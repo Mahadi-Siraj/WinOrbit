@@ -1,8 +1,8 @@
-# Glasswave — status report
+# WinOrbit — status report
 
 17 November 2026 · version 1.0.0 · 85 automated tests passing · local Git only (not published)
 
-This is an honest account of where Glasswave stands: what works, what broke during testing and was fixed, what is still weak, and what only you can check.
+This is an honest account of where WinOrbit stands: what works, what broke during testing and was fixed, what is still weak, and what only you can check.
 
 ## 1. Works and verified on this PC
 
@@ -23,7 +23,7 @@ This is an honest account of where Glasswave stands: what works, what broke duri
 2. Desktop icons hijacked the accent colour of a black-and-white wallpaper → small areas ignored.
 3. Yellow accents unreadable in light mode → contrast check (a unit test caught it).
 4. Colourful wallpapers with many hues (your Windows "ribbon") were treated as grey → colourfulness measured per pixel.
-5. Glasswave never noticed Wallpaper Engine starting, and noticed it closing only after up to 3 min → once-a-minute check.
+5. WinOrbit never noticed Wallpaper Engine starting, and noticed it closing only after up to 3 min → once-a-minute check.
 6. Every GPU-drawn window went blank after a display change → render self-check switches that window to software drawing within ~1 s.
 7. Ctrl+Alt+Space taken by another app → shortcut moved to Ctrl+Alt+I. (The owner isn't Wallpaper Engine.)
 8. Media sessions without a title showed "Nothing playing" → "Playing in ‹app›".
@@ -41,10 +41,10 @@ This is an honest account of where Glasswave stands: what works, what broke duri
 * **Live wallpapers are snapshots**, refreshed every 3 minutes, not animated glass. The snapshot includes desktop icons (their colour is ignored, but they can blur faintly into widget glass).
 * **Night light uses an undocumented Windows setting.** It checks the format first and falls back to opening Settings, but a future Windows update could change it.
 * **Power mode works only with the Balanced plan** (yours). With other plans the tile opens Settings.
-* **No Windows "Do not disturb" control** — no public API. The Focus tile runs Glasswave's own focus timer.
-* **Wi-Fi tile shows "Connected", not the network name.** Windows 11 only reveals network names to apps with location permission, and Glasswave doesn't ask for location.
+* **No Windows "Do not disturb" control** — no public API. The Focus tile runs WinOrbit's own focus timer.
+* **Wi-Fi tile shows "Connected", not the network name.** Windows 11 only reveals network names to apps with location permission, and WinOrbit doesn't ask for location.
 * **Brightness works only for DDC/CI monitors**, primary display only. Laptop built-in screens aren't supported yet.
-* **Keep awake ends when Glasswave quits** (by design, so nothing is left switched on).
+* **Keep awake ends when WinOrbit quits** (by design, so nothing is left switched on).
 
 **Quality gaps**
 * **Not code-signed**, so SmartScreen warns on first install.
@@ -71,14 +71,14 @@ Popular skins lean on exactly the hard parts: plugins, Lua, WebParser and Shape 
 What's there now:
 * Rainmeter management works when Rainmeter is installed.
 * Without Rainmeter, the page just says so; it costs nothing.
-* Glasswave's own 13 widgets cover the common Rainmeter uses (clock, calendar, system monitor, media, notes, tasks, launcher, weather …) with the glass look.
+* WinOrbit's own 13 widgets cover the common Rainmeter uses (clock, calendar, system monitor, media, notes, tasks, launcher, weather …) with the glass look.
 
 Decision: the Rainmeter page now appears only when Rainmeter is installed or running, and Home shows a Focus card instead. **Settings › Rainmeter page** can force it on or off.
 
 ## 5. Please check these yourself (I can't from here)
 
 1. **Night light tile** — does the screen warm up within about a second, and go back to normal on the second click? Does Settings › Display › Night light agree?
-2. **Dark mode tile** — do apps and the taskbar switch, with Glasswave following? Windows Tweaks › Revert all should restore your original.
+2. **Dark mode tile** — do apps and the taskbar switch, with WinOrbit following? Windows Tweaks › Revert all should restore your original.
 3. **Keep awake** — turn it on and leave the PC past your screen-off time. The screen should stay on.
 4. **Look and feel of the tiles and sliders** — the press spring, the hover chevron, and right-click opening Settings. Does it feel premium enough, and what would you change?
 5. **Centring** — drag the island near the middle (it should click in); try right-click › Centre the island and Keep centred.

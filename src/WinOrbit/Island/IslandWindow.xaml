@@ -1,0 +1,272 @@
+<Window x:Class="WinOrbit.Island.IslandWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="clr-namespace:WinOrbit.Design"
+        Title="WinOrbit Island" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" Topmost="True" ShowActivated="False" ResizeMode="NoResize"
+        Width="560" Height="420" UseLayoutRounding="True"
+        FontFamily="{DynamicResource F.Family}" Foreground="{DynamicResource T.Text}" TextOptions.TextFormattingMode="Ideal">
+    <Grid x:Name="Root">
+        <Grid.LayoutTransform>
+            <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1"/>
+        </Grid.LayoutTransform>
+
+        <d:GlassSurface x:Name="Pill" HorizontalAlignment="Center" VerticalAlignment="Top" Width="220" Height="38" Margin="0,1,0,0"
+                        SampleWallpaper="True" ShadowSize="24" Cursor="Hand" AutomationProperties.Name="Dynamic Island">
+            <d:GlassSurface.RenderTransform>
+                <TranslateTransform x:Name="PillShift"/>
+            </d:GlassSurface.RenderTransform>
+            <Grid ClipToBounds="True">
+
+                <!-- ============ Collapsed ============ -->
+                <StackPanel x:Name="Compact" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,0,14,0" Height="38">
+                    <!-- Volume HUD: replaces the capsule content for a moment when the volume changes -->
+                    <StackPanel x:Name="CHud" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock x:Name="CHudGlyph" Text="&#xE767;" Style="{StaticResource Icon}" FontSize="14" Width="18" Foreground="{DynamicResource T.Accent}" Margin="0,0,10,0"/>
+                        <Grid Width="132" Height="6" VerticalAlignment="Center">
+                            <Border CornerRadius="3" Background="{DynamicResource T.Track}"/>
+                            <Border x:Name="CHudFill" CornerRadius="3" Background="{DynamicResource T.Accent}" HorizontalAlignment="Left" Width="0"/>
+                            <Border CornerRadius="3" Margin="0,0,0,3" Background="#33FFFFFF" IsHitTestVisible="False"/>
+                        </Grid>
+                        <TextBlock x:Name="CHudText" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0" MinWidth="30" TextAlignment="Right"/>
+                    </StackPanel>
+                    <StackPanel x:Name="CPeek" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock x:Name="CPeekGlyph" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource T.Accent}" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="CPeekText" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="320" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <StackPanel x:Name="CNormal" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Privacy dots: orange = microphone, green = camera, blue = location in use (like phones) -->
+                        <StackPanel x:Name="CPriv" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0" Visibility="Collapsed" Background="Transparent">
+                            <Ellipse x:Name="CPrivMic" Width="7" Height="7" Fill="#FF9F0A" Margin="0,0,3,0" Visibility="Collapsed"/>
+                            <Ellipse x:Name="CPrivCam" Width="7" Height="7" Fill="#30D158" Margin="0,0,3,0" Visibility="Collapsed"/>
+                            <Ellipse x:Name="CPrivLoc" Width="7" Height="7" Fill="#0A84FF" Visibility="Collapsed"/>
+                        </StackPanel>
+                        <StackPanel x:Name="CMedia" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                            <Border x:Name="CArt" Width="22" Height="22" CornerRadius="6" Background="{DynamicResource T.AccentSoft}" Margin="0,0,8,0">
+                                <TextBlock x:Name="CArtGlyph" Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="11" Foreground="{DynamicResource T.Accent}"/>
+                            </Border>
+                            <TextBlock x:Name="CTitle" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="170" TextTrimming="CharacterEllipsis"/>
+                            <d:Equalizer x:Name="CEq" Margin="9,0,0,0"/>
+                        </StackPanel>
+                        <StackPanel x:Name="CTimer" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock Text="&#xE916;" Style="{StaticResource Icon}" FontSize="13" Foreground="{DynamicResource T.Accent}" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="CTimerText" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource T.Accent}"/>
+                        </StackPanel>
+                        <StackPanel x:Name="CDownload" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="13" Foreground="{DynamicResource T.Accent}" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="CDownloadText" FontSize="12.5" VerticalAlignment="Center" MaxWidth="150" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <Ellipse x:Name="CSep" Width="3" Height="3" Fill="{DynamicResource T.Text3}" Margin="11,0,11,0" VerticalAlignment="Center" Visibility="Collapsed"/>
+                        <TextBlock x:Name="CSys" FontSize="12.5" VerticalAlignment="Center" Foreground="{DynamicResource T.Text2}" Margin="0,0,10,0" Visibility="Collapsed"/>
+                        <TextBlock x:Name="CTime" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CDate" FontSize="12.5" VerticalAlignment="Center" Foreground="{DynamicResource T.Text2}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ============ Expanded ============ -->
+                <Grid x:Name="Expanded" Opacity="0" Visibility="Collapsed" Margin="14,10,14,14" Cursor="Arrow" Width="432" Height="266" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="38"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid>
+                        <Border Background="{DynamicResource T.Input}" CornerRadius="10" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="1">
+                            <StackPanel x:Name="Tabs" Orientation="Horizontal"/>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button x:Name="PinButton" Style="{StaticResource Button.Icon}" Content="&#xE718;" Width="30" Height="30" FontSize="12" ToolTip="Keep open" AutomationProperties.Name="Keep open" Click="OnPin"/>
+                            <Button Style="{StaticResource Button.Icon}" Content="&#xE713;" Width="30" Height="30" FontSize="12" ToolTip="Island settings" AutomationProperties.Name="Island settings" Click="OnSettings"/>
+                            <Button Style="{StaticResource Button.Icon}" Content="&#xE70E;" Width="30" Height="30" FontSize="12" ToolTip="Collapse (Esc)" AutomationProperties.Name="Collapse" Click="OnCollapseClick"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="0,10,0,0">
+
+                        <!-- Media -->
+                        <Grid x:Name="TabMedia" Visibility="Collapsed">
+                            <Grid x:Name="MediaEmpty" Visibility="Collapsed">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="30" Foreground="{DynamicResource T.Text3}"/>
+                                    <TextBlock Text="Nothing is playing" Style="{StaticResource Text.Sub}" HorizontalAlignment="Center" Margin="0,10,0,2"/>
+                                    <TextBlock Text="Start music or a video in any app and it appears here." Style="{StaticResource Text.Caption}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid x:Name="MediaBody">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="100"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border x:Name="MArt" Width="96" Height="96" CornerRadius="16" Background="{DynamicResource T.AccentSoft}" HorizontalAlignment="Left">
+                                        <TextBlock x:Name="MArtGlyph" Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="30" Foreground="{DynamicResource T.Accent}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="MSource" Style="{StaticResource Text.Label}" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="MTitle" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxHeight="46" TextWrapping="Wrap"/>
+                                        <TextBlock x:Name="MArtist" Style="{StaticResource Text.Caption}" FontSize="13" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                        <TextBlock x:Name="MLyric" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource T.Accent}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,6,0,0" Visibility="Collapsed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid Grid.Row="1" Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="MPos" Text="0:00" Style="{StaticResource Text.Caption}" FontSize="11" MinWidth="32"/>
+                                    <Slider x:Name="MSeek" Grid.Column="1" Minimum="0" Maximum="1" Margin="6,0" VerticalAlignment="Center" AutomationProperties.Name="Position in track"
+                                            ValueChanged="OnSeekChanged" Thumb.DragStarted="OnSeekDragStarted" Thumb.DragCompleted="OnSeekDragCompleted"/>
+                                    <TextBlock x:Name="MDur" Grid.Column="2" Text="0:00" Style="{StaticResource Text.Caption}" FontSize="11" MinWidth="32" TextAlignment="Right"/>
+                                </Grid>
+                                <Grid Grid.Row="2">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <Button x:Name="MBack" Style="{StaticResource Button.Icon}" Content="−10" FontFamily="{DynamicResource F.Family}" FontSize="11" FontWeight="SemiBold" ToolTip="Back 10 seconds (←)" AutomationProperties.Name="Back 10 seconds" Click="OnSkipBack"/>
+                                        <Button Style="{StaticResource Button.Icon}" Content="&#xE892;" ToolTip="Previous" AutomationProperties.Name="Previous track" Click="OnPrev"/>
+                                        <Button x:Name="MPlay" Style="{StaticResource Button.IconAccent}" Content="&#xE768;" Width="42" Height="42" FontSize="16" Margin="8,0" ToolTip="Play / pause (Space)" AutomationProperties.Name="Play or pause" Click="OnPlay"/>
+                                        <Button Style="{StaticResource Button.Icon}" Content="&#xE893;" ToolTip="Next" AutomationProperties.Name="Next track" Click="OnNext"/>
+                                        <Button x:Name="MFwd" Style="{StaticResource Button.Icon}" Content="+10" FontFamily="{DynamicResource F.Family}" FontSize="11" FontWeight="SemiBold" ToolTip="Forward 10 seconds" AutomationProperties.Name="Forward 10 seconds" Click="OnSkipForward"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <TextBlock Text="&#xE767;" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource T.Text2}" Margin="0,0,8,0"/>
+                                        <Slider x:Name="MVolume" Width="100" Minimum="0" Maximum="100" AutomationProperties.Name="Volume" ValueChanged="OnVolumeSlider"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+
+                        <!-- System -->
+                        <UniformGrid x:Name="TabSystem" Columns="3" Rows="2" Visibility="Collapsed"/>
+
+                        <!-- Quick controls -->
+                        <Grid x:Name="TabControls" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="38"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="44"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="QMute" Style="{StaticResource Button.Icon}" Content="&#xE767;" ToolTip="Mute" AutomationProperties.Name="Mute" Click="OnMute"/>
+                                <Slider x:Name="QVolume" Grid.Column="1" Minimum="0" Maximum="100" Margin="6,0" AutomationProperties.Name="Volume" ValueChanged="OnVolumeSlider"/>
+                                <TextBlock x:Name="QVolumeText" Grid.Column="2" Style="{StaticResource Text.Caption}" TextAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Grid x:Name="QBrightnessRow" Grid.Row="1" Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="38"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="44"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&#xE706;" Style="{StaticResource Icon}" FontSize="15"/>
+                                <Slider x:Name="QBrightness" Grid.Column="1" Minimum="0" Maximum="100" Margin="6,0" AutomationProperties.Name="Brightness" ValueChanged="OnBrightnessSlider"/>
+                                <TextBlock x:Name="QBrightnessText" Grid.Column="2" Style="{StaticResource Text.Caption}" TextAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                            <UniformGrid x:Name="QShortcuts" Grid.Row="2" Columns="4" Margin="-3,8,-3,0" VerticalAlignment="Top"/>
+                        </Grid>
+
+                        <!-- Focus -->
+                        <Grid x:Name="TabFocus" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Width="140" Height="140" HorizontalAlignment="Left">
+                                <d:Ring x:Name="FRing" Thickness="7"/>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="FTime" Text="25:00" FontSize="30" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="FMode" Text="Focus" Style="{StaticResource Text.Caption}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <Border Background="{DynamicResource T.Input}" CornerRadius="10" Padding="1" HorizontalAlignment="Left">
+                                    <StackPanel x:Name="FModes" Orientation="Horizontal"/>
+                                </Border>
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button x:Name="FStart" Style="{StaticResource Button.Accent}" Content="Start" MinWidth="86" Click="OnFocusToggle"/>
+                                    <Button Content="Reset" Margin="8,0,0,0" Click="OnFocusReset"/>
+                                    <Button Style="{StaticResource Button.Icon}" Content="&#xE738;" Margin="8,0,0,0" ToolTip="5 minutes less" AutomationProperties.Name="Five minutes less" Click="OnFocusLess"/>
+                                    <Button Style="{StaticResource Button.Icon}" Content="&#xE710;" ToolTip="5 minutes more" AutomationProperties.Name="Five minutes more" Click="OnFocusMore"/>
+                                </StackPanel>
+                                <TextBlock x:Name="FStats" Style="{StaticResource Text.Caption}" Margin="0,14,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Calendar -->
+                        <Grid x:Name="TabCalendar" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="CalDay" Style="{StaticResource Text.Label}" Foreground="{DynamicResource T.Accent}" FontSize="12"/>
+                                <TextBlock x:Name="CalNumber" FontSize="64" FontWeight="SemiBold" Margin="-3,-8,0,-6"/>
+                                <TextBlock x:Name="CalMonth" Style="{StaticResource Text.Muted}"/>
+                                <TextBlock x:Name="CalWeek" Style="{StaticResource Text.Caption}" Margin="0,6,0,0"/>
+                            </StackPanel>
+                            <d:MonthView x:Name="CalView" Grid.Column="1" CellSize="25"/>
+                        </Grid>
+
+                        <!-- Notes -->
+                        <Grid x:Name="TabNotes" Visibility="Collapsed">
+                            <Border Style="{StaticResource Card.Inset}" Padding="12,10">
+                                <Grid>
+                                    <TextBlock x:Name="NotesHint" Text="Quick note… saved on this PC only." Style="{StaticResource Text.Caption}" FontSize="13" Foreground="{DynamicResource T.Text3}" IsHitTestVisible="False"/>
+                                    <TextBox x:Name="NotesBox" Style="{StaticResource TextBox.Bare}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                             AutomationProperties.Name="Quick note" TextChanged="OnNotesChanged" PreviewMouseDown="OnNotesMouseDown"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Clipboard history -->
+                        <Grid x:Name="TabClipboard" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Margin="2,0,0,8">
+                                <TextBlock x:Name="ClipHeader" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
+                                <Button x:Name="ClipClear" Content="Clear" HorizontalAlignment="Right" Padding="12,4" FontSize="12" Click="OnClipClear"/>
+                            </Grid>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel x:Name="ClipList"/>
+                            </ScrollViewer>
+                        </Grid>
+
+                        <!-- File shelf -->
+                        <Grid x:Name="TabShelf" Visibility="Collapsed" Background="Transparent">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Margin="2,0,0,8">
+                                <TextBlock x:Name="ShelfHeader" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
+                                <Button Content="Clear" HorizontalAlignment="Right" Padding="12,4" FontSize="12" Click="OnShelfClear"/>
+                            </Grid>
+                            <Border Grid.Row="1" x:Name="ShelfZone" CornerRadius="14" BorderThickness="1.5" BorderBrush="{DynamicResource T.Stroke}" Background="{DynamicResource T.Input}">
+                                <Grid>
+                                    <StackPanel x:Name="ShelfEmpty" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="26" Foreground="{DynamicResource T.Text3}"/>
+                                        <TextBlock Text="Drop files here to keep them handy" Style="{StaticResource Text.Sub}" FontSize="13" HorizontalAlignment="Center" Margin="0,8,0,2"/>
+                                        <TextBlock Text="Then drag them out into any app or folder. Files stay where they are." Style="{StaticResource Text.Caption}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="6">
+                                        <WrapPanel x:Name="ShelfList"/>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </d:GlassSurface>
+    </Grid>
+</Window>

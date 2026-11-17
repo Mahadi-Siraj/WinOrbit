@@ -1,4 +1,4 @@
-# Visual QA: opens each Glasswave page in the running instance and captures the main window.
+# Visual QA: opens each WinOrbit page in the running instance and captures the main window.
 param([string]$Exe, [string]$OutDir, [string[]]$Pages = @("home","appearance","studio","wallpaper","island","widgets","rainmeter","tweaks","profiles","settings","about"))
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 Add-Type @'
@@ -14,7 +14,7 @@ New-Item -ItemType Directory -Force $OutDir | Out-Null
 foreach ($p in $Pages) {
   Start-Process $Exe -ArgumentList "--page", $p
   Start-Sleep -Milliseconds 1600
-  $h = (Get-Process Glasswave | Select-Object -First 1).MainWindowHandle
+  $h = (Get-Process WinOrbit | Select-Object -First 1).MainWindowHandle
   $r = New-Object QA+RECT
   [QA]::GetWindowRect($h, [ref]$r) | Out-Null
   $w = $r.R - $r.L; $hh = $r.B - $r.T

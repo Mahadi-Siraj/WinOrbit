@@ -1,4 +1,4 @@
-# Glasswave
+# WinOrbit
 
 **A Liquid Glass desktop for Windows 11.** Wallpaper-aware glass, a Dynamic Island, premium desktop widgets, Rainmeter management and coordinated Windows appearance — in one native, private, lightweight app.
 
@@ -20,7 +20,7 @@ Status key: ✅ implemented and verified on the development PC · 🧪 implement
 | **Dynamic Island** | Floating capsule (time, date, now-playing, timer, CPU/RAM, downloads); expands into Media, System, Quick controls, Focus timer, Calendar, Notes; drag with magnetic centre snap, Centre / Keep centred, scroll-for-volume, auto-hide, hover-expand, auto-collapse, fullscreen hide, keyboard control, never steals focus | ✅ |
 | Live activities | Volume meter (any volume change), mic/camera privacy dot with app name, equaliser that follows the music tinted by album art, synced lyrics in the capsule and media tab (opt-in, LRCLIB) | ✅ volume meter and lyrics verified live; ⚠️ privacy dot not yet seen with a real mic/camera session |
 | Clipboard & shelf | Clipboard history tab (opt-in, memory-only, skips password-manager copies, pin to keep) and a file shelf (drop files on the island, drag them out later) | ✅ UI verified; ⚠️ copy/paste and drag-drop need a hands-on check |
-| Launcher (Alt+Space) | Search apps (desktop + Store, with icons), Windows and Glasswave settings, quick actions, profiles and recent files; calculator and unit conversion; web search in your own browser; learns your favourites (locally) | ✅ verified live |
+| Launcher (Alt+Space) | Search apps (desktop + Store, with icons), Windows and WinOrbit settings, quick actions, profiles and recent files; calculator and unit conversion; web search in your own browser; learns your favourites (locally) | ✅ verified live |
 | Settings search | Search box in the main window (Ctrl+F): jumps to the setting and highlights it; built from the real pages, so it never goes stale | ✅ |
 | Welcome | First-run card: pick a starting style, opt into clipboard history and lyrics | ✅ |
 | Media from more players | VLC (classic 3.x), foobar2000, Winamp, PotPlayer, MPC-HC/BE and mpv, read from their window titles with play/pause detected from their audio; seek bar and ±10 s for players that allow it (YouTube in Chrome/Brave/Edge, Spotify …) | ✅ VLC detection verified live; ⚠️ VLC can only be *controlled* with its global media keys switched on (see User guide) |
@@ -34,7 +34,7 @@ Status key: ✅ implemented and verified on the development PC · 🧪 implement
 | **Profiles** | Study, Gaming, Productivity, Minimal, Night + your own; restore previous; import/export | ✅ |
 | **Automation** (opt-in) | By time of day, fullscreen app, or foreground app | ✅ (logic unit-tested; fullscreen rule tested manually) |
 | Privacy & network gate | Master switch (off), HTTPS-only gate, request ledger, static test that no other code can open sockets | ✅ |
-| Diagnostics | Live RAM/CPU of Glasswave and of Rainmeter separately, start-up time, network ledger, log viewer | ✅ |
+| Diagnostics | Live RAM/CPU of WinOrbit and of Rainmeter separately, start-up time, network ledger, log viewer | ✅ |
 | Render self-check | Detects when the GPU driver fails to present the window and falls back to software rendering automatically | ✅ (triggered for real on this PC) |
 | Installer & portable | Inno Setup per-user installer with clean uninstall (keeps/removes data on request, offers Windows-settings rollback); self-contained portable zip | ✅ |
 | Explorer/DWM injection, system file patching | | ➖ by design |
@@ -43,16 +43,16 @@ Measured results are in [docs/TEST-REPORT.md](docs/TEST-REPORT.md). Screenshots 
 
 ## Install
 
-* **Installer:** run `Glasswave-Setup-1.0.0.exe`. Needs the .NET 8 Desktop Runtime (x64), which setup checks for. Not code-signed: SmartScreen will show *More info → Run anyway*.
-* **Portable:** unzip `Glasswave-Portable-1.0.0-win-x64.zip` anywhere and run `Glasswave.exe`. Everything (runtime included) is inside; settings stay in `Data\` next to it.
+* **Installer:** run `WinOrbit-Setup-1.0.0.exe`. Needs the .NET 8 Desktop Runtime (x64), which setup checks for. Not code-signed: SmartScreen will show *More info → Run anyway*.
+* **Portable:** unzip `WinOrbit-Portable-1.0.0-win-x64.zip` anywhere and run `WinOrbit.exe`. Everything (runtime included) is inside; settings stay in `Data\` next to it.
 
 ## Build from source
 
 Requirements: Windows 10 2004+ / 11, .NET 8 SDK. Optional: Inno Setup 6 for the installer (`winget install JRSoftware.InnoSetup --scope user`).
 
 ```powershell
-dotnet build Glasswave.sln                       # debug build
-dotnet test tests\Glasswave.Tests                # unit tests
+dotnet build WinOrbit.sln                       # debug build
+dotnet test tests\WinOrbit.Tests                # unit tests
 .\tools\build-release.ps1                        # tests + installer + portable zip into .\artifacts
 ```
 

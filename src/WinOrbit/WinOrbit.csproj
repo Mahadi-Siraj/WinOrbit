@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>WinOrbit</AssemblyName>
+    <RootNamespace>WinOrbit</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\winorbit.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>WinOrbit</Product>
+    <Description>Liquid Glass desktop customisation suite for Windows</Description>
+    <Copyright>Local-first. No telemetry.</Copyright>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <TieredPGO>true</TieredPGO>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\winorbit.ico" />
+    <InternalsVisibleTo Include="WinOrbit.Tests" />
+  </ItemGroup>
+
+</Project>

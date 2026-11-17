@@ -1,12 +1,12 @@
-# Glasswave privacy audit
+# WinOrbit privacy audit
 
-**Summary: Glasswave contains no telemetry, analytics, tracking, advertising identifiers, crash uploading, accounts or automatic update checks. With default settings it makes zero network connections.**
+**Summary: WinOrbit contains no telemetry, analytics, tracking, advertising identifiers, crash uploading, accounts or automatic update checks. With default settings it makes zero network connections.**
 
 This document describes what the application stores, what it can transmit, and how that was verified.
 
-## 1. What Glasswave stores
+## 1. What WinOrbit stores
 
-Everything lives in one folder: `%APPDATA%\Glasswave` (or `Data\` beside the exe in portable mode).
+Everything lives in one folder: `%APPDATA%\WinOrbit` (or `Data\` beside the exe in portable mode).
 
 | File | Contents | Why |
 |---|---|---|
@@ -14,15 +14,15 @@ Everything lives in one folder: `%APPDATA%\Glasswave` (or `Data\` beside the exe
 | `data.json` | Notes, task lists, focus-session history (start time + minutes), clipboard items **you pinned** (text only), how often you opened each launcher result (to rank your favourites first) | Widget content, launcher ranking |
 | `backups\nightlight-state.bin` | Windows' night-light state as it was before the island's Night light tile first changed it | Restore if a future Windows changes the format |
 | `themes\*.json`, `profiles\*.json` | Themes and profiles you created | Your customisations |
-| `backups\windows-settings-backup.json` | Original values of Windows settings Glasswave changed (e.g. `AppsUseLightTheme`, accent colour, wallpaper path) | **Revert all** and uninstall rollback |
+| `backups\windows-settings-backup.json` | Original values of Windows settings WinOrbit changed (e.g. `AppsUseLightTheme`, accent colour, wallpaper path) | **Revert all** and uninstall rollback |
 | `wallpapers\gradient-*.png` | Only if you use "Apply as wallpaper" | The generated wallpaper file |
-| `logs\glasswave.log` | Local diagnostic messages (start-up, errors, which Windows setting changed). Rotates at 512 KB, max 2 files | Troubleshooting. Never uploaded |
+| `logs\winorbit.log` | Local diagnostic messages (start-up, errors, which Windows setting changed). Rotates at 512 KB, max 2 files | Troubleshooting. Never uploaded |
 
-Glasswave also writes, **only when you ask it to**, per-user Windows values: the `Glasswave` entry under `HKCU\…\Run` (start with Windows), and the appearance values listed on the Windows Tweaks page. All are under `HKEY_CURRENT_USER`; nothing machine-wide is changed.
+WinOrbit also writes, **only when you ask it to**, per-user Windows values: the `WinOrbit` entry under `HKCU\…\Run` (start with Windows), and the appearance values listed on the Windows Tweaks page. All are under `HKEY_CURRENT_USER`; nothing machine-wide is changed.
 
 Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing data, window titles, keystrokes, screenshots, lyrics. The live-wallpaper snapshot (see §4) is kept in memory only.
 
-## 2. What Glasswave reads on your PC
+## 2. What WinOrbit reads on your PC
 
 | Data | Purpose | Leaves the PC? |
 |---|---|---|
@@ -37,13 +37,13 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 | Output audio level (Windows' peak meter) and volume/mute changes | Volume meter and music-reactive bars. A single loudness number, read only while music plays in a visible capsule; no audio is recorded | No |
 | Files you drop on the island's shelf | Paths only (files are not copied); memory only | No |
 | Windows' "All apps" list (`shell:AppsFolder`) and the shortcuts in your Recent folder | Launcher search, read when you open the launcher | No |
-| Window titles of known media players only (VLC, foobar2000, Winamp, PotPlayer, MPC-HC/BE, mpv) and those players' own audio level | Now-playing for players that don't report to Windows. Glasswave gets Windows' "a title changed" event, checks which program the window belongs to, and reads the title only for those players | No (not logged) |
+| Window titles of known media players only (VLC, foobar2000, Winamp, PotPlayer, MPC-HC/BE, mpv) and those players' own audio level | Now-playing for players that don't report to Windows. WinOrbit gets Windows' "a title changed" event, checks which program the window belongs to, and reads the title only for those players | No (not logged) |
 | Power source, battery %, laptop brightness, Energy Saver state | Charging/low-battery/brightness activities and the Control Centre | No |
 | Default microphone's mute state | Microphone tile | No |
 
 ## 3. Network access
 
-There is exactly **one** class that can open a network connection: `NetworkGate` in `src/Glasswave/Services/Network.cs`.
+There is exactly **one** class that can open a network connection: `NetworkGate` in `src/WinOrbit/Services/Network.cs`.
 
 * It refuses every request unless **Settings › Privacy › Allow optional internet features** is on. The switch is **off by default**.
 * HTTPS only; no cookies, no redirects, no custom headers, no identifiers.
@@ -59,22 +59,22 @@ Two optional features use it, each with its own switch under **Settings › Priv
 
 Your IP address is inevitably visible to those services when you enable a feature, as with any web request.
 
-Links such as "Open rainmeter.net", and the launcher's "Search the web for …", open in **your own browser**; Glasswave itself makes no request.
+Links such as "Open rainmeter.net", and the launcher's "Search the web for …", open in **your own browser**; WinOrbit itself makes no request.
 
 There is **no** update checker. New versions are installed by running a newer installer.
 
 ## 4. Live wallpaper snapshots
 
-When Wallpaper Engine or Lively Wallpaper draws your desktop, the real wallpaper is not a file Windows knows about. If **Match live wallpapers** is on (default), Glasswave calls `PrintWindow` on the desktop's wallpaper host window — not on any application window — every 3 minutes, paused while a fullscreen app runs. The image is downscaled, blurred and kept in memory only. Desktop icons may be included in the snapshot (Windows composes them into that layer); they are reduced to soft blurs and excluded from colour extraction. Turn it off on **Wallpaper & Gradients**.
+When Wallpaper Engine or Lively Wallpaper draws your desktop, the real wallpaper is not a file Windows knows about. If **Match live wallpapers** is on (default), WinOrbit calls `PrintWindow` on the desktop's wallpaper host window — not on any application window — every 3 minutes, paused while a fullscreen app runs. The image is downscaled, blurred and kept in memory only. Desktop icons may be included in the snapshot (Windows composes them into that layer); they are reduced to soft blurs and excluded from colour extraction. Turn it off on **Wallpaper & Gradients**.
 
 ## 5. Verification performed
 
-1. **Dependency audit.** The app has **zero NuGet package dependencies** — only the .NET 8 / WPF framework and Windows APIs. There is no third-party SDK, analytics or crash-reporting library to audit. (`src/Glasswave/Glasswave.csproj` contains no `PackageReference`.)
+1. **Dependency audit.** The app has **zero NuGet package dependencies** — only the .NET 8 / WPF framework and Windows APIs. There is no third-party SDK, analytics or crash-reporting library to audit. (`src/WinOrbit/WinOrbit.csproj` contains no `PackageReference`.)
 2. **Static check (automated test).** `PrivacyTests.Only_the_network_gate_creates_http_clients` scans every source file and fails the build if anything other than `Network.cs` constructs an `HttpClient`, `WebClient`, `Socket`, `TcpClient` or `WebRequest`.
 3. **Behavioural tests.** `Network_gate_refuses_when_switched_off` and `Network_gate_refuses_plain_http` prove the gate blocks requests with the default settings and rejects non-HTTPS URLs. `Lyrics_need_both_switches_and_never_touch_the_network_when_off` proves a lyrics lookup makes no request unless both the network switch and the lyrics switch are on.
-4. **Runtime check.** With default settings, during the idle benchmark, `Get-NetTCPConnection` and `Get-NetUDPEndpoint` for the Glasswave process returned **0 TCP connections and 0 UDP endpoints**. (The process does load the framework assemblies `System.Net.Requests` and `System.Net.WebClient`: WPF's resource loader uses them internally to resolve `pack://application` URIs for embedded images such as the app icon. They open no sockets — confirmed by the zero counts above.)
-5. **Build tooling.** `tools/build-release.ps1` sets `DOTNET_CLI_TELEMETRY_OPTOUT=1` so even the .NET SDK used to build Glasswave does not send usage data.
+4. **Runtime check.** With default settings, during the idle benchmark, `Get-NetTCPConnection` and `Get-NetUDPEndpoint` for the WinOrbit process returned **0 TCP connections and 0 UDP endpoints**. (The process does load the framework assemblies `System.Net.Requests` and `System.Net.WebClient`: WPF's resource loader uses them internally to resolve `pack://application` URIs for embedded images such as the app icon. They open no sockets — confirmed by the zero counts above.)
+5. **Build tooling.** `tools/build-release.ps1` sets `DOTNET_CLI_TELEMETRY_OPTOUT=1` so even the .NET SDK used to build WinOrbit does not send usage data.
 
-## 6. What is *not* Glasswave
+## 6. What is *not* WinOrbit
 
-Windows itself (Windows Update, Defender, Microsoft Store), the NVIDIA driver, Wallpaper Engine/Steam and Rainmeter are separate programs with their own network behaviour. Glasswave does not change, block or inspect their traffic.
+Windows itself (Windows Update, Defender, Microsoft Store), the NVIDIA driver, Wallpaper Engine/Steam and Rainmeter are separate programs with their own network behaviour. WinOrbit does not change, block or inspect their traffic.

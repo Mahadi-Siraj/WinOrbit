@@ -12,7 +12,7 @@
 
 ### How Liquid Glass is achieved
 
-Windows provides real-time backdrop blur only for whole, non-layered windows (DWM Mica/Acrylic). The island and widgets must be layered (per-pixel alpha) windows to have rounded, shadowed, click-through edges, and DWM does not blur behind those. Glasswave therefore uses a **wallpaper-sampled glass**:
+Windows provides real-time backdrop blur only for whole, non-layered windows (DWM Mica/Acrylic). The island and widgets must be layered (per-pixel alpha) windows to have rounded, shadowed, click-through edges, and DWM does not blur behind those. WinOrbit therefore uses a **wallpaper-sampled glass**:
 
 1. `WallpaperEngine` decodes the wallpaper (or snapshots the live-wallpaper layer) off the UI thread, lays it out per monitor exactly as Windows does (Fill/Fit/Stretch/Center/Tile/Span), downsamples ×4, boosts saturation and applies a three-pass box blur (≈ Gaussian).
 2. Each `GlassSurface` maps its own on-screen rectangle into that pre-blurred image (an `ImageBrush` viewbox), with a slight inward inset to imitate refraction.
@@ -23,7 +23,7 @@ Because widgets live on the desktop, the backdrop is exactly what is behind them
 ## Modules
 
 ```
-src/Glasswave
+src/WinOrbit
 ├─ App.xaml(.cs)          Application shell: single instance, start-up order, tray, hotkeys, CLI (--page, --quit, --revert-tweaks)
 ├─ Hub.cs                 Service locator for long-lived services
 ├─ Core/                  Models (settings, themes, profiles, widgets) + Store (atomic JSON, debounced saves, local log)
@@ -52,4 +52,4 @@ src/Glasswave
 
 * No DLL injection, no hooks inside other processes, no patched system files, no admin rights.
 * Windows tweaks only write `HKEY_CURRENT_USER` values the Settings app itself writes, or call documented APIs (`SystemParametersInfo`, `SHAppBarMessage`, `IDesktopWallpaper`). Originals are backed up before the first change.
-* Rainmeter: read-only access to its files; control only via documented bangs passed to `Rainmeter.exe`; packages installed by Rainmeter's own `SkinInstaller.exe` after Glasswave shows the contents and warns about plugin DLLs.
+* Rainmeter: read-only access to its files; control only via documented bangs passed to `Rainmeter.exe`; packages installed by Rainmeter's own `SkinInstaller.exe` after WinOrbit shows the contents and warns about plugin DLLs.

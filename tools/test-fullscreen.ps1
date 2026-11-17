@@ -1,6 +1,6 @@
 # Verifies the island hides while a fullscreen app is in front and returns afterwards.
 # Opens a borderless, fullscreen window (like a game or video) for ~4 seconds. Results go to -Out.
-param([string]$Out = "$env:TEMP\glasswave-fullscreen-test.txt")
+param([string]$Out = "$env:TEMP\winorbit-fullscreen-test.txt")
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type @'
 using System; using System.Runtime.InteropServices; using System.Text;
@@ -11,7 +11,7 @@ public static class FS {
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
   public static bool IslandVisible() {
     bool v = false;
-    EnumWindows((h, l) => { var sb = new StringBuilder(64); GetWindowText(h, sb, 64); if (sb.ToString() == "Glasswave Island" && IsWindowVisible(h)) v = true; return true; }, IntPtr.Zero);
+    EnumWindows((h, l) => { var sb = new StringBuilder(64); GetWindowText(h, sb, 64); if (sb.ToString() == "WinOrbit Island" && IsWindowVisible(h)) v = true; return true; }, IntPtr.Zero);
     return v;
   }
 }

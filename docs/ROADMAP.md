@@ -1,4 +1,4 @@
-# Glasswave roadmap — what people want, and what's next
+# WinOrbit roadmap — what people want, and what's next
 
 17 November 2026. Based on: Reddit threads about Windows Dynamic Island apps (NabyScape, Notchify, Dyno, Dynamic Edge, BuildNotch and the Windhawk island mod), Windows Central, MakeUseOf and Windows Forum coverage of those apps, and 2026 "best Windows customisation tools" round-ups.
 
@@ -6,7 +6,7 @@
 
 **One free, private, lightweight app instead of six.** People currently stack several separate tools, and the round-ups themselves warn that stacking hurts performance and stability:
 
-| What people install today | What it does | In Glasswave |
+| What people install today | What it does | In WinOrbit |
 |---|---|---|
 | A Dynamic Island app (Notchify, NabyScape, Dynamic Edge …) | Media, timers, live activities | ✅ Island |
 | Rainmeter / widgets | Clock, system, media on the desktop | ✅ Widgets (+ Rainmeter manager) |
@@ -18,7 +18,7 @@
 | f.lux / night-light toggles, Awake | Quick system switches | ✅ Quick tiles |
 | Wallpaper Engine colour matching | Glass that fits the wallpaper | ✅ |
 
-## What users said they want (and where Glasswave stands)
+## What users said they want (and where WinOrbit stands)
 
 **Wanted, and now built**
 * Media in the island with album art → ✅. **Live synced lyrics** (the most-praised NabyScape feature, and asked for YouTube too) → ✅ opt-in via LRCLIB; works with any player that tells Windows the title and artist, including YouTube in a browser when the page publishes them.
@@ -37,7 +37,7 @@
 
 Wave 2 — **done** (17 Nov 2026):
 1. ✅ **Spotlight-style launcher** (Alt+Space): apps with icons, settings, actions, profiles, recent files, calculator, unit conversion, web search.
-2. ❌ **Taskbar styling — not possible within the rules.** Tested on this PC: Windows 11 ignores the documented accent call on its taskbar (pixels identical before/after). TranslucentTB-style results need code injected into Explorer, which Glasswave refuses to do. Windows' own Transparency effects and taskbar accent colour remain on the Tweaks page.
+2. ❌ **Taskbar styling — not possible within the rules.** Tested on this PC: Windows 11 ignores the documented accent call on its taskbar (pixels identical before/after). TranslucentTB-style results need code injected into Explorer, which WinOrbit refuses to do. Windows' own Transparency effects and taskbar accent colour remain on the Tweaks page.
 3. ✅ **Charging, low battery, Energy Saver and brightness activities** (laptop hardware still to be tested).
 4. ✅ **First-run welcome** with starting styles.
 5. ✅ **Settings search**, plus the same settings in the launcher.

@@ -1,6 +1,6 @@
-# Idle benchmark: samples Glasswave's CPU time and memory over a period and reports averages.
+# Idle benchmark: samples WinOrbit's CPU time and memory over a period and reports averages.
 param([int]$Seconds = 300, [int]$Interval = 10, [string]$Out = "bench.json")
-$p = Get-Process Glasswave -ErrorAction Stop | Select-Object -First 1
+$p = Get-Process WinOrbit -ErrorAction Stop | Select-Object -First 1
 $cores = [Environment]::ProcessorCount
 $startCpu = $p.TotalProcessorTime; $startAt = Get-Date
 $samples = @()
