@@ -77,6 +77,21 @@ public sealed class RainmeterService
 
     public static bool IsRunning => Process.GetProcessesByName("Rainmeter").Length > 0;
 
+    /// <summary>
+    /// Whether Glasswave should offer its Rainmeter page and Home card. "auto" shows them only when Rainmeter
+    /// is installed or running, so people who don't use Rainmeter never see it.
+    /// </summary>
+    public bool PageWanted()
+    {
+        switch (_prefs().PageVisibility)
+        {
+            case "always": return true;
+            case "never": return false;
+        }
+        if (!Installed) Detect();
+        return Installed || IsRunning;
+    }
+
     public void Detect()
     {
         ExePath = "";

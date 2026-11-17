@@ -25,7 +25,7 @@ Notes:
 
 Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
-## 2. Automated tests — 42 passing
+## 2. Automated tests — 43 passing
 
 `dotnet test tests/Glasswave.Tests` (also run by `tools/build-release.ps1`, in Release):
 

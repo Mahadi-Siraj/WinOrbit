@@ -165,7 +165,14 @@ public sealed class SettingsPage : PageBase
             Kit.ToggleRow("24-hour clock", null, G.Use24Hour, v => { G.Use24Hour = v; Hub.Store.Save(); Hub.Island.Apply(); Hub.Widgets.Apply(); foreach (var w in Hub.Widgets.Windows) w.Rebuild(); }),
             Kit.ToggleRow("Pause during fullscreen apps", "Stops widget updates and system sampling while a game or fullscreen video is in front.", G.PauseInFullscreen, v => { G.PauseInFullscreen = v; Hub.Store.Save(); }),
             Kit.ToggleRow("Software rendering for this window", "Only if this window ever appears blank. Glasswave detects that automatically and switches for the session; this makes it permanent. Takes effect when the window is reopened.",
-                G.ForceSoftwareRendering, v => { G.ForceSoftwareRendering = v; Hub.Store.Save(); })));
+                G.ForceSoftwareRendering, v => { G.ForceSoftwareRendering = v; Hub.Store.Save(); }),
+            Kit.Row("Rainmeter page", "Automatic shows it only when Rainmeter is installed or running.",
+                Kit.Combo(new[] { "Automatic", "Always show", "Hide" }, Array.IndexOf(new[] { "auto", "always", "never" }, Hub.Settings.Rainmeter.PageVisibility) is var i and >= 0 ? i : 0, i =>
+                {
+                    Hub.Settings.Rainmeter.PageVisibility = new[] { "auto", "always", "never" }[i];
+                    Hub.Store.Save();
+                    (Owner as Shell.MainWindow)?.UpdateOptionalPages();
+                }, 170))));
 
         var failures = App.Current.HotkeyFailures;
         Children.Add(Kit.Section("Keyboard shortcuts", failures.Count > 0 ? $"Already used by another app: {string.Join(", ", failures)}. Choose a different combination." : "Global shortcuts. Use Ctrl, Alt, Shift or Win plus a key, for example Ctrl+Alt+Space.",

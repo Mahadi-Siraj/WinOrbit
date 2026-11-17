@@ -161,24 +161,46 @@ public sealed class HomePage : PageBase
         media.Children.Add(controls);
         row.Children.Add(Kit.Card(media, new Thickness(20, 16, 20, 16)).At(0, 2));
 
-        var rm = new StackPanel();
-        rm.Children.Add(Header(Glyph.Diagnostic, "Rainmeter", () => Owner?.Navigate("rainmeter")));
+        // Third card: Rainmeter for people who use it, otherwise a focus card.
         var r = Hub.Rainmeter;
-        if (!r.Installed) r.Detect();
-        if (r.Installed)
+        var third = new StackPanel();
+        if (r.PageWanted() && r.Installed)
         {
+            third.Children.Add(Header(Glyph.Diagnostic, "Rainmeter", () => Owner?.Navigate("rainmeter")));
             if (r.Skins.Count == 0) r.Scan();
-            rm.Children.Add(Ui.Text($"{r.Skins.Count(s => s.Active)} active skin{(r.Skins.Count(s => s.Active) == 1 ? "" : "s")}", "Text.Sub", 15));
-            rm.Children.Add(Ui.Text($"{r.Skins.Count} installed · version {r.Version}", "Text.Caption", 12.5));
-            rm.Children.Add(Kit.Chip(RainmeterService.IsRunning ? "Running" : "Not running", RainmeterService.IsRunning ? "T.Good" : "T.Warn").With(c => c.Margin = new Thickness(0, 12, 0, 0)));
+            third.Children.Add(Ui.Text($"{r.Skins.Count(s => s.Active)} active skin{(r.Skins.Count(s => s.Active) == 1 ? "" : "s")}", "Text.Sub", 15));
+            third.Children.Add(Ui.Text($"{r.Skins.Count} installed · version {r.Version}", "Text.Caption", 12.5));
+            third.Children.Add(Kit.Chip(RainmeterService.IsRunning ? "Running" : "Not running", RainmeterService.IsRunning ? "T.Good" : "T.Warn").With(c => c.Margin = new Thickness(0, 12, 0, 0)));
         }
         else
         {
-            rm.Children.Add(Ui.Text("Not installed", "Text.Sub", 15));
-            rm.Children.Add(Ui.Text("Glasswave can manage your Rainmeter skins once Rainmeter is installed.", "Text.Caption", 12.5));
-            rm.Children.Add(Kit.Btn("Learn how", () => Owner?.Navigate("rainmeter")).With(b => { b.HorizontalAlignment = HorizontalAlignment.Left; b.Margin = new Thickness(0, 10, 0, 0); }));
+            var timers = Hub.Timers;
+            third.Children.Add(Header(Glyph.Stopwatch, "Focus", () => Owner?.Navigate("island")));
+            var headline = Ui.Text("", "Text.Sub", 15);
+            var detail = Ui.Text("", "Text.Caption", 12.5);
+            var button = Kit.Btn("", () => { }, Glyph.Play, true).With(b => { b.HorizontalAlignment = HorizontalAlignment.Left; b.Margin = new Thickness(0, 10, 0, 0); });
+            void Refresh()
+            {
+                var focusing = timers.Running && timers.Mode == TimerMode.Focus;
+                headline.Text = focusing ? $"{timers.Display} left" : $"{timers.MinutesToday} min today";
+                detail.Text = focusing ? "Focus block running — the island shows the countdown." : $"{timers.CompletedToday} focus block{(timers.CompletedToday == 1 ? "" : "s")} completed today";
+                button.Content = focusing ? "Stop" : $"Start {timers.FocusMinutes}-min focus";
+            }
+            button.Click += (_, _) =>
+            {
+                if (timers.Running && timers.Mode == TimerMode.Focus) timers.Stop();
+                else { timers.SetMode(TimerMode.Focus); timers.Start(); }
+                Refresh();
+            };
+            Action onTick = () => Refresh();
+            third.Loaded += (_, _) => timers.Changed += onTick;
+            third.Unloaded += (_, _) => timers.Changed -= onTick;
+            Refresh();
+            third.Children.Add(headline);
+            third.Children.Add(detail);
+            third.Children.Add(button);
         }
-        row.Children.Add(Kit.Card(rm, new Thickness(20, 16, 20, 16)).At(0, 4));
+        row.Children.Add(Kit.Card(third, new Thickness(20, 16, 20, 16)).At(0, 4));
         Children.Add(row);
 
         // ---------- profiles ----------

@@ -64,15 +64,28 @@ public partial class MainWindow : Window
             if (!IsVisible) _current?.Leave(); else _current?.Enter();
         };
         PreviewKeyDown += OnKeys;
+        IsVisibleChanged += (_, _) => { if (IsVisible) UpdateOptionalPages(); };
         UpdateProfileChip();
+        UpdateOptionalPages();
         Navigate("home");
+    }
+
+    /// <summary>Show the Rainmeter entry only when it's useful (see Settings › Rainmeter page).</summary>
+    public void UpdateOptionalPages()
+    {
+        var index = _pages.FindIndex(p => p.Id == "rainmeter");
+        if (index >= 0 && Nav.Items[index] is ListBoxItem item)
+            item.Visibility = Hub.Rainmeter.PageWanted() || _currentId == "rainmeter" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnKeys(object sender, KeyEventArgs e)
     {
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key is >= Key.D1 and <= Key.D9)
         {
-            Nav.SelectedIndex = e.Key - Key.D1;
+            // Ctrl+N picks the Nth page that is actually listed.
+            var visible = Nav.Items.OfType<ListBoxItem>().Select((it, i) => (it, i)).Where(x => x.it.Visibility == Visibility.Visible).ToList();
+            var n = e.Key - Key.D1;
+            if (n < visible.Count) Nav.SelectedIndex = visible[n].i;
             e.Handled = true;
         }
         else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.W) { Close(); e.Handled = true; }

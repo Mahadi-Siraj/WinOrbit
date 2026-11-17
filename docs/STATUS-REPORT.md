@@ -1,6 +1,6 @@
 # Glasswave — status report
 
-17 November 2026 · version 1.0.0 · 42 automated tests passing · local Git only (not published)
+17 November 2026 · version 1.0.0 · 43 automated tests passing · local Git only (not published)
 
 This is an honest account of where Glasswave stands: what works, what broke during testing and was fixed, what is still weak, and what only you can check.
 
@@ -73,7 +73,7 @@ What's there now:
 * Without Rainmeter, the page just says so; it costs nothing.
 * Glasswave's own 13 widgets cover the common Rainmeter uses (clock, calendar, system monitor, media, notes, tasks, launcher, weather …) with the glass look.
 
-If you'd rather not see the Rainmeter page at all, it can be hidden — your call.
+Decision: the Rainmeter page now appears only when Rainmeter is installed or running, and Home shows a Focus card instead. **Settings › Rainmeter page** can force it on or off.
 
 ## 5. Please check these yourself (I can't from here)
 
@@ -86,4 +86,5 @@ If you'd rather not see the Rainmeter page at all, it can be hidden — your cal
 7. **Media with your usual players** (YouTube, Spotify, VLC …) — titles, artwork, controls.
 8. **After a restart** — the island and widgets should appear at sign-in, and About › Rendering should say "Hardware".
 9. **Wallpaper Engine** — reopen it; within about a minute the glass should return to its colours.
-10. **Anything that looks off, feels slow, or that you'd expect to work and doesn't.**
+10. **Home and sidebar** — with Rainmeter not installed, the sidebar has no Rainmeter entry and Home shows a Focus card. Does Start focus work from there?
+11. **Anything that looks off, feels slow, or that you'd expect to work and doesn't.**

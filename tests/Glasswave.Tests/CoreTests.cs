@@ -228,6 +228,32 @@ public class RainmeterTests
     }
 
     [Fact]
+    public void Rainmeter_page_appears_only_when_useful()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "gw-rmexe-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var fakeExe = Path.Combine(dir, "Rainmeter.exe");
+        try
+        {
+            var prefs = new RainmeterPrefs { CustomExePath = Path.Combine(dir, "missing", "Rainmeter.exe") };
+            var svc = new RainmeterService(() => prefs);
+            if (!RainmeterService.IsRunning && !File.Exists(@"C:\Program Files\Rainmeter\Rainmeter.exe"))
+                Assert.False(svc.PageWanted());                               // auto + not installed → hidden
+
+            File.WriteAllText(fakeExe, "");
+            prefs.CustomExePath = fakeExe;
+            Assert.True(new RainmeterService(() => prefs).PageWanted());       // auto + installed → shown
+
+            prefs.PageVisibility = "never";
+            Assert.False(new RainmeterService(() => prefs).PageWanted());
+            prefs.PageVisibility = "always";
+            prefs.CustomExePath = "";
+            Assert.True(new RainmeterService(() => prefs).PageWanted());
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Rejects_non_rainmeter_zip()
     {
         var path = Path.Combine(Path.GetTempPath(), "gw-" + Guid.NewGuid().ToString("N") + ".rmskin");

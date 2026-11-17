@@ -61,6 +61,8 @@ Closing the main window keeps the island and widgets running from the tray (turn
 
 ## Rainmeter
 
+* The Rainmeter page appears in the sidebar only when Rainmeter is installed or running; otherwise Home shows a Focus card in its place. Change this in **Settings › Rainmeter page** (Automatic / Always show / Hide).
+
 * Glasswave finds a normal Rainmeter install automatically. A portable copy is found while it is running; otherwise use **Locate Rainmeter.exe** once. The library shows every skin config with preview images where the skin has one (`preview.png`, `@Resources\preview.png`, …), metadata, favourites and recents.
 * Warnings: **Third-party plugin** means the skin loads a plugin DLL that didn't come with Rainmeter (Rainmeter's own plugins, such as InputText or WebParser, aren't flagged). **Runs programs** means a click action or RunCommand can start a program or script; hover the chip to see which. Links and folders aren't flagged.
 * The switch on each card activates/deactivates through Rainmeter. Use the monitor button for position, layering and transparency. Position and layering are saved by Rainmeter; transparency set here lasts until the skin is refreshed or Rainmeter restarts (set it in Rainmeter's Manage window to keep it).

@@ -228,6 +228,8 @@ public sealed class PrivacySettings
 public sealed class RainmeterPrefs
 {
     public string CustomExePath { get; set; } = "";
+    /// <summary>"auto" (show the Rainmeter page only when Rainmeter is installed or running), "always" or "never".</summary>
+    public string PageVisibility { get; set; } = "auto";
     public List<string> Favourites { get; set; } = new();
     public List<string> Recent { get; set; } = new();
 }
