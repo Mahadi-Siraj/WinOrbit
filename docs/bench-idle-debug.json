@@ -1,0 +1,225 @@
+{
+  "seconds": 300.0,
+  "cores": 12,
+  "cpuSeconds": 2.188,
+  "avgCpuPercentOfMachine": 0.061,
+  "avgCpuPercentOfOneCore": 0.728,
+  "privateMB_min": 124.1,
+  "privateMB_max": 195.0,
+  "workingSetMB_avg": 84.9,
+  "workingSetMB_max": 97.6,
+  "handles_first": 810,
+  "handles_last": 810,
+  "samples": [
+    {
+      "t": 10,
+      "privateMB": 164.4,
+      "workingSetMB": 73.2,
+      "threads": 20,
+      "handles": 810
+    },
+    {
+      "t": 20,
+      "privateMB": 164.9,
+      "workingSetMB": 73.7,
+      "threads": 20,
+      "handles": 810
+    },
+    {
+      "t": 30,
+      "privateMB": 164.9,
+      "workingSetMB": 73.9,
+      "threads": 17,
+      "handles": 808
+    },
+    {
+      "t": 40,
+      "privateMB": 166.2,
+      "workingSetMB": 74.3,
+      "threads": 17,
+      "handles": 808
+    },
+    {
+      "t": 50,
+      "privateMB": 166.4,
+      "workingSetMB": 74.5,
+      "threads": 17,
+      "handles": 808
+    },
+    {
+      "t": 60,
+      "privateMB": 168.9,
+      "workingSetMB": 74.9,
+      "threads": 17,
+      "handles": 809
+    },
+    {
+      "t": 70,
+      "privateMB": 169.3,
+      "workingSetMB": 74.9,
+      "threads": 17,
+      "handles": 810
+    },
+    {
+      "t": 80,
+      "privateMB": 170.2,
+      "workingSetMB": 74.9,
+      "threads": 16,
+      "handles": 807
+    },
+    {
+      "t": 90,
+      "privateMB": 171.9,
+      "workingSetMB": 74.9,
+      "threads": 16,
+      "handles": 807
+    },
+    {
+      "t": 100,
+      "privateMB": 171.9,
+      "workingSetMB": 74.9,
+      "threads": 15,
+      "handles": 807
+    },
+    {
+      "t": 110,
+      "privateMB": 171.9,
+      "workingSetMB": 75.0,
+      "threads": 16,
+      "handles": 810
+    },
+    {
+      "t": 120,
+      "privateMB": 172.2,
+      "workingSetMB": 75.1,
+      "threads": 17,
+      "handles": 809
+    },
+    {
+      "t": 130,
+      "privateMB": 172.2,
+      "workingSetMB": 75.1,
+      "threads": 16,
+      "handles": 806
+    },
+    {
+      "t": 140,
+      "privateMB": 174.2,
+      "workingSetMB": 75.2,
+      "threads": 16,
+      "handles": 806
+    },
+    {
+      "t": 150,
+      "privateMB": 195.0,
+      "workingSetMB": 92.4,
+      "threads": 16,
+      "handles": 810
+    },
+    {
+      "t": 160,
+      "privateMB": 193.3,
+      "workingSetMB": 91.1,
+      "threads": 16,
+      "handles": 810
+    },
+    {
+      "t": 170,
+      "privateMB": 124.1,
+      "workingSetMB": 91.2,
+      "threads": 16,
+      "handles": 812
+    },
+    {
+      "t": 180,
+      "privateMB": 126.7,
+      "workingSetMB": 91.4,
+      "threads": 17,
+      "handles": 814
+    },
+    {
+      "t": 190,
+      "privateMB": 128.7,
+      "workingSetMB": 91.5,
+      "threads": 16,
+      "handles": 811
+    },
+    {
+      "t": 200,
+      "privateMB": 131.1,
+      "workingSetMB": 91.5,
+      "threads": 16,
+      "handles": 811
+    },
+    {
+      "t": 210,
+      "privateMB": 134.0,
+      "workingSetMB": 94.1,
+      "threads": 17,
+      "handles": 813
+    },
+    {
+      "t": 220,
+      "privateMB": 134.0,
+      "workingSetMB": 94.1,
+      "threads": 17,
+      "handles": 813
+    },
+    {
+      "t": 230,
+      "privateMB": 133.9,
+      "workingSetMB": 94.1,
+      "threads": 15,
+      "handles": 807
+    },
+    {
+      "t": 240,
+      "privateMB": 137.4,
+      "workingSetMB": 97.6,
+      "threads": 16,
+      "handles": 810
+    },
+    {
+      "t": 250,
+      "privateMB": 134.7,
+      "workingSetMB": 94.9,
+      "threads": 15,
+      "handles": 807
+    },
+    {
+      "t": 260,
+      "privateMB": 135.2,
+      "workingSetMB": 94.1,
+      "threads": 15,
+      "handles": 807
+    },
+    {
+      "t": 270,
+      "privateMB": 135.2,
+      "workingSetMB": 96.3,
+      "threads": 16,
+      "handles": 807
+    },
+    {
+      "t": 280,
+      "privateMB": 135.2,
+      "workingSetMB": 96.3,
+      "threads": 16,
+      "handles": 807
+    },
+    {
+      "t": 290,
+      "privateMB": 135.2,
+      "workingSetMB": 96.3,
+      "threads": 16,
+      "handles": 807
+    },
+    {
+      "t": 300,
+      "privateMB": 135.9,
+      "workingSetMB": 96.4,
+      "threads": 17,
+      "handles": 810
+    }
+  ]
+}

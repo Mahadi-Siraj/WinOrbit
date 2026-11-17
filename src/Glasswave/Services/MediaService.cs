@@ -23,6 +23,10 @@ public sealed class MediaService
     public ImageSource? Art { get; private set; }
     public TimeSpan Duration { get; private set; }
     public bool Available { get; private set; }
+    /// <summary>Something is playing or paused with known details — what the UI should treat as "a track".</summary>
+    public bool HasTrack => HasSession && (!string.IsNullOrWhiteSpace(Title) || IsPlaying);
+    /// <summary>The title, or a sensible stand-in for players that publish none.</summary>
+    public string DisplayTitle => !string.IsNullOrWhiteSpace(Title) ? Title : string.IsNullOrWhiteSpace(Source) ? "Unknown track" : $"Playing in {Source}";
 
     /// <summary>Any property changed.</summary>
     public event Action? Changed;

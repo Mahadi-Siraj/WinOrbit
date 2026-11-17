@@ -205,6 +205,8 @@ public sealed class GeneralSettings
     public string HotkeyMain { get; set; } = "Ctrl+Alt+G";
     /// <summary>Main window material: "acrylic" (blurs what is behind), "mica" (wallpaper tint) or "glass" (Glasswave's own).</summary>
     public string WindowMaterial { get; set; } = "acrylic";
+    /// <summary>Render the settings window on the CPU. Only needed when a graphics driver misbehaves; Glasswave also detects that itself.</summary>
+    public bool ForceSoftwareRendering { get; set; }
     public bool FirstRunDone { get; set; }
 }
 

@@ -28,7 +28,7 @@ public partial class MainWindow : Window
 
     private PageBase? _current;
     private string _currentId = "";
-    private bool _systemBackdrop;
+    private bool _systemBackdrop, _software;
 
     public MainWindow()
     {
@@ -40,6 +40,9 @@ public partial class MainWindow : Window
             Nav.Items.Add(item);
         }
         SourceInitialized += (_, _) => ApplyBackdrop();
+        // If the GPU path fails to present this window, fall back to software rendering with an opaque material
+        // (DWM backdrops need a transparent hardware surface).
+        RenderGuard.Attach(this, Frame, () => { _software = true; ApplyBackdrop(); });
         Hub.Theme.Applied += OnTheme;
         Hub.Profiles.Changed += UpdateProfileChip;
         Closed += (_, _) =>
@@ -87,7 +90,7 @@ public partial class MainWindow : Window
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd == IntPtr.Zero) return;
         var source = HwndSource.FromHwnd(hwnd);
-        var material = Hub.Settings.General.WindowMaterial;
+        var material = _software ? "glass" : Hub.Settings.General.WindowMaterial;
         _systemBackdrop = material != "glass" && WindowFx.ApplySystemBackdrop(this, Hub.Theme.IsDark, material == "acrylic");
         if (source?.CompositionTarget is not null) source.CompositionTarget.BackgroundColor = _systemBackdrop ? Colors.Transparent : Colors.Black;
         // Without a system backdrop (Windows 10, or "Glass" chosen) use Glasswave's own wallpaper-sampled glass.

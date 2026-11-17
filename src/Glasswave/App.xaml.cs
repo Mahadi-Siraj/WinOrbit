@@ -32,13 +32,24 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // ---- headless commands used by the installer/uninstaller ----
+        if (e.Args.Contains("--revert-tweaks", StringComparer.OrdinalIgnoreCase))
+        {
+            try { Paths.Ensure(); var n = WindowsIntegration.Tweaks.RevertAll(); Log.Info($"Reverted {n} Windows setting(s) from the command line"); } catch (Exception ex) { Log.Error("Revert", ex); }
+            Shutdown();
+            return;
+        }
+
         // ---- one instance only: a second launch just opens the existing window ----
         _mutex = new Mutex(true, MutexName, out var first);
-        var requestedPage = PageArg(e.Args);
+        var requestedPage = e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase) ? "quit" : PageArg(e.Args);
+        if (first && requestedPage == "quit") { Shutdown(); return; }
         if (!first)
         {
             // "Glasswave.exe --page widgets" opens that page in the running instance.
             try { File.WriteAllText(ActivationFile, requestedPage ?? ""); } catch { }
+            // This launch came from the user (Start menu, shortcut), so it may hand foreground rights to the running copy.
+            Interop.Native.AllowSetForegroundWindow(-1);
             try { EventWaitHandle.OpenExisting(ShowEventName).Set(); } catch { }
             Shutdown();
             return;
@@ -50,6 +61,7 @@ public partial class App : Application
             {
                 string? page = null;
                 try { if (File.Exists(ActivationFile)) { page = File.ReadAllText(ActivationFile).Trim(); File.Delete(ActivationFile); } } catch { }
+                if (page == "quit") { Dispatcher.BeginInvoke(Quit); continue; }
                 Dispatcher.BeginInvoke(() => ShowMain(string.IsNullOrEmpty(page) ? null : page));
             }
         }) { IsBackground = true, Name = "Glasswave activation" };
@@ -184,6 +196,7 @@ public partial class App : Application
         if (!_main.IsVisible) _main.Show();
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
         _main.Activate();
+        Interop.Native.SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(_main).Handle);
     }
 
     private void ShowTrayMenu()

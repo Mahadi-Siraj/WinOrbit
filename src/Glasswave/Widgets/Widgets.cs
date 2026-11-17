@@ -319,8 +319,8 @@ internal sealed class MediaWidget : WidgetView
     private void Update()
     {
         var m = Hub.Media;
-        var has = m.HasSession && !string.IsNullOrWhiteSpace(m.Title);
-        _title.Text = has ? m.Title : "Nothing playing";
+        var has = m.HasTrack;
+        _title.Text = has ? m.DisplayTitle : "Nothing playing";
         _artist.Text = has ? (string.IsNullOrWhiteSpace(m.Artist) ? m.Source : m.Artist) : "Start music in any app";
         _play.Content = m.IsPlaying ? Glyph.Pause : Glyph.Play;
         _controls.Opacity = has ? 1 : 0.45;

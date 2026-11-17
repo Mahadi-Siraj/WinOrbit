@@ -8,7 +8,8 @@ dist/
 .vs/
 TestResults/
 
-# Never commit personal data
+# Never commit personal data (screenshots show the owner's wallpaper and desktop icons)
+docs/screenshots/
 *.log
 Data/
 portable.flag

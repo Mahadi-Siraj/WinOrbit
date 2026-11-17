@@ -246,7 +246,7 @@ public sealed class WidgetsPage : PageBase
         foreach (var group in WidgetCatalog.All.GroupBy(k => k.Category))
         foreach (var kind in group)
         {
-            var card = new Button { Width = 196, Margin = new Thickness(6), Padding = new Thickness(16, 14, 16, 14), HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = "Add " + kind.Name };
+            var card = new Button { Width = 196, Margin = new Thickness(6), Padding = new Thickness(16, 14, 16, 14), HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, ToolTip = "Add " + kind.Name };
             var sp = new StackPanel();
             var head = Ui.Grid("auto,*,auto");
             var badge = new Border { Width = 34, Height = 34, CornerRadius = new CornerRadius(10), Child = Ui.Icon(kind.Glyph, 15, "T.Accent") };

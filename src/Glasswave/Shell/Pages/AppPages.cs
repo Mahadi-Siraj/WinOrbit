@@ -163,7 +163,9 @@ public sealed class SettingsPage : PageBase
             Kit.ToggleRow("Start with Windows", "Adds Glasswave to your sign-in apps (per-user, no admin). Starts quietly in the tray.", Startup.Enabled, v => { try { Startup.Set(v); G.RunAtStartup = v; Hub.Store.Save(); } catch (Exception ex) { Dialogs.Message("Couldn't change start-up", ex.Message); } }, false),
             Kit.ToggleRow("Keep running when the window is closed", "The island and widgets stay on your desktop; reopen from the tray icon.", G.CloseToTray, v => { G.CloseToTray = v; Hub.Store.Save(); }),
             Kit.ToggleRow("24-hour clock", null, G.Use24Hour, v => { G.Use24Hour = v; Hub.Store.Save(); Hub.Island.Apply(); Hub.Widgets.Apply(); foreach (var w in Hub.Widgets.Windows) w.Rebuild(); }),
-            Kit.ToggleRow("Pause during fullscreen apps", "Stops widget updates and system sampling while a game or fullscreen video is in front.", G.PauseInFullscreen, v => { G.PauseInFullscreen = v; Hub.Store.Save(); })));
+            Kit.ToggleRow("Pause during fullscreen apps", "Stops widget updates and system sampling while a game or fullscreen video is in front.", G.PauseInFullscreen, v => { G.PauseInFullscreen = v; Hub.Store.Save(); }),
+            Kit.ToggleRow("Software rendering for this window", "Only if this window ever appears blank. Glasswave detects that automatically and switches for the session; this makes it permanent. Takes effect when the window is reopened.",
+                G.ForceSoftwareRendering, v => { G.ForceSoftwareRendering = v; Hub.Store.Save(); })));
 
         var failures = App.Current.HotkeyFailures;
         Children.Add(Kit.Section("Keyboard shortcuts", failures.Count > 0 ? $"Already used by another app: {string.Join(", ", failures)}. Choose a different combination." : "Global shortcuts. Use Ctrl, Alt, Shift or Win plus a key, for example Ctrl+Alt+Space.",
@@ -317,12 +319,15 @@ public sealed class AboutPage : PageBase
         _threads = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold); _rm = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold);
         _uptime = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold);
         Children.Add(Kit.Section("Resource use (live)", "Measured from Windows' own process counters every 2 seconds while this page is open.",
-            Kit.Row("Glasswave memory", "Private working set of this process. Closing this window frees most of the UI.", _ram, false),
+            Kit.Row("Glasswave memory", "Private bytes (memory committed by this process) and working set (physical RAM in use right now). Closing this window frees most of the UI.", _ram, false),
             Kit.Row("Glasswave CPU", "Average over the last interval, as a share of all cores.", _cpu),
             Kit.Row("Windows", "Island, widgets and this window.", _threads),
             Kit.Row("Rainmeter (separate process)", "Rainmeter's own usage; it is not part of Glasswave.", _rm),
             Kit.Row("Start-up", "Time from launch until the island and widgets were on screen.", Ui.Text($"{App.StartupTime.TotalMilliseconds:0} ms", "Text.Body", 14, FontWeights.SemiBold)),
             Kit.Row("Running for", null, _uptime),
+            Kit.Row("Rendering", RenderGuard.FellBack ? "The graphics driver did not present this window, so Glasswave switched it to software rendering for this session. Restarting the PC or updating the GPU driver usually restores hardware rendering."
+                    : Hub.Settings.General.ForceSoftwareRendering ? "Software rendering is forced in Settings." : "GPU-accelerated (DirectX).",
+                Kit.Chip(RenderGuard.FellBack || Hub.Settings.General.ForceSoftwareRendering ? "Software" : "Hardware", RenderGuard.FellBack ? "T.Warn" : "T.Good")),
             Kit.Row("Sensors", $"GPU: {(Hub.Monitor.GpuAvailable ? Hub.Monitor.GpuSource : "not available until a monitor is shown")}{(Hub.Monitor.GpuTempAvailable ? " (with temperature)" : "")}. CPU temperature is not shown: Windows has no reliable, admin-free source for it.", Kit.Btn("Trim memory", App.TrimMemory))));
 
         var stores = new[]

@@ -242,9 +242,9 @@ public sealed class HomePage : PageBase
         void Media()
         {
             var m = Hub.Media;
-            var has = m.HasSession && !string.IsNullOrWhiteSpace(m.Title);
+            var has = m.HasTrack;
             if (_mediaTitle is null || _mediaArtist is null) return;
-            _mediaTitle.Text = has ? m.Title : "Nothing playing";
+            _mediaTitle.Text = has ? m.DisplayTitle : "Nothing playing";
             _mediaArtist.Text = has ? $"{m.Artist}{(m.Source.Length > 0 ? " · " + m.Source : "")}" : "Media from any app appears here";
         }
         Media();

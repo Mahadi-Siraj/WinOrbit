@@ -261,6 +261,7 @@ public sealed class WidgetWindow : Window
     private void OnUp(object sender, MouseButtonEventArgs e)
     {
         if (!_pressed) return;
+        if (_dragging) OnMove(sender, e);     // apply the release point: the last move event can be coalesced away
         _pressed = false;
         _glass.ReleaseMouseCapture();
         if (_dragging) { _dragging = false; Hub.Store.Save(); Hub.Widgets.NotifyChanged(); }

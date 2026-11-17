@@ -215,7 +215,7 @@ public partial class IslandWindow : Window
         if (CPeek.Visibility == Visibility.Visible) { FitCompact(); return; }
         var media = Hub.Media;
         var timers = Hub.Timers;
-        var showMedia = S.ShowMedia && media.HasSession && !string.IsNullOrWhiteSpace(media.Title);
+        var showMedia = S.ShowMedia && media.HasTrack;
         var showTimer = S.ShowTimer && timers.IsActive;
         var showDownload = S.WatchDownloads && _downloads.Active is not null && !showTimer;
 
@@ -227,7 +227,7 @@ public partial class IslandWindow : Window
         if (showDownload) CDownloadText.Text = _downloads.Active!.Value.Name;
         if (CMedia.Visibility == Visibility.Visible)
         {
-            CTitle.Text = media.Title;
+            CTitle.Text = media.DisplayTitle;
             if (media.Art is not null) { CArt.Background = new ImageBrush(media.Art) { Stretch = Stretch.UniformToFill }; CArtGlyph.Visibility = Visibility.Collapsed; }
             else { CArt.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft"); CArtGlyph.Visibility = Visibility.Visible; }
         }
@@ -243,9 +243,23 @@ public partial class IslandWindow : Window
         FitCompact();
     }
 
+    private bool _refitQueued;
+
     private void FitCompact()
     {
         if (_expanded) return;
+        // Children that just became visible may not have been measured yet; measure fresh, then re-check once layout settles.
+        foreach (var fe in new FrameworkElement[] { CTitle, CMedia, CTimer, CDownload, CSys, CTime, CDate, CNormal, CPeek, Compact }) fe.InvalidateMeasure();
+        if (!_refitQueued)
+        {
+            _refitQueued = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => { _refitQueued = false; if (!_expanded) FitNow(); });
+        }
+        FitNow();
+    }
+
+    private void FitNow()
+    {
         Compact.Measure(new Size(double.PositiveInfinity, CollapsedHeight));
         var target = Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500);
         if (Math.Abs(target - Pill.Width) > 1.5 || Pill.HasAnimatedProperties) Motion.To(Pill, WidthProperty, target, 280, Motion.Settle);
@@ -403,6 +417,7 @@ public partial class IslandWindow : Window
     private void OnPillUp(object sender, MouseButtonEventArgs e)
     {
         if (!_pressed) return;
+        if (_dragging) OnPillMove(sender, e);
         _pressed = false;
         Pill.ReleaseMouseCapture();
         if (_dragging) { _dragging = false; Hub.Store.Save(); }
@@ -538,11 +553,11 @@ public partial class IslandWindow : Window
     private void UpdateMedia()
     {
         var m = Hub.Media;
-        var has = m.HasSession && !string.IsNullOrWhiteSpace(m.Title);
+        var has = m.HasTrack;
         MediaEmpty.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
         MediaBody.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
         if (!has) { _mediaTick.Stop(); return; }
-        MTitle.Text = m.Title;
+        MTitle.Text = m.DisplayTitle;
         MArtist.Text = string.IsNullOrWhiteSpace(m.Album) ? m.Artist : $"{m.Artist} · {m.Album}";
         MSource.Text = m.Source.ToUpperInvariant();
         MPlay.Content = m.IsPlaying ? Glyph.Pause : Glyph.Play;
