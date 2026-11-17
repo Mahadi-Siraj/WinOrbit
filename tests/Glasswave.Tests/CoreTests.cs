@@ -183,13 +183,31 @@ public class RainmeterTests
         var dir = Path.Combine(Path.GetTempPath(), "gw-p-" + Guid.NewGuid().ToString("N"));
         var skins = Path.Combine(dir, "Skins", "S");
         Directory.CreateDirectory(skins);
-        File.WriteAllText(Path.Combine(skins, "S.ini"), "[M]\nMeasure=Plugin\nPlugin=WebParser\n");
+        File.WriteAllText(Path.Combine(skins, "S.ini"),
+            "[A]\nMeasure=Plugin\nPlugin=WebParser\n" +                       // bundled with Rainmeter
+            "[B]\nMeasure=Plugin\nPlugin=Plugins\\InputText.dll\n" +          // bundled, legacy path syntax
+            "[C]\nMeasure=Plugin\nPlugin=SpotifyPlugin\n" +                   // third-party
+            "[D]\nMeasure=Plugin\nPlugin=RunCommand\nProgram=powershell\n" +  // runs a command
+            "[E]\nMeter=String\nLeftMouseUpAction=[\"https://example.com\"][\"C:\\\"]\n" +   // link + folder: harmless
+            "[F]\nMeter=String\nLeftMouseUpAction=[!Execute [\"#@#tool.bat\"]]\n");
         var svc = new RainmeterService(() => new RainmeterPrefs());
         typeof(RainmeterService).GetProperty(nameof(RainmeterService.SkinsPath))!.SetValue(svc, Path.Combine(dir, "Skins"));
         typeof(RainmeterService).GetProperty(nameof(RainmeterService.SettingsPath))!.SetValue(svc, Path.Combine(dir, "none.ini"));
         svc.Scan();
-        Assert.True(svc.Skins[0].UsesPlugins);
+        var s = svc.Skins[0];
+        Assert.Equal(new[] { "SpotifyPlugin" }, s.ThirdPartyPlugins);
+        Assert.True(s.UsesPlugins);
+        Assert.Equal(new[] { "powershell", "#@#tool.bat" }, s.Launches);
         Directory.Delete(dir, true);
+    }
+
+    [Fact]
+    public void Links_and_folders_are_not_reported_as_programs()
+    {
+        Assert.Empty(RainmeterService.LaunchTargets("[\"http://rainmeter.net/discover\"]"));
+        Assert.Empty(RainmeterService.LaunchTargets("[\"#disk1#\\\"]"));
+        Assert.Empty(RainmeterService.LaunchTargets("[!Refresh][!ToggleConfig \"illustro\\Clock\" \"Clock.ini\"]"));
+        Assert.Equal(new[] { "taskmgr.exe" }, RainmeterService.LaunchTargets("[\"taskmgr.exe\"]"));
     }
 
     [Fact]

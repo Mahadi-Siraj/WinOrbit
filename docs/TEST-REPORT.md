@@ -1,6 +1,6 @@
 # Test & performance report — Glasswave 1.0.0
 
-**Test machine:** Windows 11 Home build 26300 · Intel Core i5-12400F (6C/12T) · NVIDIA GeForce GTX 1660 SUPER (driver 32.0.16.1047) · 16 GB RAM · NVMe SSD · one 1920×1080 display at 100 % scaling, 60 Hz · Wallpaper Engine running a black-and-white live wallpaper · Rainmeter **not** installed.
+**Test machine:** Windows 11 Home build 26300 · Intel Core i5-12400F (6C/12T) · NVIDIA GeForce GTX 1660 SUPER (driver 32.0.16.1047) · 16 GB RAM · NVMe SSD · one 1920×1080 display at 100 % scaling, 60 Hz · Wallpaper Engine running a black-and-white live wallpaper · Rainmeter tested with a throw-away **portable** Rainmeter 4.5.28 (official signed release) in a temporary folder, removed afterwards.
 
 Date: 17 November 2026.
 
@@ -25,7 +25,7 @@ Notes:
 
 Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
-## 2. Automated tests — 32 passing
+## 2. Automated tests — 36 passing
 
 `dotnet test tests/Glasswave.Tests` (also run by `tools/build-release.ps1`, in Release):
 
@@ -34,7 +34,8 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 | Palette | monochrome wallpaper with small colourful icons → neutral graphite palette; blue wallpaper → blue accent; two-colour wallpaper → distinct secondary; empty input → default |
 | Colour maths | hex parsing (3/6/8 digit, invalid), HSL round-trip, WCAG contrast, accent legibility in dark and light mode *(this test caught a real bug: yellow accents were unreadable on white; fixed)* |
 | Wallpaper | box blur preserves flat colour; live-capture maps 1:1 onto its monitor; blank-capture detection |
-| Rainmeter | INI parser (BOM, comments, duplicate keys); skin scan reads state + metadata from the active variant **and modifies no file**; plugin detection; non-Rainmeter zip rejected; `.rmskin` contents (skins, plugins) inspected |
+| Rainmeter | INI parser (BOM, comments, duplicate keys); skin scan reads state + metadata from the active variant **and modifies no file**; bundled vs third-party plugins; RunCommand and program launches flagged, links and folders not; non-Rainmeter zip rejected; `.rmskin` contents (skins, plugins) inspected |
+| Rainmeter, live (`LiveRainmeterTests`, opt-in with `GLASSWAVE_RM_LIVE=1`; otherwise they return immediately) | detects the running portable install; lists the stock illustro skins with state and variants; activate, variant switch, refresh, refresh-all and deactivate take effect in Rainmeter; SHA-256 of every skin file identical before and after |
 | Settings | JSON round-trip; privacy and automation default to off; atomic write; corrupt file preserved as `.corrupt`; presets complete and unique; scheduled dark/light boundaries; time-rule selection; hotkey parsing |
 | Privacy | network gate refuses when off; refuses plain HTTP; **static scan proves no file other than `Network.cs` creates an HttpClient/WebClient/Socket/TcpClient/WebRequest**; weather parser |
 
@@ -55,6 +56,9 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 | Dark mode | default | ✅ |
 | Light mode | temporary light theme | ✅ window, island and widgets; readability guard thickened the tint over the dark wallpaper |
 | GPU presentation failure | **happened for real**: after a display re-enumeration (Windows event 4107 at 13:20) every hardware-rendered WPF window on this PC, including a minimal test window, showed nothing | ✅ Glasswave's render self-check detected the blank window within ~1 s and switched it to software rendering; UI fully usable; Diagnostics reports it |
+| Rainmeter, real install | portable Rainmeter 4.5.28 in a temp folder | ✅ Rainmeter page shows version, Running, 7 skins / 4 active, the active variant of Disk; live tests above pass. **Found and fixed:** every `["…"]` click action was flagged "Runs programs" (so illustro's Disk and Welcome, which only open a drive or a web page, were flagged); Rainmeter's own bundled plugins (InputText in illustro\Google) were flagged as untrusted native code; RunCommand was looked for as a measure type, but it is a plugin, so it was never detected. Now only third-party plugins and real program/script launches are flagged, and the chips name them |
+| `.rmskin` import, real | test package handed over by Glasswave's `Install()` → Rainmeter's Skin Installer → Install | ✅ installer showed name/author/version; skin installed into the portable Skins folder, loaded by Rainmeter (`LoadType=Skin`), and listed active by Glasswave. A package with plugin DLLs was inspected (plugin listed) but not installed. Nothing written to `%APPDATA%\Rainmeter` or `Documents\Rainmeter` |
+| `.rmskin` file picker | UI Automation | ⚠️ not automated: the Windows 11 build 26300 file picker doesn't expose its filename box to UI Automation. The picker is the standard Windows dialog; everything after it was tested as above |
 | Installer | silent install, per-user | ✅ no UAC; files, Start-menu shortcut, start-up entry, Apps & Features entry created; app launches (start-up 0.75 s) |
 | Uninstaller | silent uninstall | ✅ program folder, shortcut, start-up value and uninstall entry removed; user data kept (default answer); Rainmeter untouched |
 | Reinstall over existing data | | ✅ settings picked up |
@@ -63,7 +67,7 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
 | Item | Status |
 |---|---|
-| Real Rainmeter | Not installed on this PC, and installing third-party customisation tools needs the owner's approval. Library, scanning, bang construction and `.rmskin` inspection are covered by unit tests on synthetic skins; the not-installed experience was verified on screen. |
+| Rainmeter: standard (non-portable) install, move/z-order/transparency | Tested with a portable copy only, so detection through the registry and `%APPDATA%\Rainmeter\Rainmeter.ini` is unit-tested but not live. Move, z-order and transparency bangs were not checked visually, because the owner was using the screen. |
 | Multiple monitors, scaling ≠ 100 % | Only one 1080p display at 100 %. Code paths are per-monitor-DPI aware (PerMonitorV2 manifest, per-monitor wallpaper layout, per-display island instances) but untested on hardware. |
 | Windows tweaks applied for real | Not applied, to avoid changing your Windows settings without asking. Read paths were exercised (the page shows your current values); write + backup + revert logic is straightforward registry/API code but was not run on this PC. |
 | Weather | Network is off by default and wasn't enabled. Parsing is unit-tested. |

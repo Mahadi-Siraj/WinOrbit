@@ -30,8 +30,12 @@ public sealed class RmSkin
     public string Version { get; set; } = "";
     public string License { get; set; } = "";
     public string? Preview { get; set; }
-    public bool UsesPlugins { get; set; }
-    public bool RunsCommands { get; set; }
+    /// <summary>Plugins that do not ship with Rainmeter (third-party native DLLs).</summary>
+    public List<string> ThirdPartyPlugins { get; } = new();
+    /// <summary>Programs/scripts the skin can launch (click actions, !Execute, RunCommand).</summary>
+    public List<string> Launches { get; } = new();
+    public bool UsesPlugins => ThirdPartyPlugins.Count > 0;
+    public bool RunsCommands => Launches.Count > 0;
     public string? LoadError { get; set; }
 
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Config.Split('\\').Last() : Name;
@@ -179,13 +183,59 @@ public sealed class RainmeterService
             skin.License = ini.Get("Metadata", "License");
             foreach (var section in ini.Sections)
             {
-                if (ini.Get(section, "Measure").Equals("Plugin", StringComparison.OrdinalIgnoreCase) || ini.Get(section, "Plugin").Length > 0) skin.UsesPlugins = true;
-                if (ini.Get(section, "Measure").Equals("RunCommand", StringComparison.OrdinalIgnoreCase) ||
-                    ini.Values(section).Any(v => v.Contains("[\"", StringComparison.Ordinal) || v.Contains("!Execute", StringComparison.OrdinalIgnoreCase) && v.Contains(".exe", StringComparison.OrdinalIgnoreCase)))
-                    skin.RunsCommands = true;
+                var plugin = PluginName(ini.Get(section, "Plugin"));
+                if (plugin.Length > 0)
+                {
+                    if (plugin.Equals("RunCommand", StringComparison.OrdinalIgnoreCase))
+                        AddOnce(skin.Launches, ini.Get(section, "Program") is { Length: > 0 } prog ? prog : "a command (RunCommand)");
+                    else if (!BundledPlugins.Contains(plugin)) AddOnce(skin.ThirdPartyPlugins, plugin);
+                }
+                foreach (var v in ini.Values(section))
+                    foreach (var target in LaunchTargets(v)) AddOnce(skin.Launches, target);
             }
         }
         catch (Exception ex) { skin.LoadError = "Could not read skin file: " + ex.Message; }
+    }
+
+    /// <summary>Plugins installed with Rainmeter 4.5 itself; these are not third-party code.</summary>
+    internal static readonly HashSet<string> BundledPlugins = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ActionTimer", "AdvancedCPU", "AudioLevel", "CoreTemp", "FileView", "FolderInfo", "InputText", "iTunesPlugin",
+        "PerfMon", "PingPlugin", "PowerPlugin", "QuotePlugin", "ResMon", "RunCommand", "SpeedFanPlugin", "UsageMonitor",
+        "Win7AudioPlugin", "WindowMessagePlugin", "WebParser", "NowPlaying", "SysInfo", "WifiStatus", "MediaKey", "RecycleManager",
+    };
+
+    private static readonly string[] ProgramExtensions = { ".exe", ".bat", ".cmd", ".com", ".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".msi", ".lnk", ".scr", ".pif", ".hta" };
+
+    internal static string PluginName(string value)
+    {
+        var v = value.Trim().Trim('"');
+        if (v.Length == 0) return "";
+        return Path.GetFileNameWithoutExtension(v.Replace('/', '\\').Split('\\').Last());
+    }
+
+    /// <summary>
+    /// Targets of ["..."] actions and !Execute that start a program or script. Links (http/https/mailto) and
+    /// folders (e.g. illustro's ["C:\"]) only open in Explorer or the browser, so they are not reported.
+    /// </summary>
+    internal static IEnumerable<string> LaunchTargets(string value)
+    {
+        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(value, "\\[\"([^\"]+)\""))
+        {
+            var t = m.Groups[1].Value.Trim();
+            if (t.Length == 0 || t.StartsWith('!')) continue;
+            if (System.Text.RegularExpressions.Regex.IsMatch(t, "^(https?|mailto|ftp):", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) continue;
+            var file = t.Split(' ')[0];
+            var lower = t.ToLowerInvariant();
+            if (ProgramExtensions.Any(e => file.EndsWith(e, StringComparison.OrdinalIgnoreCase) || lower.Contains(e + " ") || lower.EndsWith(e)) ||
+                lower.StartsWith("cmd") || lower.StartsWith("powershell") || lower.StartsWith("pwsh") || lower.StartsWith("wscript") || lower.StartsWith("cscript") || lower.StartsWith("rundll32"))
+                yield return t;
+        }
+    }
+
+    private static void AddOnce(List<string> list, string item)
+    {
+        if (!list.Contains(item, StringComparer.OrdinalIgnoreCase)) list.Add(item);
     }
 
     private static string? FindPreview(string dir)

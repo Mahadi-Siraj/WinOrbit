@@ -217,8 +217,8 @@ public sealed class RainmeterPage : PageBase
             body.Children.Add(Ui.Text(s.Information, "Text.Caption", 11.5).With(t => { t.Margin = new Thickness(0, 8, 0, 0); t.MaxHeight = 32; t.TextTrimming = TextTrimming.CharacterEllipsis; }));
         var chips = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         if (s.Active) chips.Children.Add(Kit.Chip(s.Variants.Count > 1 ? s.ActiveVariant : "Active", "T.Good").With(c => c.Margin = new Thickness(0, 0, 6, 4)));
-        if (s.UsesPlugins) chips.Children.Add(Kit.Chip("Uses plugins", "T.Warn", Glyph.Warning).With(c => { c.Margin = new Thickness(0, 0, 6, 4); c.ToolTip = "This skin loads plugin DLLs. Plugins are native code that run inside Rainmeter — only use skins from authors you trust."; }));
-        if (s.RunsCommands) chips.Children.Add(Kit.Chip("Runs programs", "T.Warn", Glyph.Warning).With(c => { c.Margin = new Thickness(0, 0, 6, 4); c.ToolTip = "This skin can launch programs or commands."; }));
+        if (s.UsesPlugins) chips.Children.Add(Kit.Chip("Third-party plugin", "T.Warn", Glyph.Warning).With(c => { c.Margin = new Thickness(0, 0, 6, 4); c.ToolTip = $"Loads {string.Join(", ", s.ThirdPartyPlugins)}, which did not come with Rainmeter. Plugins are native code that run inside Rainmeter — only use skins from authors you trust."; }));
+        if (s.RunsCommands) chips.Children.Add(Kit.Chip("Runs programs", "T.Warn", Glyph.Warning).With(c => { c.Margin = new Thickness(0, 0, 6, 4); c.ToolTip = "This skin can launch: " + string.Join(", ", s.Launches.Take(4)) + (s.Launches.Count > 4 ? $" and {s.Launches.Count - 4} more" : ""); }));
         if (s.LoadError is not null) chips.Children.Add(Kit.Chip("Read error", "T.Danger", Glyph.Error).With(c => { c.Margin = new Thickness(0, 0, 6, 4); c.ToolTip = s.LoadError; }));
         if (chips.Children.Count > 0) body.Children.Add(chips);
 
@@ -262,7 +262,9 @@ public sealed class RainmeterPage : PageBase
     {
         if (on && (s.UsesPlugins || s.RunsCommands) && !Hub.Settings.Rainmeter.Favourites.Contains(s.Config) && !Hub.Settings.Rainmeter.Recent.Contains(s.Config))
         {
-            var what = s.UsesPlugins && s.RunsCommands ? "loads plugin DLLs and can run programs" : s.UsesPlugins ? "loads plugin DLLs (native code)" : "can launch programs or commands";
+            var plugins = $"loads third-party plugin code ({string.Join(", ", s.ThirdPartyPlugins)})";
+            var launches = $"can launch {string.Join(", ", s.Launches.Take(3))}{(s.Launches.Count > 3 ? " and more" : "")}";
+            var what = s.UsesPlugins && s.RunsCommands ? $"{plugins} and {launches}" : s.UsesPlugins ? plugins : launches;
             if (!Dialogs.Confirm("Activate this skin?", $"“{s.DisplayName}” {what}. That is common for advanced skins, but only activate skins from sources you trust.", "Activate"))
             { Later(RenderLibrary, 10); return; }
         }
