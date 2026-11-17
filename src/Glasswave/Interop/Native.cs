@@ -323,6 +323,42 @@ internal interface IAudioEndpointVolumeCallback
     [PreserveSig] int OnNotify(IntPtr data);
 }
 
+/// <summary>Per-app audio sessions on a device (what the volume mixer lists).</summary>
+[ComImport, Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IAudioSessionManager2
+{
+    [PreserveSig] int GetAudioSessionControl(IntPtr guid, int flags, out IntPtr control);
+    [PreserveSig] int GetSimpleAudioVolume(IntPtr guid, int flags, out IntPtr volume);
+    [PreserveSig] int GetSessionEnumerator(out IAudioSessionEnumerator sessions);
+}
+
+[ComImport, Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IAudioSessionEnumerator
+{
+    [PreserveSig] int GetCount(out int count);
+    // Returns IAudioSessionControl; take it as IUnknown and cast, so the runtime asks for IAudioSessionControl2 properly.
+    [PreserveSig] int GetSession(int index, [MarshalAs(UnmanagedType.IUnknown)] out object session);
+}
+
+[ComImport, Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IAudioSessionControl2
+{
+    // IAudioSessionControl
+    [PreserveSig] int GetState(out int state);
+    [PreserveSig] int GetDisplayName(out IntPtr name);
+    [PreserveSig] int SetDisplayName(IntPtr name, IntPtr ctx);
+    [PreserveSig] int GetIconPath(out IntPtr path);
+    [PreserveSig] int SetIconPath(IntPtr path, IntPtr ctx);
+    [PreserveSig] int GetGroupingParam(out Guid g);
+    [PreserveSig] int SetGroupingParam(IntPtr g, IntPtr ctx);
+    [PreserveSig] int RegisterAudioSessionNotification(IntPtr client);
+    [PreserveSig] int UnregisterAudioSessionNotification(IntPtr client);
+    // IAudioSessionControl2
+    [PreserveSig] int GetSessionIdentifier(out IntPtr id);
+    [PreserveSig] int GetSessionInstanceIdentifier(out IntPtr id);
+    [PreserveSig] int GetProcessId(out uint pid);
+}
+
 /// <summary>Peak level of what the device is playing (0..1) — the same meter the Windows volume mixer shows.</summary>
 [ComImport, Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IAudioMeterInformation

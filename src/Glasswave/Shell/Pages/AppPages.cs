@@ -177,6 +177,9 @@ public sealed class SettingsPage : PageBase
         var failures = App.Current.HotkeyFailures;
         Children.Add(Kit.Section("Keyboard shortcuts", failures.Count > 0 ? $"Already used by another app: {string.Join(", ", failures)}. Choose a different combination." : "Global shortcuts. Use Ctrl, Alt, Shift or Win plus a key, for example Ctrl+Alt+Space.",
             HotkeyRow("Open the Dynamic Island", G.HotkeyIsland, v => G.HotkeyIsland = v, false),
+            HotkeyRow("Search apps, settings and actions", G.HotkeyLauncher, v => G.HotkeyLauncher = v),
+            Kit.Row("Web search in the launcher", "When nothing matches, the launcher offers a web search that opens in your own browser. Glasswave itself sends nothing.",
+                Kit.Combo(new[] { "DuckDuckGo", "Google", "Bing" }, Math.Max(0, Array.IndexOf(new[] { "duckduckgo", "google", "bing" }, G.SearchEngine)), i => { G.SearchEngine = new[] { "duckduckgo", "google", "bing" }[i]; Hub.Store.Save(); }, 150)),
             HotkeyRow("Show or hide widgets", G.HotkeyWidgets, v => G.HotkeyWidgets = v),
             HotkeyRow("Open Glasswave", G.HotkeyMain, v => G.HotkeyMain = v)));
 
@@ -321,6 +324,14 @@ public sealed class AboutPage : PageBase
         t.Children.Add(Ui.Text("Glasswave", "Text.Title", 24));
         t.Children.Add(Ui.Text($"Version {v?.ToString(3)} · .NET {Environment.Version} · Windows build {Environment.OSVersion.Version.Build}" + (Paths.Portable ? " · portable" : ""), "Text.Caption", 12.5));
         t.Children.Add(Ui.Text("A Liquid Glass desktop for Windows. Local-first, no telemetry. Not code-signed, so Windows SmartScreen may warn on first install.", "Text.Caption", 12.5).With(x => x.Margin = new Thickness(0, 4, 0, 0)));
+        if (AppInfo.Author.Length > 0 || AppInfo.InstagramUrl is not null || AppInfo.GitHubUrl is not null)
+        {
+            var made = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+            if (AppInfo.Author.Length > 0) made.Children.Add(Ui.Text("Made by " + AppInfo.Author, "Text.Body", 13, FontWeights.SemiBold).With(x => { x.VerticalAlignment = VerticalAlignment.Center; x.Margin = new Thickness(0, 0, 12, 0); }));
+            if (AppInfo.InstagramUrl is { } ig) made.Children.Add(Kit.Btn("Instagram  @" + AppInfo.Instagram.TrimStart('@'), () => Island.IslandWindow.OpenUri(ig), null, false, ig).With(b => b.Margin = new Thickness(0, 0, 8, 0)));
+            if (AppInfo.GitHubUrl is { } gh) made.Children.Add(Kit.Btn("GitHub  " + AppInfo.GitHub, () => Island.IslandWindow.OpenUri(gh), null, false, gh));
+            t.Children.Add(made);
+        }
         head.Children.Add(t.At(0, 1));
         Children.Add(Kit.Card(head, new Thickness(22, 18, 22, 18)).With(c => c.Margin = new Thickness(0, 0, 0, 16)));
 

@@ -4,7 +4,7 @@
         xmlns:d="clr-namespace:Glasswave.Design"
         Title="Glasswave Island" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True" ShowActivated="False" ResizeMode="NoResize"
-        Width="560" Height="380" UseLayoutRounding="True"
+        Width="560" Height="420" UseLayoutRounding="True"
         FontFamily="{DynamicResource F.Family}" Foreground="{DynamicResource T.Text}" TextOptions.TextFormattingMode="Ideal">
     <Grid x:Name="Root">
         <Grid.LayoutTransform>
@@ -119,18 +119,21 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="MPos" Text="0:00" Style="{StaticResource Text.Caption}" FontSize="11" MinWidth="32"/>
-                                    <ProgressBar x:Name="MProgress" Grid.Column="1" Minimum="0" Maximum="1" Margin="6,0" VerticalAlignment="Center"/>
+                                    <Slider x:Name="MSeek" Grid.Column="1" Minimum="0" Maximum="1" Margin="6,0" VerticalAlignment="Center" AutomationProperties.Name="Position in track"
+                                            ValueChanged="OnSeekChanged" Thumb.DragStarted="OnSeekDragStarted" Thumb.DragCompleted="OnSeekDragCompleted"/>
                                     <TextBlock x:Name="MDur" Grid.Column="2" Text="0:00" Style="{StaticResource Text.Caption}" FontSize="11" MinWidth="32" TextAlignment="Right"/>
                                 </Grid>
                                 <Grid Grid.Row="2">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <Button x:Name="MBack" Style="{StaticResource Button.Icon}" Content="−10" FontFamily="{DynamicResource F.Family}" FontSize="11" FontWeight="SemiBold" ToolTip="Back 10 seconds (←)" AutomationProperties.Name="Back 10 seconds" Click="OnSkipBack"/>
                                         <Button Style="{StaticResource Button.Icon}" Content="&#xE892;" ToolTip="Previous" AutomationProperties.Name="Previous track" Click="OnPrev"/>
                                         <Button x:Name="MPlay" Style="{StaticResource Button.IconAccent}" Content="&#xE768;" Width="42" Height="42" FontSize="16" Margin="8,0" ToolTip="Play / pause (Space)" AutomationProperties.Name="Play or pause" Click="OnPlay"/>
                                         <Button Style="{StaticResource Button.Icon}" Content="&#xE893;" ToolTip="Next" AutomationProperties.Name="Next track" Click="OnNext"/>
+                                        <Button x:Name="MFwd" Style="{StaticResource Button.Icon}" Content="+10" FontFamily="{DynamicResource F.Family}" FontSize="11" FontWeight="SemiBold" ToolTip="Forward 10 seconds" AutomationProperties.Name="Forward 10 seconds" Click="OnSkipForward"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <TextBlock Text="&#xE767;" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource T.Text2}" Margin="0,0,8,0"/>
-                                        <Slider x:Name="MVolume" Width="130" Minimum="0" Maximum="100" AutomationProperties.Name="Volume" ValueChanged="OnVolumeSlider"/>
+                                        <Slider x:Name="MVolume" Width="100" Minimum="0" Maximum="100" AutomationProperties.Name="Volume" ValueChanged="OnVolumeSlider"/>
                                     </StackPanel>
                                 </Grid>
                             </Grid>

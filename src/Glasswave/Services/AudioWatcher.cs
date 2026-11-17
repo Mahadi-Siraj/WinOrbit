@@ -68,6 +68,35 @@ public sealed class AudioWatcher : IDisposable
         _volume = null; _meter = null; _callback = null;
     }
 
+    /// <summary>
+    /// Loudness of one app's audio right now (0..1), from its session in the volume mixer — used to tell whether a
+    /// player that doesn't report to Windows (classic VLC) is playing or paused. Call on the UI thread.
+    /// </summary>
+    public double ProcessPeak(int pid)
+    {
+        try
+        {
+            if (_enumerator is null || _enumerator.GetDefaultAudioEndpoint(0, 1, out var device) != 0) return 0;
+            var iid = typeof(IAudioSessionManager2).GUID;
+            if (device.Activate(ref iid, 23, IntPtr.Zero, out var obj) != 0) return 0;
+            var manager = (IAudioSessionManager2)obj;
+            if (manager.GetSessionEnumerator(out var sessions) != 0) return 0;
+            sessions.GetCount(out var count);
+            double peak = 0;
+            for (var i = 0; i < count; i++)
+            {
+                if (sessions.GetSession(i, out var session) != 0 || session is null) continue;
+                if (session is IAudioSessionControl2 control && control.GetProcessId(out var p) == 0 && p == pid && session is IAudioMeterInformation meter && meter.GetPeakValue(out var v) == 0)
+                    peak = Math.Max(peak, v);
+                Marshal.ReleaseComObject(session);
+            }
+            Marshal.ReleaseComObject(sessions);
+            Marshal.ReleaseComObject(manager);
+            return peak;
+        }
+        catch { return 0; }
+    }
+
     /// <summary>Current output peak 0..1 (what is audible right now), or 0 when unavailable.</summary>
     public double Peak()
     {

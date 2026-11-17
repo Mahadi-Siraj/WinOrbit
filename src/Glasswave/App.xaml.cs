@@ -95,6 +95,7 @@ public partial class App : Application
         Hub.Lyrics = new LyricsService(Hub.Net, () => Hub.Settings.Privacy);
         Hub.Privacy = new PrivacyIndicator(Dispatcher);
         Hub.Clipboard = new ClipboardHistory(store, () => Hub.Settings.Island);
+        Hub.Power = new PowerEvents();
         Hub.Ready = true;
 
         Hub.Theme.Load();
@@ -116,6 +117,7 @@ public partial class App : Application
         Hub.Audio.Start();
         Hub.Privacy.Start();
         Hub.Clipboard.Apply();
+        Hub.Power.Start();
 
         // First launch: seed a tasteful starter layout so the product is visibly alive.
         if (store.IsFirstRun) SeedFirstRun();
@@ -187,9 +189,31 @@ public partial class App : Application
             }
             else HotkeyFailures.Add(fallback is null ? g.HotkeyIsland : g.HotkeyIsland);
         }
+        // Launcher: Alt+Space by default (the PowerToys Run / Flow Launcher convention). If something else owns it
+        // (e.g. Copilot on some PCs), take the first free alternative and remember it.
+        if (!string.IsNullOrWhiteSpace(g.HotkeyLauncher) && !Hub.Shell.RegisterHotkey(g.HotkeyLauncher, ToggleLauncher))
+        {
+            var fallback = new[] { "Win+Alt+Space", "Ctrl+Alt+K", "Ctrl+Shift+K" }.FirstOrDefault(f => f != g.HotkeyLauncher && Hub.Shell.RegisterHotkey(f, ToggleLauncher));
+            if (fallback is not null && g.HotkeyLauncher == "Alt+Space")
+            {
+                Log.Info($"Alt+Space is used by another app; launcher shortcut moved to {fallback}");
+                g.HotkeyLauncher = fallback;
+                Hub.Store.Save();
+            }
+            else HotkeyFailures.Add(g.HotkeyLauncher);
+        }
         Reg(g.HotkeyWidgets, () => Hub.Widgets.ToggleAll());
         Reg(g.HotkeyMain, () => { if (_main is { IsVisible: true, IsActive: true }) _main.Hide(); else ShowMain(null); });
         if (HotkeyFailures.Count > 0) Log.Warn("Hotkeys already in use by another app: " + string.Join(", ", HotkeyFailures));
+    }
+
+    private Launcher.LauncherWindow? _launcher;
+
+    /// <summary>Open the launcher, or close it if it's already open.</summary>
+    public void ToggleLauncher()
+    {
+        _launcher ??= new Launcher.LauncherWindow();
+        if (_launcher.IsVisible) _launcher.Dismiss(); else _launcher.Open();
     }
 
     public void ShowMain(string? page)
@@ -213,6 +237,7 @@ public partial class App : Application
         m.Items.Clear();
         MenuItem Item(string header, Action a, bool check = false) { var i = new MenuItem { Header = header, IsChecked = check }; i.Click += (_, _) => a(); return i; }
         m.Items.Add(Item("Open Glasswave", () => ShowMain(null)));
+        m.Items.Add(Item($"Search…   {Hub.Settings.General.HotkeyLauncher}", ToggleLauncher));
         m.Items.Add(new Separator());
         m.Items.Add(Item("Dynamic Island", () => { Hub.Settings.Island.Enabled = !Hub.Settings.Island.Enabled; Hub.Store.Save(); Hub.Island.Apply(); }, Hub.Settings.Island.Enabled));
         m.Items.Add(Item("Desktop widgets", () => Hub.Widgets.ToggleAll(), Hub.Settings.Layout.WidgetsVisible));

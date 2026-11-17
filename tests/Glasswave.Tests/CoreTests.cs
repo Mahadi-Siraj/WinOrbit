@@ -445,6 +445,102 @@ public class LiveActivityTests
     }
 }
 
+public class WindowPlayerTests
+{
+    [Theory]
+    [InlineData("Joznez, 2WEI & Kataem - Ready for War - VLC media player", " - VLC media player", "VLC", "Ready for War", "Joznez, 2WEI & Kataem")]
+    [InlineData("holiday video.mp4 - VLC media player", " - VLC media player", "VLC", "holiday video", "")]
+    [InlineData("Daft Punk - One More Time [foobar2000]", " [foobar2000]", "foobar2000", "One More Time", "Daft Punk")]
+    [InlineData("12. Queen - Bohemian Rhapsody - Winamp", " - Winamp", "Winamp", "Bohemian Rhapsody", "Queen")]
+    [InlineData("Interstellar.2014.1080p.mkv", null, "MPC-HC", "Interstellar.2014.1080p", "")]
+    public void Player_titles_parse(string window, string? suffix, string app, string title, string artist)
+    {
+        var r = Glasswave.Services.WindowPlayers.ParseTitle(window, suffix, app);
+        Assert.NotNull(r);
+        Assert.Equal(title, r!.Value.Title);
+        Assert.Equal(artist, r.Value.Artist);
+    }
+
+    [Theory]
+    [InlineData("VLC media player", " - VLC media player", "VLC")]
+    [InlineData("foobar2000", " [foobar2000]", "foobar2000")]
+    [InlineData("", null, "MPC-HC")]
+    public void Idle_player_windows_are_not_tracks(string window, string? suffix, string app)
+        => Assert.Null(Glasswave.Services.WindowPlayers.ParseTitle(window, suffix, app));
+
+    [Fact]
+    public void Low_battery_warnings_fire_once_per_threshold()
+    {
+        Assert.Equal(20, Glasswave.Services.PowerEvents.LowBatteryWarning(21, 20));
+        Assert.Null(Glasswave.Services.PowerEvents.LowBatteryWarning(20, 19));
+        Assert.Equal(10, Glasswave.Services.PowerEvents.LowBatteryWarning(11, 10));
+        Assert.Null(Glasswave.Services.PowerEvents.LowBatteryWarning(40, 39));
+    }
+}
+
+public class LauncherTests
+{
+    [Theory]
+    [InlineData("2+2", 4)]
+    [InlineData("2 + 3 * 4", 14)]
+    [InlineData("(2+3)*4", 20)]
+    [InlineData("2^10", 1024)]
+    [InlineData("2^3^2", 512)]
+    [InlineData("-5+2", -3)]
+    [InlineData("50%", 0.5)]
+    [InlineData("200*15%", 30)]
+    [InlineData("10%3", 1)]
+    [InlineData("sqrt(16)+1", 5)]
+    [InlineData("1,5*2", 3)]
+    [InlineData("12×3÷4", 9)]
+    public void Calculator_evaluates(string input, double expected)
+    {
+        Assert.True(Glasswave.Launcher.Calculator.TryEvaluate(input, out var v));
+        Assert.Equal(expected, v, 9);
+    }
+
+    [Theory]
+    [InlineData("notepad")]
+    [InlineData("spotify")]
+    [InlineData("42")]
+    [InlineData("2+")]
+    [InlineData("1/0")]
+    [InlineData("e-mail")]
+    public void Calculator_ignores_non_sums(string input) => Assert.False(Glasswave.Launcher.Calculator.TryEvaluate(input, out _));
+
+    [Theory]
+    [InlineData("10 km to mi", "6.213712 mi")]
+    [InlineData("10km to mi", "6.213712 mi")]
+    [InlineData("212 f to c", "100 °C")]
+    [InlineData("0 c in f", "32 °F")]
+    [InlineData("1 gb to mb", "1,024 mb")]
+    [InlineData("2 hours to min", "120 min")]
+    public void Units_convert(string input, string expected)
+    {
+        Assert.True(Glasswave.Launcher.Units.TryConvert(input, out var r));
+        Assert.Equal(expected, r.Replace(' ', ' ').Replace(" ", " "), ignoreCase: true);
+    }
+
+    [Fact]
+    public void Units_refuse_mismatched_groups() => Assert.False(Glasswave.Launcher.Units.TryConvert("10 kg to km", out _));
+
+    [Fact]
+    public void Ranking_prefers_exact_then_prefix_then_words_then_initials()
+    {
+        double M(string q, string t, string k = "") => Glasswave.Launcher.LauncherIndex.Match(q, t, k);
+        Assert.True(M("chrome", "Chrome") > M("chrome", "Chrome Remote Desktop"));
+        Assert.True(M("chr", "Chrome") > M("chr", "Google Chrome"));
+        Assert.True(M("code", "Visual Studio Code") > 0);
+        Assert.True(M("vsc", "Visual Studio Code") >= 560);
+        Assert.True(M("bluetooth", "Bluetooth & devices") > M("blue", "Night light", "blue light warm"));
+        Assert.True(M("dnd", "Focus", "do not disturb dnd") > 0);
+        Assert.Equal(0, M("zzz", "Calculator"));
+        Assert.True(M("vscode", "Visual Studio Code") > 0);
+        Assert.Equal(0, M("spot", "Need For Speed Most Wanted Black Edition"));
+        Assert.Equal(0, M("blue", "Where You Are 1 HOUR VERSION Nasheed Background Vocals"));
+    }
+}
+
 public class PrivacyTests
 {
     [Fact]

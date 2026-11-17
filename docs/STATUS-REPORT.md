@@ -1,6 +1,6 @@
 # Glasswave — status report
 
-17 November 2026 · version 1.0.0 · 50 automated tests passing · local Git only (not published)
+17 November 2026 · version 1.0.0 · 85 automated tests passing · local Git only (not published)
 
 This is an honest account of where Glasswave stands: what works, what broke during testing and was fixed, what is still weak, and what only you can check.
 

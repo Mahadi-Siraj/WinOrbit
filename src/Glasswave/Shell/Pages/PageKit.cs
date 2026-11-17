@@ -53,10 +53,13 @@ public abstract class PageBase : StackPanel
 /// <summary>Composable building blocks for settings pages.</summary>
 public static class Kit
 {
+    /// <summary>Marks a setting row or section so Settings search can find it and jump to it.</summary>
+    public sealed record SearchTag(string Label, string Description);
+
     /// <summary>A titled card containing rows.</summary>
     public static Border Section(string title, string? description, params UIElement[] content)
     {
-        var card = new Border { Margin = new Thickness(0, 0, 0, 16) };
+        var card = new Border { Margin = new Thickness(0, 0, 0, 16), Tag = string.IsNullOrEmpty(title) ? null : new SearchTag(title, description ?? "") };
         card.SetResourceReference(FrameworkElement.StyleProperty, "Card");
         card.Padding = new Thickness(22, 18, 22, 10);
         var stack = new StackPanel();
@@ -81,6 +84,7 @@ public static class Kit
     {
         var g = Ui.Grid(glyph is null ? "*,auto" : "auto,*,auto");
         g.MinHeight = 52;
+        g.Tag = new SearchTag(label, description ?? "");
         var col = 0;
         if (glyph is not null) { g.Children.Add(Ui.Icon(glyph, 17, "T.Text2").With(t => { t.Margin = new Thickness(0, 0, 14, 0); t.Width = 20; })); col = 1; }
         var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 10, 18, 10) };

@@ -207,11 +207,15 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Download activity", "Watches your Downloads folder for files that browsers are still downloading. Only file names are read, locally.", S.WatchDownloads, v => { S.WatchDownloads = v; Save(); }, true, Glyph.Download)));
 
         Children.Add(Kit.Section("Live activities", "Things the island shows on its own, the moment they happen. All event-driven: nothing here polls.",
-            Kit.ToggleRow("Volume meter", "Changing the volume — keyboard keys, the taskbar, scrolling on the island — shows a glass meter in the capsule.", S.VolumeHud, v => { S.VolumeHud = v; Save(); }, false, Glyph.Volume),
+            Kit.ToggleRow("Volume and brightness meter", "Changing the volume — keyboard keys, the taskbar, scrolling on the island — or a laptop's brightness shows a glass meter in the capsule.", S.VolumeHud, v => { S.VolumeHud = v; Save(); }, false, Glyph.Volume),
+            Kit.ToggleRow("Charging and battery", "On laptops: a moment in the capsule when you plug in or unplug, and a warning at 20 % and 10 %.", S.BatteryAlerts, v => { S.BatteryAlerts = v; Save(); }, true, Glyph.Battery),
             Kit.ToggleRow("Bars follow the music", "The equaliser in the capsule moves with what's actually playing, tinted by the album art. Reads Windows' output level 20 times a second, only while music plays.", S.AudioReactive, v => { S.AudioReactive = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Microphone and camera dot", "An orange dot while any app uses your microphone, green for the camera — hover it to see which app. Read locally from Windows' own privacy records.", S.PrivacyDot, v => { S.PrivacyDot = v; Save(); }, true, Glyph.Shield),
             Kit.ToggleRow("Lyrics in the capsule", Hub.Settings.Privacy.LyricsEnabled ? "Shows the line being sung instead of the song title." : "Turn on Synced lyrics in Settings › Privacy & network first.", S.LyricsInCapsule, v => { S.LyricsInCapsule = v; Save(); }, true, Glyph.Note),
-            Kit.ToggleRow("Clipboard history", "Keeps the last 40 copied items in memory for the Clipboard tab. Pinned text is saved; everything else is forgotten when Glasswave quits. Private copies (password managers) are skipped.", S.ClipboardHistory, v => { S.ClipboardHistory = v; Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy)));
+            Kit.ToggleRow("Clipboard history", "Keeps the last 40 copied items in memory for the Clipboard tab. Pinned text is saved; everything else is forgotten when Glasswave quits. Private copies (password managers) are skipped.", S.ClipboardHistory, v => { S.ClipboardHistory = v; Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy),
+            Kit.Row("Preview", "See what each live activity looks like on your island.", Kit.Buttons(
+                Kit.Btn("Charging", () => Hub.Island.Demo("charging")), Kit.Btn("Low battery", () => Hub.Island.Demo("low")),
+                Kit.Btn("Volume", () => Hub.Island.Demo("volume")), Kit.Btn("Microphone", () => Hub.Island.Demo("mic"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]

@@ -91,8 +91,10 @@ public sealed class IslandSettings
     public bool SnapToCentre { get; set; } = true;
     /// <summary>Only vertical dragging; the island always stays horizontally centred.</summary>
     public bool KeepCentred { get; set; }
-    /// <summary>Show volume changes (keys, taskbar, other apps) as an animated meter in the capsule.</summary>
+    /// <summary>Show volume and (laptop) brightness changes as an animated meter in the capsule.</summary>
     public bool VolumeHud { get; set; } = true;
+    /// <summary>Laptops: announce plugging in/out and warn at 20 % and 10 % battery.</summary>
+    public bool BatteryAlerts { get; set; } = true;
     /// <summary>Equaliser bars follow what is actually playing (Windows' output meter) instead of a loop.</summary>
     public bool AudioReactive { get; set; } = true;
     /// <summary>Show a dot while an app uses the microphone or camera, like phones do.</summary>
@@ -221,6 +223,12 @@ public sealed class GeneralSettings
     public string HotkeyIsland { get; set; } = "Ctrl+Alt+Space";
     public string HotkeyWidgets { get; set; } = "Ctrl+Alt+W";
     public string HotkeyMain { get; set; } = "Ctrl+Alt+G";
+    /// <summary>Opens the launcher. Alt+Space is what PowerToys Run and Flow Launcher use; a free fallback is chosen if taken.</summary>
+    public string HotkeyLauncher { get; set; } = "Alt+Space";
+    /// <summary>Web search in the launcher opens this engine in the user's own browser: duckduckgo, google or bing.</summary>
+    public string SearchEngine { get; set; } = "duckduckgo";
+    /// <summary>The welcome card (choose a starting style) was completed or dismissed.</summary>
+    public bool WelcomeDone { get; set; }
     /// <summary>Main window material: "acrylic" (blurs what is behind), "mica" (wallpaper tint) or "glass" (Glasswave's own).</summary>
     public string WindowMaterial { get; set; } = "acrylic";
     /// <summary>Render the settings window on the CPU. Only needed when a graphics driver misbehaves; Glasswave also detects that itself.</summary>
@@ -290,6 +298,8 @@ public sealed class UserData
     public List<FocusSession> Sessions { get; set; } = new();
     /// <summary>Clipboard items the user pinned (text only). Unpinned history lives in memory and is never written to disk.</summary>
     public List<string> ClipPins { get; set; } = new();
+    /// <summary>How often each launcher result was opened, to rank favourites first. Stays on this PC.</summary>
+    public Dictionary<string, int> LaunchCounts { get; set; } = new();
 
     [JsonIgnore] public const string IslandNoteKey = "island";
 }

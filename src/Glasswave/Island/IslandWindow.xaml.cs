@@ -23,7 +23,10 @@ namespace Glasswave.Island;
 /// </summary>
 public partial class IslandWindow : Window
 {
-    private const double ExpandedWidth = 460, ExpandedHeight = 290, CollapsedHeight = 38;
+    private const double ExpandedWidth = 460, ExpandedHeight = 290, ControlsHeight = 366, CollapsedHeight = 38;
+
+    /// <summary>The Control Centre tab is taller (three rows of tiles); the others share one height.</summary>
+    private double HeightFor(string tab) => tab == "controls" ? ControlsHeight : ExpandedHeight;
 
     public static readonly DependencyProperty RadiusProperty = DependencyProperty.Register(nameof(Radius), typeof(double), typeof(IslandWindow),
         new PropertyMetadata(19.0, (d, e) => ((IslandWindow)d).Pill.CornerRadius = new CornerRadius((double)e.NewValue)));
@@ -143,7 +146,7 @@ public partial class IslandWindow : Window
         var scale = Math.Clamp(S.Scale, 0.8, 1.4);
         RootScale.ScaleX = RootScale.ScaleY = scale;
         Width = 560 * scale;
-        Height = 380 * scale;
+        Height = 420 * scale;
         ApplyMaterial();
         BuildTabs();
         RefreshCompact();
@@ -322,7 +325,8 @@ public partial class IslandWindow : Window
         Pill.Cursor = Cursors.Arrow;
         Motion.To(Compact, OpacityProperty, 0, 110);
         Motion.To(Pill, WidthProperty, ExpandedWidth, 430, Motion.Spring);
-        Motion.To(Pill, HeightProperty, ExpandedHeight, 430, Motion.Spring);
+        Expanded.Height = HeightFor(_tab) - 24;
+        Motion.To(Pill, HeightProperty, HeightFor(_tab), 430, Motion.Spring);
         Motion.To(this, RadiusProperty, 30, 320);
         Motion.To(Expanded, OpacityProperty, 1, 300);
         Compact.IsHitTestVisible = false;
@@ -511,7 +515,7 @@ public partial class IslandWindow : Window
     // ------------------------------------------------------------------ tabs
     private static readonly (string Id, string Glyph, string Name)[] AllTabs =
     {
-        ("media", Glyph.Music, "Media"), ("system", Glyph.Chip, "System"), ("controls", Glyph.Settings, "Quick controls"),
+        ("media", Glyph.Music, "Media"), ("system", Glyph.Chip, "System"), ("controls", Glyph.Settings, "Control Centre"),
         ("focus", Glyph.Stopwatch, "Focus timer"), ("calendar", Glyph.Calendar, "Calendar"), ("notes", Glyph.Note, "Notes"),
         ("clipboard", Glyph.Copy, "Clipboard"), ("shelf", GlyphShelf, "File shelf")
     };
@@ -549,6 +553,11 @@ public partial class IslandWindow : Window
 
     private void ShowTab(string id)
     {
+        if (_expanded && HeightFor(id) != HeightFor(_tab))
+        {
+            Expanded.Height = HeightFor(id) - 24;
+            Motion.To(Pill, HeightProperty, HeightFor(id), 320, Motion.Spring);
+        }
         _tab = id;
         _loadingUi = true;
         foreach (var rb in Tabs.Children.OfType<RadioButton>()) rb.IsChecked = (string)rb.Tag == id;
@@ -608,16 +617,47 @@ public partial class IslandWindow : Window
         if (m.IsPlaying && _expanded) _mediaTick.Start(); else _mediaTick.Stop();
     }
 
+    private static string T(TimeSpan t) => t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes}:{t.Seconds:00}";
+    private bool _seekDragging;
+
     private void UpdateMediaProgress()
     {
         var m = Hub.Media;
-        static string T(TimeSpan t) => t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes}:{t.Seconds:00}";
         var known = m.Duration > TimeSpan.Zero;
-        MProgress.Value = known ? Math.Clamp(m.Position.TotalSeconds / m.Duration.TotalSeconds, 0, 1) : 0;
-        MPos.Text = known ? T(m.Position) : "";
+        var canSeek = m.CanSeek;
+        if (!_seekDragging)
+        {
+            _loadingUi = true;
+            MSeek.Value = known ? Math.Clamp(m.Position.TotalSeconds / m.Duration.TotalSeconds, 0, 1) : 0;
+            _loadingUi = false;
+            MPos.Text = known ? T(m.Position) : "";
+        }
         MDur.Text = known ? T(m.Duration) : "";
-        MProgress.Opacity = known ? 1 : 0.35;
+        MSeek.IsEnabled = canSeek;
+        MSeek.Opacity = known ? 1 : 0.35;
+        MSeek.ToolTip = canSeek ? null : known ? $"{m.Source} doesn't let other apps change the position" : null;
+        MBack.Visibility = MFwd.Visibility = canSeek ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    // Clicking the bar jumps there; dragging previews the time and jumps when released.
+    private void OnSeekChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_loadingUi) return;
+        var target = TimeSpan.FromSeconds(Hub.Media.Duration.TotalSeconds * e.NewValue);
+        MPos.Text = T(target);
+        if (!_seekDragging) _ = Hub.Media.SeekAsync(target);
+    }
+
+    private void OnSeekDragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e) => _seekDragging = true;
+
+    private void OnSeekDragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        _seekDragging = false;
+        _ = Hub.Media.SeekAsync(TimeSpan.FromSeconds(Hub.Media.Duration.TotalSeconds * MSeek.Value));
+    }
+
+    private void OnSkipBack(object s, RoutedEventArgs e) => _ = Hub.Media.SeekAsync(Hub.Media.Position - TimeSpan.FromSeconds(10));
+    private void OnSkipForward(object s, RoutedEventArgs e) => _ = Hub.Media.SeekAsync(Hub.Media.Position + TimeSpan.FromSeconds(10));
 
     private void OnPrev(object s, RoutedEventArgs e) => Hub.Media.Previous();
     private void OnNext(object s, RoutedEventArgs e) => Hub.Media.Next();
@@ -696,6 +736,9 @@ public partial class IslandWindow : Window
         }
         Add("wifi", Glyph.Wifi, "Wi-Fi", () => ToggleRadio("wifi", RadioKind.WiFi), () => OpenUri("ms-settings:network-wifi"));
         Add("bt", Glyph.Bluetooth, "Bluetooth", () => ToggleRadio("bt", RadioKind.Bluetooth), () => OpenUri("ms-settings:bluetooth"));
+        // Windows offers apps no way to switch these; the tile shows what it can and opens the right place.
+        Add("airplane", "", "Airplane mode", () => { OpenUri("ms-settings:network-airplanemode"); Collapse(); }, () => OpenUri("ms-settings:network-airplanemode"));
+        Add("dnd", "", "Do not disturb", () => { OpenUri("ms-actioncenter:"); Collapse(); }, () => OpenUri("ms-settings:notifications"));
         Add("night", Glyph.Moon, "Night light", () =>
         {
             var on = !(_quick["night"].IsOn);
@@ -708,6 +751,7 @@ public partial class IslandWindow : Window
             QuickControls.SetWindowsDark(dark);
             SetTile("dark", dark, dark ? "Dark" : "Light");
         }, () => OpenUri("ms-settings:colors"));
+        Add("saver", "", "Energy saver", () => { OpenUri("ms-settings:batterysaver"); Collapse(); }, () => OpenUri("ms-settings:batterysaver"));
         Add("power", Glyph.Diagnostic, "Power mode", () =>
         {
             // Balanced → Performance → Efficiency → Balanced
@@ -715,6 +759,14 @@ public partial class IslandWindow : Window
             var next = i == 1 ? 2 : i == 2 ? 0 : 1;
             if (QuickControls.SetPowerMode(next)) RefreshQuick();
         }, () => OpenUri("ms-settings:powersleep"));
+        Add("mic", "", "Microphone", () =>
+        {
+            var muted = Audio.GetMicMute();
+            if (muted is null) { OpenUri("ms-settings:sound"); return; }
+            Audio.SetMicMute(!muted.Value);
+            RefreshQuick();
+            Peek(muted.Value ? "" : "", muted.Value ? "Microphone on" : "Microphone muted", 1.5);
+        }, () => OpenUri("ms-settings:sound"));
         Add("awake", Glyph.Clock, "Keep awake", () =>
         {
             QuickControls.SetKeepAwake(!QuickControls.KeepAwake);
@@ -796,6 +848,14 @@ public partial class IslandWindow : Window
         else SetTile("power", power.Value == 2, QuickControls.PowerModes[power.Value].Name);
 
         SetTile("awake", QuickControls.KeepAwake, QuickControls.KeepAwake ? "Screen stays on" : "Off");
+        var mic = Audio.GetMicMute();
+        if (mic is null) SetTile("mic", false, "No microphone", false);
+        else SetTile("mic", !mic.Value, mic.Value ? "Muted" : "On");
+        var saver = Hub.Power.EnergySaver;
+        SetTile("saver", saver > 0, saver switch { null => "Settings", 0 => "Off", 2 => "Extra savings", _ => "On" });
+        var radiosOff = (wifi is null || wifi.State != RadioState.On) && (bt is null || bt.State != RadioState.On);
+        SetTile("airplane", false, radiosOff && (wifi is not null || bt is not null) ? "Radios off" : "Settings");
+        SetTile("dnd", false, "Notifications");
         UpdateFocusTile();
         var widgets = Hub.Settings.Layout.WidgetsVisible;
         SetTile("widgets", widgets, widgets ? "Shown" : "Hidden");
@@ -1042,5 +1102,6 @@ public sealed class IslandController
     public void CollapseAll() { foreach (var w in _windows) w.Collapse(); }
     public void Peek(string glyph, string text) { foreach (var w in _windows) w.Peek(glyph, text); }
     public void Centre() { foreach (var w in _windows) w.Centre(); }
+    public void Demo(string what) { foreach (var w in _windows) w.Demo(what); }
     public void CloseAll() { foreach (var w in _windows.ToList()) w.Close(); _windows.Clear(); }
 }

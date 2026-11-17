@@ -26,10 +26,11 @@
             <Grid Margin="14,14,4,14">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal" Margin="10,4,0,22" WindowChrome.IsHitTestVisibleInChrome="False">
+                <StackPanel Orientation="Horizontal" Margin="10,4,0,18" WindowChrome.IsHitTestVisibleInChrome="False">
                     <Image Source="/Assets/glasswave.ico" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality"/>
                     <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="Glasswave" FontSize="16.5" FontWeight="SemiBold"/>
@@ -37,10 +38,34 @@
                     </StackPanel>
                 </StackPanel>
 
-                <ListBox x:Name="Nav" Grid.Row="1" ItemContainerStyle="{StaticResource NavItem}" SelectionChanged="OnNav"
+                <!-- Settings search -->
+                <Grid Grid.Row="1" Margin="0,0,0,12" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Border CornerRadius="10" Background="{DynamicResource T.Input}" BorderBrush="{DynamicResource T.Stroke}" BorderThickness="1" Padding="10,0,8,0" Height="34">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{DynamicResource T.Text3}" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="SearchHint" Grid.Column="1" Text="Search settings" FontSize="12.5" Foreground="{DynamicResource T.Text3}" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                            <TextBox x:Name="SearchBox" Grid.Column="1" Style="{StaticResource TextBox.Bare}" FontSize="12.5" VerticalAlignment="Center"
+                                     AutomationProperties.Name="Search settings" TextChanged="OnSearchChanged" PreviewKeyDown="OnSearchKey" LostKeyboardFocus="OnSearchLostFocus"/>
+                        </Grid>
+                    </Border>
+                    <Popup x:Name="SearchPopup" PlacementTarget="{Binding ElementName=SearchBox}" Placement="Bottom" VerticalOffset="10" HorizontalOffset="-30" AllowsTransparency="True" StaysOpen="True">
+                        <Border Width="340" CornerRadius="14" Padding="6" Background="{DynamicResource T.Popup}" BorderBrush="{DynamicResource T.StrokeStrong}" BorderThickness="1" Margin="0,0,14,14">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.35"/>
+                            </Border.Effect>
+                            <StackPanel x:Name="SearchResults"/>
+                        </Border>
+                    </Popup>
+                </Grid>
+
+                <ListBox x:Name="Nav" Grid.Row="2" ItemContainerStyle="{StaticResource NavItem}" SelectionChanged="OnNav"
                          AutomationProperties.Name="Sections" KeyboardNavigation.TabNavigation="Once"/>
 
-                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="12,10" Margin="0,10,0,0" Cursor="Hand" MouseLeftButtonUp="OnProfileChip"
+                <Border Grid.Row="3" Style="{StaticResource Card}" Padding="12,10" Margin="0,10,0,0" Cursor="Hand" MouseLeftButtonUp="OnProfileChip"
                         ToolTip="Switch profile">
                     <Grid>
                         <Grid.ColumnDefinitions>

@@ -29,6 +29,14 @@ Closing the main window keeps the island and widgets running from the tray (turn
   | Keep awake | Stops sleep and screen-off until switched off or Glasswave quits | Documented power request |
   | Focus | Starts/stops a focus block (Glasswave's timer, not Windows "Do not disturb", which has no public API) | |
   | Widgets | Shows/hides all Glasswave widgets | |
+  | Microphone | Mutes/unmutes your default microphone | Windows audio API (supported) |
+  | Energy saver | Shows whether it's on; opens Settings to change it | Windows reports the state; it offers apps no switch |
+  | Airplane mode, Do not disturb | Open the right Windows panel (DND: the notification centre, where the bell is one click) | Windows offers apps no way to switch these |
+
+* **Launcher — Alt+Space** (or the shortcut shown in Settings): type an app, a setting ("bluetooth", "hover delay"), an action ("dark mode", "lock", "focus"), a sum (`12*7`, `15% of` → `200*15%`) or a conversion (`10 km to mi`, `70 f to c`). Enter opens; Lock and Sleep ask for a second Enter. Nothing matches? It offers a web search in your own browser (choose DuckDuckGo, Google or Bing in Settings).
+* **Seeking:** on the Media tab, click or drag the bar, or use −10 / +10. Works when the player allows it (YouTube in Chrome/Brave/Edge, Spotify, Media Player); otherwise the bar is greyed out.
+* **VLC and other classic players:** the island reads the song from the player's title bar. VLC doesn't accept outside controls unless you turn on its global media keys: VLC › Tools › Preferences › Hotkeys, in the **Global** column set Play/Pause, Next and Previous to your keyboard's media keys, then Save. (Glasswave never sends commands straight to VLC's window — that crashes VLC 3.0.23.)
+* **Preview** live activities (charging, low battery, volume, microphone) from Dynamic Island › Live activities, or type "preview" in the launcher.
 * In the expanded panel: **←/→** or **1–6** switch tabs, **Space** plays/pauses (Media) or starts/pauses (Focus).
 * The capsule shows one live activity at a time — a running timer, a download (opt-in) or what's playing — followed by the time and date.
 * It hides automatically during fullscreen games and videos.

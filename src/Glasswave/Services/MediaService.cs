@@ -54,8 +54,20 @@ public sealed class MediaService
         }
     }
 
+    private WindowPlayers? _players;
+    private bool _usingWindow;
+    /// <summary>The current track comes from a player's window title (e.g. classic VLC), so there's no timeline or art.</summary>
+    public bool FromWindowTitle => _usingWindow;
+
     public async void Start()
     {
+        try
+        {
+            _players = new WindowPlayers(_ui, pid => Hub.Audio?.ProcessPeak(pid) ?? 0);
+            _players.Changed += () => _ = RefreshAsync(true);
+            _players.Start();
+        }
+        catch (Exception ex) { Log.Warn("Window-title players unavailable: " + ex.Message); }
         try
         {
             _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
@@ -98,6 +110,22 @@ public sealed class MediaService
         var session = _session;
         try
         {
+            if (UseWindowPlayer(session, out var wp))
+            {
+                var wasWindow = _usingWindow;
+                _usingWindow = true;
+                Title = wp.Title; Artist = wp.Artist; Album = ""; Source = wp.App; IsPlaying = wp.Playing;
+                Art = null; Duration = TimeSpan.Zero; _position = TimeSpan.Zero; _positionAt = default;
+                HasSession = true;
+                var wkey = Title + "|" + Artist;
+                var wNew = wkey != _trackKey;
+                _trackKey = wkey;
+                Changed?.Invoke();
+                if (wNew || !wasWindow) TrackChanged?.Invoke();
+                return;
+            }
+            if (_usingWindow) { _usingWindow = false; properties = true; }   // back to the media session: fetch its details
+
             if (session is null)
             {
                 HasSession = false; IsPlaying = false; Title = Artist = Album = Source = ""; Art = null; _trackKey = "";
@@ -159,6 +187,21 @@ public sealed class MediaService
         catch (Exception ex) { Log.Warn("Media refresh: " + ex.Message); }
     }
 
+    /// <summary>
+    /// Prefer the Windows media session (richer: art, timeline). Use a window-title player when there is no
+    /// session, or when that player is the one making sound while the session is paused.
+    /// </summary>
+    private bool UseWindowPlayer(GlobalSystemMediaTransportControlsSession? session, out WindowPlayer wp)
+    {
+        wp = _players?.Current!;
+        if (wp is null) return false;
+        if (session is null) return true;
+        bool sessionPlaying;
+        try { sessionPlaying = session.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing; }
+        catch { return true; }
+        return wp.Playing && !sessionPlaying;
+    }
+
     private static string FriendlySource(string? id)
     {
         if (string.IsNullOrEmpty(id)) return "";
@@ -178,20 +221,67 @@ public sealed class MediaService
         return s.Length > 0 ? char.ToUpper(s[0]) + s[1..] : s;
     }
 
+    /// <summary>The player lets other apps move the playhead (YouTube in Chrome/Brave/Edge, Spotify, Media Player …).</summary>
+    public bool CanSeek
+    {
+        get
+        {
+            if (_usingWindow || _session is null || Duration <= TimeSpan.Zero) return false;
+            try { return _session.GetPlaybackInfo()?.Controls?.IsPlaybackPositionEnabled == true; }
+            catch { return false; }
+        }
+    }
+
+    /// <summary>Jump to a position in the current track. Returns false if the player refused.</summary>
+    public async Task<bool> SeekAsync(TimeSpan position)
+    {
+        var s = _session;
+        if (s is null || _usingWindow) return false;
+        if (position < TimeSpan.Zero) position = TimeSpan.Zero;
+        if (Duration > TimeSpan.Zero && position > Duration) position = Duration - TimeSpan.FromSeconds(1);
+        try
+        {
+            var start = s.GetTimelineProperties()?.StartTime ?? TimeSpan.Zero;
+            var ok = await s.TryChangePlaybackPositionAsync((start + position).Ticks);
+            if (ok)
+            {
+                // Show the new position at once; the player's own timeline update follows shortly.
+                _position = position;
+                _positionAt = DateTimeOffset.UtcNow;
+                Changed?.Invoke();
+            }
+            return ok;
+        }
+        catch (Exception ex) { Log.Warn("Seek failed: " + ex.Message); return false; }
+    }
+
+    /// <summary>A short message for the user when a control can't be carried out (shown in the island).</summary>
+    public event Action<string>? Hint;
+
+    private bool WindowControl(byte key)
+    {
+        if (!_usingWindow || _players is null) return false;
+        if (_players.Control(key, _session is not null) is { } why) Hint?.Invoke(why);
+        return true;
+    }
+
     public async void PlayPause()
     {
+        if (WindowControl(Native.VK_MEDIA_PLAY_PAUSE)) return;
         try { if (_session is not null) await _session.TryTogglePlayPauseAsync(); else Key(Native.VK_MEDIA_PLAY_PAUSE); }
         catch { Key(Native.VK_MEDIA_PLAY_PAUSE); }
     }
 
     public async void Next()
     {
+        if (WindowControl(Native.VK_MEDIA_NEXT_TRACK)) return;
         try { if (_session is not null) await _session.TrySkipNextAsync(); else Key(Native.VK_MEDIA_NEXT_TRACK); }
         catch { Key(Native.VK_MEDIA_NEXT_TRACK); }
     }
 
     public async void Previous()
     {
+        if (WindowControl(Native.VK_MEDIA_PREV_TRACK)) return;
         try { if (_session is not null) await _session.TrySkipPreviousAsync(); else Key(Native.VK_MEDIA_PREV_TRACK); }
         catch { Key(Native.VK_MEDIA_PREV_TRACK); }
     }

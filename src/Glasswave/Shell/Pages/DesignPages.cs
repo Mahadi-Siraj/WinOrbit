@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using Glasswave.Core;
@@ -82,8 +83,44 @@ public sealed class HomePage : PageBase
 
     private static string Greeting() => DateTime.Now.Hour switch { < 5 => "Good night", < 12 => "Good morning", < 18 => "Good afternoon", _ => "Good evening" };
 
+    /// <summary>First run: pick a starting style and the two opt-in extras, in one card. Shown until Done or Skip.</summary>
+    private UIElement WelcomeCard()
+    {
+        var body = new StackPanel();
+        body.Children.Add(Ui.Text("Welcome to Glasswave 👋", "Text.Title", 22));
+        body.Children.Add(Ui.Text("Pick a starting style — you can change everything later. Press " + Hub.Settings.General.HotkeyLauncher + " anywhere to search apps and settings.", "Text.Muted").With(t => { t.Margin = new Thickness(0, 4, 0, 14); t.TextWrapping = TextWrapping.Wrap; }));
+        var styles = new UniformGrid { Columns = 4, Margin = new Thickness(-5, 0, -5, 6) };
+        foreach (var id in new[] { "minimal", "productivity", "gaming", "study" })
+        {
+            var p = Hub.Profiles.All.FirstOrDefault(x => x.Id == id);
+            if (p is null) continue;
+            var active = Hub.Settings.ActiveProfileId == p.Id;
+            var b = new Button { Margin = new Thickness(5), Padding = new Thickness(14, 14, 14, 12), HorizontalContentAlignment = HorizontalAlignment.Left, VerticalContentAlignment = VerticalAlignment.Top };
+            if (active) b.SetResourceReference(StyleProperty, "Button.Accent");
+            var sp = new StackPanel();
+            sp.Children.Add(new TextBlock { Text = p.Glyph, FontFamily = (FontFamily)FindResource("F.Icons"), FontSize = 20, Margin = new Thickness(0, 0, 0, 8) });
+            sp.Children.Add(new TextBlock { Text = p.Name, FontWeight = FontWeights.SemiBold, FontSize = 14 });
+            sp.Children.Add(new TextBlock { Text = p.Description, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Opacity = 0.75, Margin = new Thickness(0, 3, 0, 0), MaxHeight = 48 });
+            b.Content = sp;
+            b.Click += (_, _) => { Hub.Profiles.Apply(p); Rebuild(); OnEnter(); };
+            styles.Children.Add(b);
+        }
+        body.Children.Add(styles);
+        body.Children.Add(Kit.ToggleRow("Clipboard history", "Recent copies in the island. Memory only; private copies are skipped.", Hub.Settings.Island.ClipboardHistory,
+            v => { Hub.Settings.Island.ClipboardHistory = v; Hub.Store.Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy));
+        body.Children.Add(Kit.ToggleRow("Synced lyrics", "Uses the internet (LRCLIB) to fetch lyrics for the song that's playing. Turns on the network switch.", Hub.Settings.Privacy.LyricsEnabled && Hub.Settings.Privacy.NetworkAllowed,
+            v => { Hub.Settings.Privacy.LyricsEnabled = v; if (v) Hub.Settings.Privacy.NetworkAllowed = true; Hub.Store.Save(); }, true, Glyph.Music));
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 4) };
+        buttons.Children.Add(Kit.Btn("Skip", () => { Hub.Settings.General.WelcomeDone = true; Hub.Store.Save(); Rebuild(); OnEnter(); }));
+        buttons.Children.Add(Kit.Btn("Done", () => { Hub.Settings.General.WelcomeDone = true; Hub.Store.Save(); Rebuild(); OnEnter(); }, Glyph.Check, true).With(b => b.Margin = new Thickness(8, 0, 0, 0)));
+        body.Children.Add(buttons);
+        return Kit.Card(body, new Thickness(24, 20, 24, 16)).With(c => c.Margin = new Thickness(0, 0, 0, 16));
+    }
+
     protected override void Build()
     {
+        if (!Hub.Settings.General.WelcomeDone) Children.Add(WelcomeCard());
+
         // ---------- hero ----------
         var hero = Ui.Grid("2*,16,*", "auto");
         hero.Margin = new Thickness(0, 0, 0, 16);

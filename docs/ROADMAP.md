@@ -35,19 +35,21 @@
 
 **Wanted, not built yet — next waves**
 
-Wave 2 (high impact, fits light and private):
-1. **Spotlight-style launcher** — type to open apps, settings, files; calculator; unit conversion. Replaces Flow Launcher / PowerToys Run for most people.
-2. **Taskbar styling** (TranslucentTB-style clear, blur or acrylic) — experimental tier: uses an undocumented but injection-free Windows call that must be re-applied when Explorer resets it.
-3. **Brightness HUD and battery/charging activity** — on laptops: plug-in animation, low-battery warning, brightness meter.
-4. **First-run setup** — choose Minimal / Productivity / Music / Gamer, so the first minute looks great (NabyScape added this and users liked it).
-5. **Settings search** ("notch width" etc.).
-6. **Island on other edges, and cursor-follow across monitors.**
+Wave 2 — **done** (17 Nov 2026):
+1. ✅ **Spotlight-style launcher** (Alt+Space): apps with icons, settings, actions, profiles, recent files, calculator, unit conversion, web search.
+2. ❌ **Taskbar styling — not possible within the rules.** Tested on this PC: Windows 11 ignores the documented accent call on its taskbar (pixels identical before/after). TranslucentTB-style results need code injected into Explorer, which Glasswave refuses to do. Windows' own Transparency effects and taskbar accent colour remain on the Tweaks page.
+3. ✅ **Charging, low battery, Energy Saver and brightness activities** (laptop hardware still to be tested).
+4. ✅ **First-run welcome** with starting styles.
+5. ✅ **Settings search**, plus the same settings in the launcher.
+6. ✅ Also: **VLC and other classic players**, **seek bar / ±10 s**, **Control Centre** with 12 tiles (microphone, energy saver, airplane, DND added).
+7. ⏳ **Island on other edges and cursor-follow** — moved to Wave 3.
 
 Wave 3 (reach and trust):
 7. **ARM64 build** (requested in threads). Cross-compiling is easy; it can't be tested without ARM hardware.
 8. **Code signing.** Unsigned self-contained .NET installers get flagged by Windows Defender (a top complaint in the NabyScape thread). This needs a certificate (cost) or the Microsoft Store.
 9. **Languages** — Spanish and others were asked for.
-10. **Notifications in the island** — reading Windows notifications needs the app to be packaged (MSIX) and the user's permission, so it comes with a Store or MSIX release.
+10. **Notifications in the island** — reading Windows notifications needs the app to be packaged (MSIX) and the user's permission, so it comes with a Store or MSIX release. The same applies to Clock-app alarms/timers (they only surface as notifications).
+11. **Do not disturb on/off from the island** — Windows 11 keeps DND state in an undocumented kernel store with no public API; revisit if Microsoft documents one.
 
 Deliberately not planned:
 * **"Eyes that follow the cursor" / desktop pets** — in the Dyno thread, most replies said it's the first thing they'd turn off.

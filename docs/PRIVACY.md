@@ -11,7 +11,7 @@ Everything lives in one folder: `%APPDATA%\Glasswave` (or `Data\` beside the exe
 | File | Contents | Why |
 |---|---|---|
 | `settings.json` | Active theme, island settings, widget positions/options, layout, hotkeys, automation rules, Rainmeter favourites/recent list, privacy switches | Restore your desktop after a restart |
-| `data.json` | Notes, task lists, focus-session history (start time + minutes), clipboard items **you pinned** (text only) | Widget content |
+| `data.json` | Notes, task lists, focus-session history (start time + minutes), clipboard items **you pinned** (text only), how often you opened each launcher result (to rank your favourites first) | Widget content, launcher ranking |
 | `backups\nightlight-state.bin` | Windows' night-light state as it was before the island's Night light tile first changed it | Restore if a future Windows changes the format |
 | `themes\*.json`, `profiles\*.json` | Themes and profiles you created | Your customisations |
 | `backups\windows-settings-backup.json` | Original values of Windows settings Glasswave changed (e.g. `AppsUseLightTheme`, accent colour, wallpaper path) | **Revert all** and uninstall rollback |
@@ -36,6 +36,10 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 | Which apps currently use the microphone/camera (`HKCU\…\CapabilityAccessManager\ConsentStore`) | The orange/green privacy dot. Read when Windows signals a change; app names only, not audio or video | No (not logged) |
 | Output audio level (Windows' peak meter) and volume/mute changes | Volume meter and music-reactive bars. A single loudness number, read only while music plays in a visible capsule; no audio is recorded | No |
 | Files you drop on the island's shelf | Paths only (files are not copied); memory only | No |
+| Windows' "All apps" list (`shell:AppsFolder`) and the shortcuts in your Recent folder | Launcher search, read when you open the launcher | No |
+| Window titles of known media players only (VLC, foobar2000, Winamp, PotPlayer, MPC-HC/BE, mpv) and those players' own audio level | Now-playing for players that don't report to Windows. Glasswave gets Windows' "a title changed" event, checks which program the window belongs to, and reads the title only for those players | No (not logged) |
+| Power source, battery %, laptop brightness, Energy Saver state | Charging/low-battery/brightness activities and the Control Centre | No |
+| Default microphone's mute state | Microphone tile | No |
 
 ## 3. Network access
 
@@ -55,7 +59,7 @@ Two optional features use it, each with its own switch under **Settings › Priv
 
 Your IP address is inevitably visible to those services when you enable a feature, as with any web request.
 
-Links such as "Open rainmeter.net" open in **your own browser**; Glasswave itself makes no request.
+Links such as "Open rainmeter.net", and the launcher's "Search the web for …", open in **your own browser**; Glasswave itself makes no request.
 
 There is **no** update checker. New versions are installed by running a newer installer.
 

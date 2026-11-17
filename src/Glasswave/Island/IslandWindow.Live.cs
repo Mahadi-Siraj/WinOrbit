@@ -46,6 +46,11 @@ public partial class IslandWindow
         Hub.Clipboard.Changed += OnClipboardChanged;
         Hub.Media.Changed += OnMediaForLive;
         ShelfChanged += OnShelfChanged;
+        Hub.Power.PowerSourceChanged += OnPowerSource;
+        Hub.Power.BatteryChanged += OnBattery;
+        Hub.Power.BrightnessChanged += OnBrightness;
+        Hub.Power.EnergySaverChanged += OnEnergySaver;
+        Hub.Media.Hint += OnMediaHint;
 
         Pill.AllowDrop = true;
         Pill.DragEnter += OnDragEnter;
@@ -63,6 +68,69 @@ public partial class IslandWindow
         Hub.Clipboard.Changed -= OnClipboardChanged;
         Hub.Media.Changed -= OnMediaForLive;
         ShelfChanged -= OnShelfChanged;
+        Hub.Power.PowerSourceChanged -= OnPowerSource;
+        Hub.Power.BatteryChanged -= OnBattery;
+        Hub.Power.BrightnessChanged -= OnBrightness;
+        Hub.Power.EnergySaverChanged -= OnEnergySaver;
+        Hub.Media.Hint -= OnMediaHint;
+    }
+
+    private void OnMediaHint(string message)
+    {
+        if (_expanded && _tab == "media") { MLyric.Text = message; MLyric.Visibility = Visibility.Visible; MLyric.TextWrapping = TextWrapping.Wrap; return; }
+        Peek(Glyph.Info, message, 6);
+    }
+
+    // ------------------------------------------------------------------ power: charging, battery, brightness
+    private int? _lastBattery;
+
+    private static readonly Color Charging = Color.FromRgb(0x30, 0xD1, 0x58), Low = Color.FromRgb(0xFF, 0x45, 0x3A), Saver = Color.FromRgb(0xFF, 0xC4, 0x0A);
+    private const string GlyphCharging = "", GlyphLeaf = "";
+
+    /// <summary>Plugged in: a green meter fills up to the charge level, like a phone. Unplugged: a quick note.</summary>
+    public void OnPowerSource(bool onAc)
+    {
+        if (!S.BatteryAlerts || _expanded || !IsVisible) return;
+        var pct = Hub.Power.Battery ?? 100;
+        if (onAc) ShowHud(GlyphCharging, pct / 100.0, $"Charging · {pct}%", Charging, 3.2, fillFromEmpty: true);
+        else ShowHud(Glyph.Battery, pct / 100.0, $"On battery · {pct}%", null, 2.2);
+    }
+
+    public void OnBattery(int percent)
+    {
+        var previous = _lastBattery ?? percent + 1;
+        _lastBattery = percent;
+        if (!S.BatteryAlerts || Hub.Power.OnAc == true || _expanded || !IsVisible) return;
+        if (PowerEvents.LowBatteryWarning(previous, percent) is { } level)
+            ShowHud(Glyph.Warning, percent / 100.0, level <= 10 ? $"Very low · {percent}%" : $"Battery low · {percent}%", Low, 6);
+    }
+
+    private void OnEnergySaver(int state)
+    {
+        if (!S.BatteryAlerts || _expanded || !IsVisible) return;
+        if (state > 0) Peek(GlyphLeaf, state == 2 ? "Energy saver on · extra savings" : "Energy saver on", 2.5);
+        else Peek(GlyphLeaf, "Energy saver off", 2);
+        if (_expanded && _tab == "controls") RefreshQuick();
+    }
+
+    /// <summary>Show a live activity on demand (Island settings › Preview), so you can see what each looks like.</summary>
+    public void Demo(string what)
+    {
+        if (_expanded) Collapse(true);
+        switch (what)
+        {
+            case "charging": ShowHud(GlyphCharging, 0.64, "Charging · 64%", Charging, 3.2, fillFromEmpty: true); break;
+            case "low": ShowHud(Glyph.Warning, 0.18, "Battery low · 18%", Low, 4); break;
+            case "volume": ShowHud(Glyph.Volume, 0.42, "42"); break;
+            case "mic": Peek(GlyphMic, "Teams is using your microphone", 3); break;
+            case "saver": Peek(GlyphLeaf, "Energy saver on", 2.5); break;
+        }
+    }
+
+    private void OnBrightness(int percent)
+    {
+        if (!S.VolumeHud || _expanded || !IsVisible) return;
+        ShowHud(Glyph.Brightness, percent / 100.0, percent.ToString());
     }
 
     // ------------------------------------------------------------------ volume HUD
@@ -72,17 +140,29 @@ public partial class IslandWindow
         ShowHud(muted || level < 0.005 ? Glyph.Mute : Glyph.Volume, muted ? 0 : level, muted ? "Muted" : $"{level * 100:0}");
     }
 
-    private void ShowHud(string glyph, double fraction, string text)
+    private void ShowHud(string glyph, double fraction, string text, Color? color = null, double seconds = 1.6, bool fillFromEmpty = false)
     {
         var first = CHud.Visibility != Visibility.Visible;
         CHudGlyph.Text = glyph;
         CHudText.Text = text;
+        if (color is { } c)
+        {
+            CHudFill.Background = new SolidColorBrush(c);
+            CHudGlyph.Foreground = new SolidColorBrush(c);
+        }
+        else
+        {
+            CHudFill.SetResourceReference(Border.BackgroundProperty, "T.Accent");
+            CHudGlyph.SetResourceReference(TextBlock.ForegroundProperty, "T.Accent");
+        }
+        if (fillFromEmpty) { CHudFill.BeginAnimation(WidthProperty, null); CHudFill.Width = 0; first = false; }
+        _hudTimer!.Interval = TimeSpan.FromSeconds(seconds);
         CHud.Visibility = Visibility.Visible;
         CNormal.Visibility = Visibility.Collapsed;
         CPeek.Visibility = Visibility.Collapsed;
         _peekTimer.Stop();
         SetAutoHidden(false);
-        Motion.To(CHudFill, WidthProperty, 132 * Math.Clamp(fraction, 0, 1), first ? 0 : 140, Motion.EaseOut);
+        Motion.To(CHudFill, WidthProperty, 132 * Math.Clamp(fraction, 0, 1), first ? 0 : fillFromEmpty ? 900 : 140, fillFromEmpty ? Motion.Settle : Motion.EaseOut);
         FitCompact();
         _hudTimer!.Stop();
         _hudTimer.Start();
@@ -90,6 +170,7 @@ public partial class IslandWindow
 
     private void EndHud()
     {
+        _hudTimer!.Interval = TimeSpan.FromSeconds(1.6);
         if (CHud.Visibility != Visibility.Visible) return;
         CHud.Visibility = Visibility.Collapsed;
         CNormal.Visibility = Visibility.Visible;

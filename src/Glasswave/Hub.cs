@@ -31,6 +31,7 @@ public static class Hub
     public static LyricsService Lyrics { get; set; } = null!;
     public static PrivacyIndicator Privacy { get; set; } = null!;
     public static ClipboardHistory Clipboard { get; set; } = null!;
+    public static PowerEvents Power { get; set; } = null!;
 
     /// <summary>Re-apply everything from settings (after a profile switch or import).</summary>
     public static void ApplyAll()

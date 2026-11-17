@@ -70,6 +70,75 @@ public partial class MainWindow : Window
         Navigate("home");
     }
 
+    // ------------------------------------------------------------------ settings search
+    private List<SettingHit> _hits = new();
+    private int _hitIndex;
+
+    private IEnumerable<(string Id, string Name, Func<PageBase> Create)> SearchablePages()
+        => _pages.Where(p => p.Id != "rainmeter" || Hub.Rainmeter.PageWanted()).Select(p => (p.Id, p.Name, p.Create));
+
+    private void OnSearchChanged(object sender, TextChangedEventArgs e)
+    {
+        SearchHint.Visibility = SearchBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        _hits = SettingsSearch.Find(SearchBox.Text, SearchablePages());
+        _hitIndex = 0;
+        RenderHits();
+    }
+
+    private void RenderHits()
+    {
+        SearchResults.Children.Clear();
+        if (SearchBox.Text.Trim().Length < 2) { SearchPopup.IsOpen = false; return; }
+        if (_hits.Count == 0)
+            SearchResults.Children.Add(Ui.Text("No settings match.", "Text.Caption", 12.5).With(t => t.Margin = new Thickness(10, 8, 10, 8)));
+        for (var i = 0; i < _hits.Count; i++)
+        {
+            var hit = _hits[i];
+            var index = i;
+            var row = new Border { CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 7, 10, 7), Cursor = Cursors.Hand, Background = Brushes.Transparent };
+            if (i == _hitIndex) row.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft");
+            var sp = new StackPanel();
+            sp.Children.Add(Ui.Text(hit.Label, "Text.Body", 13, FontWeights.SemiBold).With(t => { t.TextTrimming = TextTrimming.CharacterEllipsis; t.TextWrapping = TextWrapping.NoWrap; }));
+            sp.Children.Add(Ui.Text(hit.PageName + (hit.Description.Length > 0 ? " · " + hit.Description : ""), "Text.Caption", 11).With(t => { t.TextTrimming = TextTrimming.CharacterEllipsis; t.TextWrapping = TextWrapping.NoWrap; }));
+            row.Child = sp;
+            row.MouseLeftButtonUp += (_, _) => { _hitIndex = index; OpenHit(); };
+            SearchResults.Children.Add(row);
+        }
+        SearchPopup.IsOpen = true;
+    }
+
+    private void OnSearchKey(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Down when _hits.Count > 0: _hitIndex = (_hitIndex + 1) % _hits.Count; RenderHits(); e.Handled = true; break;
+            case Key.Up when _hits.Count > 0: _hitIndex = (_hitIndex - 1 + _hits.Count) % _hits.Count; RenderHits(); e.Handled = true; break;
+            case Key.Enter: OpenHit(); e.Handled = true; break;
+            case Key.Escape: SearchBox.Clear(); SearchPopup.IsOpen = false; Frame.Focus(); e.Handled = true; break;
+        }
+    }
+
+    private void OnSearchLostFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        // Let a click on a result land before the list closes.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () => { if (!SearchBox.IsKeyboardFocusWithin && !SearchPopup.IsMouseOver) SearchPopup.IsOpen = false; });
+    }
+
+    private void OpenHit()
+    {
+        if (_hitIndex < 0 || _hitIndex >= _hits.Count) return;
+        var hit = _hits[_hitIndex];
+        SearchPopup.IsOpen = false;
+        OpenSetting(hit.PageId, hit.Label);
+    }
+
+    /// <summary>Open a page and reveal one setting on it (used by search and the launcher).</summary>
+    public void OpenSetting(string pageId, string label)
+    {
+        Navigate(pageId);
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => { if (_current is not null) SettingsSearch.Reveal(_current, label); });
+    }
+
     /// <summary>Show the Rainmeter entry only when it's useful (see Settings › Rainmeter page).</summary>
     public void UpdateOptionalPages()
     {
@@ -89,6 +158,7 @@ public partial class MainWindow : Window
             e.Handled = true;
         }
         else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.W) { Close(); e.Handled = true; }
+        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.F or Key.K) { SearchBox.Focus(); SearchBox.SelectAll(); e.Handled = true; }
         else _current?.OnKey(e);
     }
 

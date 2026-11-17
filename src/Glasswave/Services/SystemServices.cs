@@ -314,6 +314,28 @@ public static class Audio
 
     public static bool GetMute() => Endpoint() is { } ep && ep.GetMute(out var m) == 0 && m;
 
+    /// <summary>The default microphone's endpoint (capture, console role) — what Windows' own mic mute switches.</summary>
+    private static IAudioEndpointVolume? MicEndpoint()
+    {
+        try
+        {
+            var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorCom();
+            if (enumerator.GetDefaultAudioEndpoint(1, 0, out var device) != 0) return null;
+            var iid = typeof(IAudioEndpointVolume).GUID;
+            return device.Activate(ref iid, 23, IntPtr.Zero, out var obj) == 0 ? (IAudioEndpointVolume)obj : null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>Null when there is no microphone.</summary>
+    public static bool? GetMicMute() => MicEndpoint() is { } ep && ep.GetMute(out var m) == 0 ? m : null;
+
+    public static void SetMicMute(bool mute)
+    {
+        var ctx = Guid.Empty;
+        MicEndpoint()?.SetMute(mute, ref ctx);
+    }
+
     public static void SetMute(bool mute)
     {
         var ctx = Guid.Empty;
