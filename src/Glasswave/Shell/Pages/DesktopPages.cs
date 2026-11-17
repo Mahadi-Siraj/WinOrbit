@@ -206,12 +206,21 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("CPU and memory", "Samples system load only while visible.", S.ShowSystem, v => { S.ShowSystem = v; Save(); }, true, Glyph.Chip),
             Kit.ToggleRow("Download activity", "Watches your Downloads folder for files that browsers are still downloading. Only file names are read, locally.", S.WatchDownloads, v => { S.WatchDownloads = v; Save(); }, true, Glyph.Download)));
 
+        Children.Add(Kit.Section("Live activities", "Things the island shows on its own, the moment they happen. All event-driven: nothing here polls.",
+            Kit.ToggleRow("Volume meter", "Changing the volume — keyboard keys, the taskbar, scrolling on the island — shows a glass meter in the capsule.", S.VolumeHud, v => { S.VolumeHud = v; Save(); }, false, Glyph.Volume),
+            Kit.ToggleRow("Bars follow the music", "The equaliser in the capsule moves with what's actually playing, tinted by the album art. Reads Windows' output level 20 times a second, only while music plays.", S.AudioReactive, v => { S.AudioReactive = v; Save(); }, true, Glyph.Music),
+            Kit.ToggleRow("Microphone and camera dot", "An orange dot while any app uses your microphone, green for the camera — hover it to see which app. Read locally from Windows' own privacy records.", S.PrivacyDot, v => { S.PrivacyDot = v; Save(); }, true, Glyph.Shield),
+            Kit.ToggleRow("Lyrics in the capsule", Hub.Settings.Privacy.LyricsEnabled ? "Shows the line being sung instead of the song title." : "Turn on Synced lyrics in Settings › Privacy & network first.", S.LyricsInCapsule, v => { S.LyricsInCapsule = v; Save(); }, true, Glyph.Note),
+            Kit.ToggleRow("Clipboard history", "Keeps the last 40 copied items in memory for the Clipboard tab. Pinned text is saved; everything else is forgotten when Glasswave quits. Private copies (password managers) are skipped.", S.ClipboardHistory, v => { S.ClipboardHistory = v; Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy)));
+
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]
                  {
                      ("media", Glyph.Music, "Media", "Artwork, progress, transport and volume."), ("system", Glyph.Chip, "System monitor", "CPU, memory, GPU (with temperature on NVIDIA), network, disk."),
                      ("controls", Glyph.Settings, "Quick controls", "Volume, monitor brightness (DDC/CI), Wi-Fi, Bluetooth and settings shortcuts."), ("focus", Glyph.Stopwatch, "Focus timer", "Pomodoro, countdown and stopwatch."),
-                     ("calendar", Glyph.Calendar, "Calendar", "Today and the month."), ("notes", Glyph.Note, "Quick note", "A scratchpad saved on this PC.")
+                     ("calendar", Glyph.Calendar, "Calendar", "Today and the month."), ("notes", Glyph.Note, "Quick note", "A scratchpad saved on this PC."),
+                     ("clipboard", Glyph.Copy, "Clipboard", "Recent copies — text, links, images, files. Needs Clipboard history above."),
+                     ("shelf", "", "File shelf", "Drag files onto the island to park them; drag them out into any app later.")
                  })
         {
             modules.Children.Add(Kit.ToggleRow(name, desc, S.Modules.Contains(id), v =>
@@ -221,12 +230,13 @@ public sealed class IslandPage : PageBase
                 Save();
             }, modules.Children.Count > 0, glyph));
         }
-        Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. Use ←/→ or 1–6 to switch with the keyboard.", modules));
+        Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. Use ←/→ or the number keys to switch with the keyboard.", modules));
 
         Children.Add(Kit.Section("Behaviour", null,
             Kit.ToggleRow("Hide during fullscreen apps and games", "Gets completely out of the way of games, videos and presentations.", S.HideInFullscreen, v => { S.HideInFullscreen = v; Save(); }, false),
             Kit.ToggleRow("Auto-hide", "Slides up out of view; touch the top edge of the screen to bring it back.", S.AutoHide, v => { S.AutoHide = v; Save(); }),
             Kit.ToggleRow("Expand on hover", "Opens after resting the pointer on it briefly.", S.ExpandOnHover, v => { S.ExpandOnHover = v; Save(); }),
+            Kit.SliderRow("Hover delay", "How long the pointer must rest before it opens, so sweeping past the top of the screen doesn't open it.", 0, 1200, S.HoverDelayMs, v => { S.HoverDelayMs = (int)Math.Round(v / 20) * 20; Save(); }, v => $"{v:0} ms", true, 20),
             Kit.ToggleRow("Announce track changes", "Briefly shows the new song in the capsule.", S.PeekOnMediaChange, v => { S.PeekOnMediaChange = v; Save(); }),
             Kit.SliderRow("Collapse after", "Closes automatically when the pointer leaves. 0 keeps it open until you click away.", 0, 30, S.AutoCollapseSeconds, v => { S.AutoCollapseSeconds = (int)v; Save(); }, v => v < 1 ? "Never" : $"{v:0} s", true, 1)));
 

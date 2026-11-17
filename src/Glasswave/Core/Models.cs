@@ -91,6 +91,20 @@ public sealed class IslandSettings
     public bool SnapToCentre { get; set; } = true;
     /// <summary>Only vertical dragging; the island always stays horizontally centred.</summary>
     public bool KeepCentred { get; set; }
+    /// <summary>Show volume changes (keys, taskbar, other apps) as an animated meter in the capsule.</summary>
+    public bool VolumeHud { get; set; } = true;
+    /// <summary>Equaliser bars follow what is actually playing (Windows' output meter) instead of a loop.</summary>
+    public bool AudioReactive { get; set; } = true;
+    /// <summary>Show a dot while an app uses the microphone or camera, like phones do.</summary>
+    public bool PrivacyDot { get; set; } = true;
+    /// <summary>Show the current lyric line in the capsule while music plays (needs Lyrics in Privacy).</summary>
+    public bool LyricsInCapsule { get; set; } = true;
+    /// <summary>Keep a history of copied text, links and images in memory. Off by default.</summary>
+    public bool ClipboardHistory { get; set; }
+    /// <summary>Delay before hover-expanding, so passing the cursor over the top of the screen doesn't open it.</summary>
+    public int HoverDelayMs { get; set; } = 260;
+    /// <summary>One-time migrations of the module list for tabs added in later versions.</summary>
+    public int ModulesVersion { get; set; }
     /// <summary>Per-display offsets, keyed by device name, used when Monitor is "all".</summary>
     public Dictionary<string, double[]> PerMonitorOffset { get; set; } = new();
     public double Scale { get; set; } = 1.0;
@@ -223,6 +237,8 @@ public sealed class PrivacySettings
     public double WeatherLat { get; set; }
     public double WeatherLon { get; set; }
     public bool WeatherFahrenheit { get; set; }
+    /// <summary>Synced lyrics from LRCLIB (sends track title, artist, album and length). Off by default; needs the network switch.</summary>
+    public bool LyricsEnabled { get; set; }
 }
 
 public sealed class RainmeterPrefs
@@ -272,6 +288,8 @@ public sealed class UserData
     public Dictionary<string, string> Notes { get; set; } = new();
     public Dictionary<string, List<TaskItem>> Tasks { get; set; } = new();
     public List<FocusSession> Sessions { get; set; } = new();
+    /// <summary>Clipboard items the user pinned (text only). Unpinned history lives in memory and is never written to disk.</summary>
+    public List<string> ClipPins { get; set; } = new();
 
     [JsonIgnore] public const string IslandNoteKey = "island";
 }

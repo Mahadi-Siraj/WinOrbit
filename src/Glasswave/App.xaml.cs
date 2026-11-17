@@ -91,6 +91,10 @@ public partial class App : Application
         Hub.Net = new NetworkGate(() => Hub.Settings.Privacy);
         Hub.Weather = new WeatherService(Hub.Net, () => Hub.Settings.Privacy);
         Hub.Rainmeter = new RainmeterService(() => Hub.Settings.Rainmeter);
+        Hub.Audio = new AudioWatcher(Dispatcher);
+        Hub.Lyrics = new LyricsService(Hub.Net, () => Hub.Settings.Privacy);
+        Hub.Privacy = new PrivacyIndicator(Dispatcher);
+        Hub.Clipboard = new ClipboardHistory(store, () => Hub.Settings.Island);
         Hub.Ready = true;
 
         Hub.Theme.Load();
@@ -109,6 +113,9 @@ public partial class App : Application
         Hub.Profiles = new ProfileService();
         Hub.Profiles.Load();
         Hub.Media.Start();
+        Hub.Audio.Start();
+        Hub.Privacy.Start();
+        Hub.Clipboard.Apply();
 
         // First launch: seed a tasteful starter layout so the product is visibly alive.
         if (store.IsFirstRun) SeedFirstRun();

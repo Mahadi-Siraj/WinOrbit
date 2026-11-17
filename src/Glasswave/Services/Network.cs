@@ -58,6 +58,105 @@ public sealed class NetworkGate
     }
 }
 
+public sealed record LyricLine(TimeSpan At, string Text);
+
+/// <summary>
+/// Optional time-synced lyrics from LRCLIB (free, open, no account or key). Off by default and only active while
+/// the network switch is on. Sends the track title, artist, album and length — nothing about the user — and
+/// keeps results in memory only. Players that publish no title (some browser videos) get no lookup.
+/// </summary>
+public sealed class LyricsService
+{
+    private readonly NetworkGate _net;
+    private readonly Func<PrivacySettings> _privacy;
+    private readonly Dictionary<string, List<LyricLine>?> _cache = new();
+
+    public LyricsService(NetworkGate net, Func<PrivacySettings> privacy) { _net = net; _privacy = privacy; }
+
+    public bool Enabled => _privacy().NetworkAllowed && _privacy().LyricsEnabled;
+
+    /// <summary>Synced lines for a track, or null when lyrics are off, unknown or not time-synced.</summary>
+    public async Task<List<LyricLine>?> GetAsync(string title, string artist, string album, TimeSpan duration)
+    {
+        if (!Enabled || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(artist)) return null;
+        var key = $"{title}|{artist}|{(int)duration.TotalSeconds}".ToLowerInvariant();
+        if (_cache.TryGetValue(key, out var cached)) return cached;
+        List<LyricLine>? result = null;
+        try
+        {
+            var q = $"track_name={Uri.EscapeDataString(title)}&artist_name={Uri.EscapeDataString(artist)}";
+            if (!string.IsNullOrWhiteSpace(album)) q += "&album_name=" + Uri.EscapeDataString(album);
+            if (duration > TimeSpan.Zero) q += "&duration=" + (int)Math.Round(duration.TotalSeconds);
+            try
+            {
+                using var doc = JsonDocument.Parse(await _net.GetStringAsync("https://lrclib.net/api/get?" + q, "Lyrics: look up track"));
+                result = FromRecord(doc.RootElement);
+            }
+            catch (HttpRequestException) { }      // 404: no exact match — try a search below
+            if (result is null)
+            {
+                var s = $"track_name={Uri.EscapeDataString(title)}&artist_name={Uri.EscapeDataString(artist)}";
+                using var doc = JsonDocument.Parse(await _net.GetStringAsync("https://lrclib.net/api/search?" + s, "Lyrics: search track"));
+                foreach (var r in doc.RootElement.EnumerateArray())
+                {
+                    var d = r.TryGetProperty("duration", out var dv) && dv.ValueKind == JsonValueKind.Number ? dv.GetDouble() : 0;
+                    if (duration > TimeSpan.Zero && d > 0 && Math.Abs(d - duration.TotalSeconds) > 4) continue;
+                    if ((result = FromRecord(r)) is not null) break;
+                }
+            }
+        }
+        catch (Exception ex) { Log.Warn("Lyrics lookup failed: " + ex.GetType().Name); }
+        _cache[key] = result;
+        if (_cache.Count > 200) _cache.Remove(_cache.Keys.First());
+        return result;
+    }
+
+    private static List<LyricLine>? FromRecord(JsonElement r)
+        => r.TryGetProperty("syncedLyrics", out var s) && s.ValueKind == JsonValueKind.String ? Parse(s.GetString() ?? "") : null;
+
+    /// <summary>Parse LRC text: "[mm:ss.xx] words", several time tags per line allowed; metadata tags ignored.</summary>
+    internal static List<LyricLine>? Parse(string lrc)
+    {
+        var lines = new List<LyricLine>();
+        foreach (var raw in lrc.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+            var stamps = new List<TimeSpan>();
+            var i = 0;
+            while (i < line.Length && line[i] == '[')
+            {
+                var close = line.IndexOf(']', i);
+                if (close < 0) break;
+                var tag = line[(i + 1)..close];
+                var colon = tag.IndexOf(':');
+                if (colon > 0 && int.TryParse(tag[..colon], NumberStyles.Integer, CultureInfo.InvariantCulture, out var min)
+                    && double.TryParse(tag[(colon + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out var sec))
+                    stamps.Add(TimeSpan.FromMinutes(min) + TimeSpan.FromSeconds(sec));
+                i = close + 1;
+            }
+            // "Enhanced" LRC puts a timestamp before every word: <00:19.25>no <00:19.53>strangers — keep the words only.
+            var text = System.Text.RegularExpressions.Regex.Replace(line[i..], @"<\d+:\d+(?:[.:]\d+)?>", "");
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s{2,}", " ").Trim();
+            foreach (var t in stamps) lines.Add(new LyricLine(t, text));
+        }
+        if (lines.Count == 0) return null;
+        lines.Sort((a, b) => a.At.CompareTo(b.At));
+        return lines;
+    }
+
+    /// <summary>Index of the line being sung at <paramref name="position"/>, or -1 before the first line.</summary>
+    public static int IndexAt(IReadOnlyList<LyricLine> lines, TimeSpan position)
+    {
+        int lo = 0, hi = lines.Count - 1, found = -1;
+        while (lo <= hi)
+        {
+            var mid = (lo + hi) / 2;
+            if (lines[mid].At <= position) { found = mid; lo = mid + 1; } else hi = mid - 1;
+        }
+        return found;
+    }
+}
+
 public sealed record WeatherPlace(string Name, string Region, double Lat, double Lon)
 {
     public override string ToString() => string.IsNullOrEmpty(Region) ? Name : $"{Name}, {Region}";

@@ -1,6 +1,6 @@
 # Glasswave — status report
 
-17 November 2026 · version 1.0.0 · 43 automated tests passing · local Git only (not published)
+17 November 2026 · version 1.0.0 · 50 automated tests passing · local Git only (not published)
 
 This is an honest account of where Glasswave stands: what works, what broke during testing and was fixed, what is still weak, and what only you can check.
 
@@ -86,5 +86,8 @@ Decision: the Rainmeter page now appears only when Rainmeter is installed or run
 7. **Media with your usual players** (YouTube, Spotify, VLC …) — titles, artwork, controls.
 8. **After a restart** — the island and widgets should appear at sign-in, and About › Rendering should say "Hardware".
 9. **Wallpaper Engine** — reopen it; within about a minute the glass should return to its colours.
-10. **Home and sidebar** — with Rainmeter not installed, the sidebar has no Rainmeter entry and Home shows a Focus card. Does Start focus work from there?
-11. **Anything that looks off, feels slow, or that you'd expect to work and doesn't.**
+10. **New live activities** — press your volume keys (meter in the capsule); join a call or open the Camera app (orange/green dot, hover for the app); play music (the bars should move with the beat in the album's colour); turn on **Settings › Privacy & network › Synced lyrics** and play a song with lyrics; turn on the Clipboard tab, copy a few things, click one, then Ctrl+V; drag a file onto the island, then drag it from the shelf into a folder or email.
+11. **Home and sidebar** — with Rainmeter not installed, the sidebar has no Rainmeter entry and Home shows a Focus card. Does Start focus work from there?
+12. **Anything that looks off, feels slow, or that you'd expect to work and doesn't.**
+
+What comes next, and why, is in [ROADMAP.md](ROADMAP.md).

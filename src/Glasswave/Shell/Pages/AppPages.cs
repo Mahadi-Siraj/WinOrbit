@@ -200,6 +200,8 @@ public sealed class SettingsPage : PageBase
             catch (Exception ex) { Dialogs.Message("Search failed", ex.Message); }
         }))));
         weatherBody.Children.Add(Kit.Row("Temperature unit", null, Kit.Segmented(new[] { "°C", "°F" }, P.WeatherFahrenheit ? 1 : 0, i => { P.WeatherFahrenheit = i == 1; Hub.Store.Save(); Hub.Weather.Invalidate(); Hub.Widgets.Apply(); })));
+        weatherBody.Children.Add(Kit.ToggleRow("Synced lyrics", "Shows the line being sung in the island. Uses LRCLIB (free, open, no account). Sends only the song's title, artist, album and length when a new song starts; results stay in memory.",
+            P.LyricsEnabled, v => { P.LyricsEnabled = v; Hub.Store.Save(); }, true, Glyph.Music));
         Children.Add(Kit.Section("Privacy & network", "Glasswave has no telemetry, analytics, crash uploads, accounts or automatic update checks. This switch is the only way it can ever reach the internet.",
             Kit.ToggleRow("Allow optional internet features", "Off by default. While off, Glasswave cannot open any network connection.", P.NetworkAllowed, v =>
             {

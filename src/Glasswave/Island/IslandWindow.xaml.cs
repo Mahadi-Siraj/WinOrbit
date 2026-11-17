@@ -107,6 +107,7 @@ public partial class IslandWindow : Window
         Hub.Foreground.FullscreenChanged += ApplyVisibility;
         Hub.Theme.Applied += OnThemeApplied;
         _downloads.Changed += OnDownloadsChanged;
+        InitLive();
         ApplySettings();
         UpdateClock();
         AlignClock();
@@ -131,6 +132,7 @@ public partial class IslandWindow : Window
         Hub.Foreground.FullscreenChanged -= ApplyVisibility;
         Hub.Theme.Applied -= OnThemeApplied;
         _downloads.Changed -= OnDownloadsChanged;
+        CleanupLive();
     }
 
     private void OnThemeApplied() { ApplyMaterial(); }
@@ -147,8 +149,10 @@ public partial class IslandWindow : Window
         RefreshCompact();
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, Place);
         if (S.AutoHide) _hoverPoll.Start(); else { _hoverPoll.Stop(); SetAutoHidden(false); }
+        _hoverIntent.Interval = TimeSpan.FromMilliseconds(Math.Clamp(S.HoverDelayMs, 0, 1500));
         UpdateMonitorSubscription();
         ApplyVisibility();
+        UpdatePrivacyDot();
     }
 
     private void ApplyMaterial()
@@ -214,7 +218,7 @@ public partial class IslandWindow : Window
 
     public void RefreshCompact()
     {
-        if (CPeek.Visibility == Visibility.Visible) { FitCompact(); return; }
+        if (CPeek.Visibility == Visibility.Visible || CHud.Visibility == Visibility.Visible) { FitCompact(); return; }
         var media = Hub.Media;
         var timers = Hub.Timers;
         var showMedia = S.ShowMedia && media.HasTrack;
@@ -229,11 +233,11 @@ public partial class IslandWindow : Window
         if (showDownload) CDownloadText.Text = _downloads.Active!.Value.Name;
         if (CMedia.Visibility == Visibility.Visible)
         {
-            CTitle.Text = media.DisplayTitle;
+            CTitle.Text = CapsuleTitle();
             if (media.Art is not null) { CArt.Background = new ImageBrush(media.Art) { Stretch = Stretch.UniformToFill }; CArtGlyph.Visibility = Visibility.Collapsed; }
             else { CArt.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft"); CArtGlyph.Visibility = Visibility.Visible; }
         }
-        CEq.Set(CMedia.Visibility == Visibility.Visible && media.IsPlaying && IsVisible && !_expanded);
+        UpdateEqualizerDrive();
 
         CTime.Visibility = S.ShowTime ? Visibility.Visible : Visibility.Collapsed;
         CDate.Visibility = S.ShowDate ? Visibility.Visible : Visibility.Collapsed;
@@ -271,6 +275,8 @@ public partial class IslandWindow : Window
     public void Peek(string glyph, string text, double seconds = 4)
     {
         if (_expanded || !IsVisible) return;
+        _hudTimer?.Stop();
+        CHud.Visibility = Visibility.Collapsed;
         CPeekGlyph.Text = glyph;
         CPeekText.Text = text;
         CNormal.Visibility = Visibility.Collapsed;
@@ -309,8 +315,9 @@ public partial class IslandWindow : Window
         _expanded = true;
         _peekTimer.Stop();
         CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible;
+        _hudTimer?.Stop(); CHud.Visibility = Visibility.Collapsed;
         SetAutoHidden(false);
-        CEq.Set(false);
+        UpdateEqualizerDrive();
         Expanded.Visibility = Visibility.Visible;
         Pill.Cursor = Cursors.Arrow;
         Motion.To(Compact, OpacityProperty, 0, 110);
@@ -385,7 +392,7 @@ public partial class IslandWindow : Window
         }
         else if (e.Key == Key.Space && _tab == "media" && Keyboard.FocusedElement is not Button) { Hub.Media.PlayPause(); e.Handled = true; }
         else if (e.Key == Key.Space && _tab == "focus" && Keyboard.FocusedElement is not Button) { Hub.Timers.Toggle(); e.Handled = true; }
-        else if (e.Key is >= Key.D1 and <= Key.D6 && Keyboard.Modifiers == ModifierKeys.None)
+        else if (e.Key is >= Key.D1 and <= Key.D9 && Keyboard.Modifiers == ModifierKeys.None)
         {
             var n = e.Key - Key.D1;
             if (n < tabs.Count) { ShowTab(tabs[n]); e.Handled = true; }
@@ -451,7 +458,7 @@ public partial class IslandWindow : Window
         if (v is null) return;
         var nv = Math.Clamp(v.Value + (e.Delta > 0 ? 0.02 : -0.02), 0, 1);
         Audio.SetVolume(nv);
-        Peek(nv <= 0.001 ? Glyph.Mute : Glyph.Volume, $"Volume {nv * 100:0}%", 1.4);
+        if (!S.VolumeHud) Peek(nv <= 0.001 ? Glyph.Mute : Glyph.Volume, $"Volume {nv * 100:0}%", 1.4);   // otherwise the HUD shows it
         e.Handled = true;
     }
 
@@ -505,11 +512,19 @@ public partial class IslandWindow : Window
     private static readonly (string Id, string Glyph, string Name)[] AllTabs =
     {
         ("media", Glyph.Music, "Media"), ("system", Glyph.Chip, "System"), ("controls", Glyph.Settings, "Quick controls"),
-        ("focus", Glyph.Stopwatch, "Focus timer"), ("calendar", Glyph.Calendar, "Calendar"), ("notes", Glyph.Note, "Notes")
+        ("focus", Glyph.Stopwatch, "Focus timer"), ("calendar", Glyph.Calendar, "Calendar"), ("notes", Glyph.Note, "Notes"),
+        ("clipboard", Glyph.Copy, "Clipboard"), ("shelf", GlyphShelf, "File shelf")
     };
 
     private List<string> ActiveTabs()
     {
+        // Tabs added in later versions appear once for existing users; after that their choice is respected.
+        if (S.ModulesVersion < 1)
+        {
+            foreach (var id in new[] { "clipboard", "shelf" }) if (!S.Modules.Contains(id)) S.Modules.Add(id);
+            S.ModulesVersion = 1;
+            Hub.Store.Save();
+        }
         var list = AllTabs.Select(t => t.Id).Where(id => S.Modules.Contains(id)).ToList();
         if (list.Count == 0) list.Add("media");
         return list;
@@ -544,7 +559,9 @@ public partial class IslandWindow : Window
         TabFocus.Visibility = id == "focus" ? Visibility.Visible : Visibility.Collapsed;
         TabCalendar.Visibility = id == "calendar" ? Visibility.Visible : Visibility.Collapsed;
         TabNotes.Visibility = id == "notes" ? Visibility.Visible : Visibility.Collapsed;
-        var view = id switch { "media" => (FrameworkElement)TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, _ => TabNotes };
+        TabClipboard.Visibility = id == "clipboard" ? Visibility.Visible : Visibility.Collapsed;
+        TabShelf.Visibility = id == "shelf" ? Visibility.Visible : Visibility.Collapsed;
+        var view = id switch { "media" => (FrameworkElement)TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
         Motion.Enter(view, 8, 220);
         _mediaTick.Stop();
         UpdateMonitorSubscription();
@@ -554,6 +571,8 @@ public partial class IslandWindow : Window
             case "controls": LoadVolume(); LoadBrightness(); RefreshQuick(); break;
             case "focus": UpdateFocus(); break;
             case "calendar": CalView.ShowToday(); UpdateCalendar(); break;
+            case "clipboard": RenderClipboard(); break;
+            case "shelf": RenderShelf(); break;
             case "notes":
                 _loadingUi = true;
                 NotesBox.Text = Hub.Store.Data.Notes.TryGetValue(UserData.IslandNoteKey, out var n) ? n : "";

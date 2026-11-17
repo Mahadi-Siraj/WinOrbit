@@ -133,10 +133,36 @@ public sealed class Equalizer : StackPanel
         }
     }
 
+    /// <summary>When true, bar heights come from <see cref="Levels"/> (real audio) instead of the built-in loop.</summary>
+    public bool External { get; set; }
+
+    /// <summary>Set the three bar heights (0..1) directly — used for audio-reactive bars.</summary>
+    public void Levels(double a, double b, double c)
+    {
+        _scales[0].ScaleY = Math.Clamp(a, 0.18, 1);
+        _scales[1].ScaleY = Math.Clamp(b, 0.18, 1);
+        _scales[2].ScaleY = Math.Clamp(c, 0.18, 1);
+    }
+
+    /// <summary>Colour the bars (e.g. from album art); null returns to the theme accent.</summary>
+    public void Tint(Color? color)
+    {
+        foreach (var bar in Children.OfType<Rectangle>())
+        {
+            if (color is { } c) bar.Fill = new SolidColorBrush(c);
+            else bar.SetResourceReference(Shape.FillProperty, "T.Accent");
+        }
+    }
+
     public void Set(bool playing)
     {
         if (playing == _running) return;
         _running = playing;
+        if (External)
+        {
+            for (var i = 0; i < 3; i++) { _scales[i].BeginAnimation(ScaleTransform.ScaleYProperty, null); _scales[i].ScaleY = 0.3; }
+            return;
+        }
         var durations = new[] { 520, 380, 640 };
         for (var i = 0; i < 3; i++)
         {

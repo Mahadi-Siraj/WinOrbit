@@ -20,11 +20,26 @@
 
                 <!-- ============ Collapsed ============ -->
                 <StackPanel x:Name="Compact" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,0,14,0" Height="38">
+                    <!-- Volume HUD: replaces the capsule content for a moment when the volume changes -->
+                    <StackPanel x:Name="CHud" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock x:Name="CHudGlyph" Text="&#xE767;" Style="{StaticResource Icon}" FontSize="14" Width="18" Foreground="{DynamicResource T.Accent}" Margin="0,0,10,0"/>
+                        <Grid Width="132" Height="6" VerticalAlignment="Center">
+                            <Border CornerRadius="3" Background="{DynamicResource T.Track}"/>
+                            <Border x:Name="CHudFill" CornerRadius="3" Background="{DynamicResource T.Accent}" HorizontalAlignment="Left" Width="0"/>
+                            <Border CornerRadius="3" Margin="0,0,0,3" Background="#33FFFFFF" IsHitTestVisible="False"/>
+                        </Grid>
+                        <TextBlock x:Name="CHudText" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0" MinWidth="30" TextAlignment="Right"/>
+                    </StackPanel>
                     <StackPanel x:Name="CPeek" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                         <TextBlock x:Name="CPeekGlyph" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource T.Accent}" Margin="0,0,8,0"/>
                         <TextBlock x:Name="CPeekText" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="320" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
                     <StackPanel x:Name="CNormal" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Privacy dot: orange = microphone in use, green = camera in use (like phones) -->
+                        <StackPanel x:Name="CPriv" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0" Visibility="Collapsed" Background="Transparent">
+                            <Ellipse x:Name="CPrivMic" Width="7" Height="7" Fill="#FF9F0A" Margin="0,0,3,0" Visibility="Collapsed"/>
+                            <Ellipse x:Name="CPrivCam" Width="7" Height="7" Fill="#30D158" Visibility="Collapsed"/>
+                        </StackPanel>
                         <StackPanel x:Name="CMedia" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                             <Border x:Name="CArt" Width="22" Height="22" CornerRadius="6" Background="{DynamicResource T.AccentSoft}" Margin="0,0,8,0">
                                 <TextBlock x:Name="CArtGlyph" Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="11" Foreground="{DynamicResource T.Accent}"/>
@@ -94,6 +109,7 @@
                                         <TextBlock x:Name="MSource" Style="{StaticResource Text.Label}" Margin="0,0,0,4"/>
                                         <TextBlock x:Name="MTitle" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxHeight="46" TextWrapping="Wrap"/>
                                         <TextBlock x:Name="MArtist" Style="{StaticResource Text.Caption}" FontSize="13" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                        <TextBlock x:Name="MLyric" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource T.Accent}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,6,0,0" Visibility="Collapsed"/>
                                     </StackPanel>
                                 </Grid>
                                 <Grid Grid.Row="1" Margin="0,12,0,0">
@@ -202,6 +218,45 @@
                                     <TextBlock x:Name="NotesHint" Text="Quick note… saved on this PC only." Style="{StaticResource Text.Caption}" FontSize="13" Foreground="{DynamicResource T.Text3}" IsHitTestVisible="False"/>
                                     <TextBox x:Name="NotesBox" Style="{StaticResource TextBox.Bare}" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                                              AutomationProperties.Name="Quick note" TextChanged="OnNotesChanged" PreviewMouseDown="OnNotesMouseDown"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Clipboard history -->
+                        <Grid x:Name="TabClipboard" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Margin="2,0,0,8">
+                                <TextBlock x:Name="ClipHeader" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
+                                <Button x:Name="ClipClear" Content="Clear" HorizontalAlignment="Right" Padding="12,4" FontSize="12" Click="OnClipClear"/>
+                            </Grid>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel x:Name="ClipList"/>
+                            </ScrollViewer>
+                        </Grid>
+
+                        <!-- File shelf -->
+                        <Grid x:Name="TabShelf" Visibility="Collapsed" Background="Transparent">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Margin="2,0,0,8">
+                                <TextBlock x:Name="ShelfHeader" Style="{StaticResource Text.Caption}" VerticalAlignment="Center"/>
+                                <Button Content="Clear" HorizontalAlignment="Right" Padding="12,4" FontSize="12" Click="OnShelfClear"/>
+                            </Grid>
+                            <Border Grid.Row="1" x:Name="ShelfZone" CornerRadius="14" BorderThickness="1.5" BorderBrush="{DynamicResource T.Stroke}" Background="{DynamicResource T.Input}">
+                                <Grid>
+                                    <StackPanel x:Name="ShelfEmpty" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="26" Foreground="{DynamicResource T.Text3}"/>
+                                        <TextBlock Text="Drop files here to keep them handy" Style="{StaticResource Text.Sub}" FontSize="13" HorizontalAlignment="Center" Margin="0,8,0,2"/>
+                                        <TextBlock Text="Then drag them out into any app or folder. Files stay where they are." Style="{StaticResource Text.Caption}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="6">
+                                        <WrapPanel x:Name="ShelfList"/>
+                                    </ScrollViewer>
                                 </Grid>
                             </Border>
                         </Grid>

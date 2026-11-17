@@ -297,6 +297,37 @@ internal interface IMMDeviceEnumerator
 {
     [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IntPtr devices);
     [PreserveSig] int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+    [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
+    [PreserveSig] int RegisterEndpointNotificationCallback(IMMNotificationClient client);
+    [PreserveSig] int UnregisterEndpointNotificationCallback(IMMNotificationClient client);
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct PropertyKey { public Guid fmtid; public int pid; }
+
+/// <summary>Default output device changes (headphones plugged in, etc.).</summary>
+[ComImport, Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IMMNotificationClient
+{
+    [PreserveSig] int OnDeviceStateChanged([MarshalAs(UnmanagedType.LPWStr)] string id, int state);
+    [PreserveSig] int OnDeviceAdded([MarshalAs(UnmanagedType.LPWStr)] string id);
+    [PreserveSig] int OnDeviceRemoved([MarshalAs(UnmanagedType.LPWStr)] string id);
+    [PreserveSig] int OnDefaultDeviceChanged(int flow, int role, [MarshalAs(UnmanagedType.LPWStr)] string? id);
+    [PreserveSig] int OnPropertyValueChanged([MarshalAs(UnmanagedType.LPWStr)] string id, PropertyKey key);
+}
+
+/// <summary>Called by Windows whenever the endpoint volume or mute changes, from any source.</summary>
+[ComImport, Guid("657804FA-D6AD-4496-8A60-352752AF4F89"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IAudioEndpointVolumeCallback
+{
+    [PreserveSig] int OnNotify(IntPtr data);
+}
+
+/// <summary>Peak level of what the device is playing (0..1) — the same meter the Windows volume mixer shows.</summary>
+[ComImport, Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IAudioMeterInformation
+{
+    [PreserveSig] int GetPeakValue(out float peak);
 }
 
 [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

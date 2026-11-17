@@ -386,6 +386,65 @@ public class QuickControlTests
     }
 }
 
+public class LiveActivityTests
+{
+    [Fact]
+    public void Lrc_parses_multi_stamps_and_skips_metadata()
+    {
+        var lines = LyricsService.Parse("[ar:Someone]\n[00:12.50]First line\n[00:05.00][01:00.25]Chorus\n[00:20.00]\n")!;
+        Assert.Equal(new[] { "Chorus", "First line", "", "Chorus" }, lines.Select(l => l.Text));
+        Assert.Equal(TimeSpan.FromSeconds(5), lines[0].At);
+        Assert.Equal(TimeSpan.FromMilliseconds(60250), lines[3].At);
+        Assert.Null(LyricsService.Parse("plain text, no timestamps"));
+    }
+
+    [Fact]
+    public void Enhanced_lrc_word_stamps_are_removed()
+    {
+        var lines = LyricsService.Parse("[00:18.89] <00:18.89>We're <00:19.25>no <00:19.53>strangers <00:20.07>to <00:20.33>love")!;
+        Assert.Equal("We're no strangers to love", lines.Single().Text);
+    }
+
+    [Fact]
+    public void Lyric_index_follows_position()
+    {
+        var lines = LyricsService.Parse("[00:01.00]a\n[00:03.00]b\n[00:05.00]c")!;
+        Assert.Equal(-1, LyricsService.IndexAt(lines, TimeSpan.FromSeconds(0.5)));
+        Assert.Equal(0, LyricsService.IndexAt(lines, TimeSpan.FromSeconds(1)));
+        Assert.Equal(1, LyricsService.IndexAt(lines, TimeSpan.FromSeconds(4.9)));
+        Assert.Equal(2, LyricsService.IndexAt(lines, TimeSpan.FromMinutes(9)));
+    }
+
+    [Fact]
+    public void Lyrics_need_both_switches_and_never_touch_the_network_when_off()
+    {
+        var privacy = new PrivacySettings { NetworkAllowed = true, LyricsEnabled = false };
+        var net = new NetworkGate(() => privacy);
+        var lyrics = new LyricsService(net, () => privacy);
+        Assert.False(lyrics.Enabled);
+        Assert.Null(lyrics.GetAsync("Song", "Artist", "", TimeSpan.FromMinutes(3)).Result);
+        Assert.Equal(0, net.RequestCount);
+        privacy.LyricsEnabled = true; privacy.NetworkAllowed = false;
+        Assert.False(lyrics.Enabled);
+    }
+
+    [Fact]
+    public void Links_are_detected_conservatively()
+    {
+        Assert.True(ClipboardHistory.IsLink("https://example.com/a?b=c"));
+        Assert.False(ClipboardHistory.IsLink("see https://example.com"));
+        Assert.False(ClipboardHistory.IsLink("file:///C:/x.txt"));
+    }
+
+    [Fact]
+    public void Privacy_indicator_reads_without_throwing()
+    {
+        Assert.NotNull(PrivacyIndicator.InUse("microphone"));
+        Assert.NotNull(PrivacyIndicator.InUse("webcam"));
+        Assert.Empty(PrivacyIndicator.InUse("no-such-capability"));
+    }
+}
+
 public class PrivacyTests
 {
     [Fact]
