@@ -280,6 +280,36 @@ public sealed class RainmeterService
     public void SetDraggable(RmSkin s, bool on) => Bang("!Draggable", on ? "1" : "0", s.Config);
     public void Manage(RmSkin? s) { if (s is null) Bang("!Manage"); else Bang("!Manage", "Skins", s.Config, s.ActiveVariant.Length > 0 ? s.ActiveVariant : s.Variants[0]); }
 
+    /// <summary>
+    /// The skin's real on-screen rectangle (physical pixels), read from Rainmeter's own window. Rainmeter.ini often
+    /// stores positions as formulas such as (#SCREENAREAWIDTH#-200), so the saved values can't be used directly.
+    /// Rainmeter titles each skin window with the full path of the loaded .ini file.
+    /// </summary>
+    public Interop.Native.RECT? LiveBounds(RmSkin s)
+    {
+        if (!s.Active) return null;
+        var pids = new HashSet<uint>();
+        foreach (var p in Process.GetProcessesByName("Rainmeter")) using (p) pids.Add((uint)p.Id);
+        if (pids.Count == 0) return null;
+        var prefix = s.Folder.TrimEnd('\\') + "\\";
+        Interop.Native.RECT? found = null;
+        Interop.Native.EnumWindows((h, _) =>
+        {
+            Interop.Native.GetWindowThreadProcessId(h, out var pid);
+            if (!pids.Contains(pid)) return true;
+            var cls = new StringBuilder(64);
+            Interop.Native.GetClassName(h, cls, cls.Capacity);
+            if (cls.ToString() != "RainmeterMeterWindow") return true;
+            var title = new StringBuilder(1024);
+            Interop.Native.GetWindowText(h, title, title.Capacity);
+            var t = title.ToString();
+            if (!t.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || t.IndexOf('\\', prefix.Length) >= 0) return true;
+            if (Interop.Native.GetWindowRect(h, out var r)) { found = r; return false; }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
     public void Start()
     {
         if (!Installed || IsRunning) return;

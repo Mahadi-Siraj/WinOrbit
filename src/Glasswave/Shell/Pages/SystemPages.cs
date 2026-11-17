@@ -159,14 +159,21 @@ public sealed class RainmeterPage : PageBase
     private void OnLibrarySize(object? sender, SizeChangedEventArgs? e)
     {
         if (_library is null) return;
-        foreach (var t in _library.Children.OfType<TextBlock>()) t.Width = Math.Max(100, _library.ActualWidth - 16);
+        var width = _library.ActualWidth;
+        foreach (var t in _library.Children.OfType<TextBlock>()) t.Width = Math.Max(100, width - 16);
+        if (width <= 0) return;
+        // Cards share the row evenly (min 260 px each) instead of leaving a gap on the right.
+        const double minCard = 260, gap = 12;
+        var cols = Math.Max(1, (int)Math.Floor(width / (minCard + gap)));
+        var cardWidth = Math.Floor(width / cols - gap);
+        foreach (var c in _library.Children.OfType<Border>().Where(b => b.Tag as string == "skin-card")) c.Width = cardWidth;
     }
 
     private Border SkinCard(RmSkin s)
     {
         var prefs = Hub.Settings.Rainmeter;
         var fav = prefs.Favourites.Contains(s.Config);
-        var card = new Border { Width = 300, Margin = new Thickness(6), CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(s.Active ? 1.5 : 1), Padding = new Thickness(0) };
+        var card = new Border { Tag = "skin-card", Width = 300, Margin = new Thickness(6), CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(s.Active ? 1.5 : 1), Padding = new Thickness(0) };
         card.SetResourceReference(Border.BackgroundProperty, "T.Card");
         card.SetResourceReference(Border.BorderBrushProperty, s.Active ? "T.Accent" : "T.Stroke");
         var sp = new StackPanel();
@@ -180,7 +187,7 @@ public sealed class RainmeterPage : PageBase
             try
             {
                 var bmp = new BitmapImage();
-                bmp.BeginInit(); bmp.CacheOption = BitmapCacheOption.OnLoad; bmp.DecodePixelWidth = 300; bmp.UriSource = new Uri(s.Preview); bmp.EndInit(); bmp.Freeze();
+                bmp.BeginInit(); bmp.CacheOption = BitmapCacheOption.OnLoad; bmp.DecodePixelWidth = 480; bmp.UriSource = new Uri(s.Preview); bmp.EndInit(); bmp.Freeze();
                 prev.Children.Add(new Image { Source = bmp, Stretch = Stretch.UniformToFill });
                 hasPreview = true;
             }
@@ -194,6 +201,7 @@ public sealed class RainmeterPage : PageBase
             prev.Children.Add(ph);
         }
         prev.Clip = new RectangleGeometry(new Rect(0, 0, 300, 110), 15, 15);
+        prev.SizeChanged += (_, e) => prev.Clip = new RectangleGeometry(new Rect(0, 0, e.NewSize.Width, 110), 15, 15);
         var star = Ui.IconButton(fav ? Glyph.StarFill : Glyph.Star, fav ? "Remove from favourites" : "Add to favourites", () =>
         {
             if (!prefs.Favourites.Remove(s.Config)) prefs.Favourites.Add(s.Config);
@@ -282,13 +290,18 @@ public sealed class RainmeterPage : PageBase
 
     private void PositionDialog(RmSkin s)
     {
-        var x = Dialogs.Prompt("Move skin", $"New position for “{s.DisplayName}” as X,Y in pixels (top-left of the virtual desktop).", $"{s.X ?? 100},{s.Y ?? 100}", "Move");
+        // Start from where the skin really is; Rainmeter.ini may hold formulas rather than numbers.
+        var live = R.LiveBounds(s);
+        var curX = live?.Left ?? s.X;
+        var curY = live?.Top ?? s.Y;
+        var current = curX is not null && curY is not null ? $"{curX},{curY}" : "";
+        var x = Dialogs.Prompt("Move skin", $"Position for “{s.DisplayName}” as X,Y in pixels from the top-left of the main screen. Leave it unchanged to keep the skin where it is.", current, "Next");
         if (x is null) return;
         var parts = x.Split(',', ' ', ';').Where(p => p.Length > 0).ToArray();
-        if (parts.Length == 2 && int.TryParse(parts[0], out var px) && int.TryParse(parts[1], out var py)) R.Move(s, px, py);
+        if (x.Trim() != current && parts.Length == 2 && int.TryParse(parts[0], out var px) && int.TryParse(parts[1], out var py)) R.Move(s, px, py);
         var layer = Dialogs.Choose("Layering", "Where should the skin sit?", new[] { "On desktop", "Bottom", "Normal", "On top", "Always on top" }, s.AlwaysOnTop + 2);
         if (layer >= 0) R.ZPos(s, layer - 2);
-        var alpha = Dialogs.Choose("Transparency", "Skin opacity.", new[] { "100%", "85%", "70%", "55%", "40%" }, (int)Math.Round((255 - s.Alpha) / 255.0 / 0.15));
+        var alpha = Dialogs.Choose("Transparency", "Skin opacity. Rainmeter applies this until the skin is refreshed or Rainmeter restarts; to keep it permanently, set Transparency in Rainmeter's Manage window.",new[] { "100%", "85%", "70%", "55%", "40%" }, (int)Math.Round((255 - s.Alpha) / 255.0 / 0.15));
         if (alpha >= 0) R.SetAlpha(s, (int)Math.Round(255 * (1 - alpha * 0.15)));
         Later(() => { R.Scan(); RenderLibrary(); });
     }
