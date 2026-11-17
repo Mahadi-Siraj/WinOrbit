@@ -1,0 +1,94 @@
+<Window x:Class="Glasswave.Shell.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="clr-namespace:Glasswave.Design"
+        Title="Glasswave" Width="1180" Height="780" MinWidth="880" MinHeight="580"
+        WindowStartupLocation="CenterScreen" Background="Transparent" UseLayoutRounding="True"
+        FontFamily="{DynamicResource F.Family}" Foreground="{DynamicResource T.Text}" TextOptions.TextFormattingMode="Ideal"
+        Icon="/Assets/glasswave.ico">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="44" ResizeBorderThickness="6" GlassFrameThickness="-1" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid x:Name="Frame">
+        <!-- Material: DWM acrylic/mica sits behind everything; when unavailable the wallpaper-sampled glass takes over. -->
+        <d:GlassSurface x:Name="FallbackGlass" CornerRadius="0" CastShadow="False" SampleWallpaper="False" Visibility="Collapsed"/>
+        <Border x:Name="Tint" Background="{DynamicResource T.WindowTint}"/>
+        <Border Background="{DynamicResource T.Wash}" Opacity="0.85"/>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SideColumn" Width="248"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ================= Sidebar ================= -->
+            <Grid Margin="14,14,4,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="10,4,0,22" WindowChrome.IsHitTestVisibleInChrome="False">
+                    <Image Source="/Assets/glasswave.ico" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Glasswave" FontSize="16.5" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="SideSubtitle" Text="Liquid Glass desktop" FontSize="11.5" Foreground="{DynamicResource T.Text3}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <ListBox x:Name="Nav" Grid.Row="1" ItemContainerStyle="{StaticResource NavItem}" SelectionChanged="OnNav"
+                         AutomationProperties.Name="Sections" KeyboardNavigation.TabNavigation="Once"/>
+
+                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="12,10" Margin="0,10,0,0" Cursor="Hand" MouseLeftButtonUp="OnProfileChip"
+                        ToolTip="Switch profile">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="32" Height="32" CornerRadius="10" Background="{DynamicResource T.AccentSoft}">
+                            <TextBlock x:Name="ProfileGlyph" Style="{StaticResource Icon}" Foreground="{DynamicResource T.Accent}" FontSize="14"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="PROFILE" Style="{StaticResource Text.Label}" FontSize="10"/>
+                            <TextBlock x:Name="ProfileName" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="&#xE70D;" Style="{StaticResource Icon}" FontSize="10" Foreground="{DynamicResource T.Text3}"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ================= Content ================= -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Height="44">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button Style="{StaticResource Button.Caption}" Content="&#xE921;" Click="OnMinimize" AutomationProperties.Name="Minimise"/>
+                        <Button x:Name="MaxButton" Style="{StaticResource Button.Caption}" Content="&#xE922;" Click="OnMaximize" AutomationProperties.Name="Maximise"/>
+                        <Button Style="{StaticResource Button.Caption}" Content="&#xE8BB;" Click="OnClose" AutomationProperties.Name="Close"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="22,0,8,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel x:Name="Header" Margin="2,0,24,18">
+                        <TextBlock x:Name="PageTitle" Style="{StaticResource Text.Display}" FontSize="30"/>
+                        <TextBlock x:Name="PageSubtitle" Style="{StaticResource Text.Muted}" Margin="0,4,0,0" MaxWidth="760" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                    <ScrollViewer x:Name="Scroller" Grid.Row="1" Style="{StaticResource PageScroll}">
+                        <ContentControl x:Name="PageHost" Margin="0,0,14,28" Focusable="False"/>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

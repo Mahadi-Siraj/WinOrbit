@@ -1,0 +1,180 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using Glasswave.Core;
+using Glasswave.Design;
+using Glasswave.Shell.Pages;
+
+namespace Glasswave.Shell;
+
+public partial class MainWindow : Window
+{
+    private readonly List<(string Id, string Glyph, string Name, Func<PageBase> Create)> _pages = new()
+    {
+        ("home", Glyph.Home, "Home", () => new HomePage()),
+        ("appearance", Glyph.Personalize, "Appearance", () => new AppearancePage()),
+        ("studio", Glyph.Drop, "Liquid Glass Editor", () => new StudioPage()),
+        ("wallpaper", Glyph.Picture, "Wallpaper & Gradients", () => new WallpaperPage()),
+        ("island", Glyph.More, "Dynamic Island", () => new IslandPage()),
+        ("widgets", Glyph.Tiles, "Widgets", () => new WidgetsPage()),
+        ("rainmeter", Glyph.Diagnostic, "Rainmeter", () => new RainmeterPage()),
+        ("tweaks", Glyph.System, "Windows Tweaks", () => new TweaksPage()),
+        ("profiles", Glyph.Profiles, "Profiles", () => new ProfilesPage()),
+        ("settings", Glyph.Settings, "Settings", () => new SettingsPage()),
+        ("about", Glyph.Info, "About & Diagnostics", () => new AboutPage()),
+    };
+
+    private PageBase? _current;
+    private string _currentId = "";
+    private bool _systemBackdrop;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        foreach (var p in _pages)
+        {
+            var item = new ListBoxItem { Content = p.Name, Tag = p.Glyph, DataContext = p.Id };
+            System.Windows.Automation.AutomationProperties.SetName(item, p.Name);
+            Nav.Items.Add(item);
+        }
+        SourceInitialized += (_, _) => ApplyBackdrop();
+        Hub.Theme.Applied += OnTheme;
+        Hub.Profiles.Changed += UpdateProfileChip;
+        Closed += (_, _) =>
+        {
+            Hub.Theme.Applied -= OnTheme;
+            Hub.Profiles.Changed -= UpdateProfileChip;
+            _current?.Leave();
+        };
+        StateChanged += (_, _) =>
+        {
+            MaxButton.Content = WindowState == WindowState.Maximized ? "" : "";
+            // A maximised chrome-less window overhangs the screen by the resize border; pad it back in.
+            Frame.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+        };
+        SizeChanged += (_, e) => SideColumn.Width = new GridLength(e.NewSize.Width < 1000 ? 212 : 248);
+        IsVisibleChanged += (_, _) =>
+        {
+            // Pages with live data stop all work while the window is hidden.
+            if (!IsVisible) _current?.Leave(); else _current?.Enter();
+        };
+        PreviewKeyDown += OnKeys;
+        UpdateProfileChip();
+        Navigate("home");
+    }
+
+    private void OnKeys(object sender, KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key is >= Key.D1 and <= Key.D9)
+        {
+            Nav.SelectedIndex = e.Key - Key.D1;
+            e.Handled = true;
+        }
+        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.W) { Close(); e.Handled = true; }
+        else _current?.OnKey(e);
+    }
+
+    private void OnTheme()
+    {
+        ApplyBackdrop();
+        UpdateProfileChip();
+    }
+
+    private void ApplyBackdrop()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        var source = HwndSource.FromHwnd(hwnd);
+        var material = Hub.Settings.General.WindowMaterial;
+        _systemBackdrop = material != "glass" && WindowFx.ApplySystemBackdrop(this, Hub.Theme.IsDark, material == "acrylic");
+        if (source?.CompositionTarget is not null) source.CompositionTarget.BackgroundColor = _systemBackdrop ? Colors.Transparent : Colors.Black;
+        // Without a system backdrop (Windows 10, or "Glass" chosen) use Glasswave's own wallpaper-sampled glass.
+        FallbackGlass.Visibility = _systemBackdrop ? Visibility.Collapsed : Visibility.Visible;
+        FallbackGlass.SampleWallpaper = !_systemBackdrop;
+        Tint.Opacity = _systemBackdrop ? 1 : 0.6;
+    }
+
+    public void RefreshBackdrop() => ApplyBackdrop();
+
+    public void Navigate(string id)
+    {
+        var index = _pages.FindIndex(p => p.Id == id);
+        if (index < 0) index = 0;
+        if (Nav.SelectedIndex == index && _current is not null) { _current.Enter(); return; }
+        Nav.SelectedIndex = index;
+    }
+
+    private void OnNav(object sender, SelectionChangedEventArgs e) => Show(false);
+
+    private void Show(bool force)
+    {
+        if (Nav.SelectedIndex < 0) return;
+        var p = _pages[Nav.SelectedIndex];
+        if (p.Id == _currentId && !force) return;
+        _current?.Leave();
+        _currentId = p.Id;
+        try
+        {
+            _current = p.Create();
+            _current.Owner = this;
+            PageTitle.Text = _current.Title;
+            PageSubtitle.Text = _current.Subtitle;
+            PageSubtitle.Visibility = string.IsNullOrEmpty(_current.Subtitle) ? Visibility.Collapsed : Visibility.Visible;
+            PageHost.Content = _current;
+            Scroller.ScrollToTop();
+            _current.Enter();
+            Motion.Enter(Header, 8, 260);
+            Motion.Enter(_current, 16, 340);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Page {p.Id} failed", ex);
+            PageHost.Content = Ui.Text("This page could not be shown. Details are in the log (About & Diagnostics).\n\n" + ex.Message, "Text.Muted");
+        }
+    }
+
+    /// <summary>Rebuild the current page (after an import or a profile switch changed what it shows).</summary>
+    public void Reload()
+    {
+        var offset = Scroller.VerticalOffset;
+        Show(true);
+        Scroller.ScrollToVerticalOffset(offset);
+    }
+
+    private void UpdateProfileChip()
+    {
+        var p = Hub.Profiles.Find(Hub.Settings.ActiveProfileId);
+        ProfileName.Text = p?.Name ?? "Custom";
+        ProfileGlyph.Text = p?.Glyph ?? Glyph.Personalize;
+        SideSubtitle.Text = Hub.Theme.Current.Name;
+    }
+
+    private void OnProfileChip(object sender, MouseButtonEventArgs e)
+    {
+        var menu = new ContextMenu();
+        foreach (var p in Hub.Profiles.All)
+        {
+            var item = new MenuItem { Header = p.Name, IsChecked = p.Id == Hub.Settings.ActiveProfileId };
+            item.Click += (_, _) => Hub.Profiles.Apply(p);
+            menu.Items.Add(item);
+        }
+        menu.Items.Add(new Separator());
+        var manage = new MenuItem { Header = "Manage profiles…" };
+        manage.Click += (_, _) => Navigate("profiles");
+        menu.Items.Add(manage);
+        menu.PlacementTarget = (UIElement)sender;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+        menu.IsOpen = true;
+    }
+
+    private void OnMinimize(object s, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    private void OnMaximize(object s, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void OnClose(object s, RoutedEventArgs e)
+    {
+        if (Hub.Settings.General.CloseToTray) Close();      // the desktop experience keeps running from the tray
+        else App.Current.Quit();
+    }
+}

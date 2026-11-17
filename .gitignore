@@ -1,0 +1,14 @@
+# Build output
+bin/
+obj/
+artifacts/
+dist/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Never commit personal data
+*.log
+Data/
+portable.flag
