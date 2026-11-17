@@ -323,26 +323,50 @@ public static class Audio
 
 public static class Brightness
 {
-    private static bool? _supported;
+    // DDC/CI is a slow, lossy side channel: monitors often miss a request while they are busy (input switch,
+    // OSD open, waking up). One failure must not disable the slider for the whole session, so reads retry,
+    // and only a monitor that has failed several times in a row is treated as unsupported — for a few minutes.
+    private static int _failures;
+    private static DateTime _lastFailure;
+    private static readonly object Gate = new();
 
-    /// <summary>Brightness of the primary display 0..100 through DDC/CI, or null when the monitor does not support it.</summary>
+    private static bool LooksUnsupported => _failures >= 3 && DateTime.UtcNow - _lastFailure < TimeSpan.FromMinutes(5);
+
+    /// <summary>Brightness of the primary display 0..100 through DDC/CI, or null when the monitor does not answer.</summary>
     public static int? Get()
     {
-        if (_supported == false) return null;
-        int? result = null;
-        WithMonitor(h => { if (Native.GetMonitorBrightness(h, out var min, out var cur, out var max) && max > min) result = (int)(100.0 * (cur - min) / (max - min)); });
-        _supported = result is not null;
-        return result;
+        lock (Gate)
+        {
+            if (LooksUnsupported) return null;
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                int? result = null;
+                WithMonitor(h => { if (Native.GetMonitorBrightness(h, out var min, out var cur, out var max) && max > min) result = (int)Math.Round(100.0 * (cur - min) / (max - min)); });
+                if (result is not null) { _failures = 0; return result; }
+                Thread.Sleep(60);
+            }
+            _failures++;
+            _lastFailure = DateTime.UtcNow;
+            return null;
+        }
     }
 
     public static void Set(int percent)
     {
-        if (_supported == false) return;
-        WithMonitor(h =>
+        lock (Gate)
         {
-            if (Native.GetMonitorBrightness(h, out var min, out _, out var max) && max > min)
-                Native.SetMonitorBrightness(h, (uint)(min + (max - min) * Math.Clamp(percent, 0, 100) / 100.0));
-        });
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                var ok = false;
+                WithMonitor(h =>
+                {
+                    if (Native.GetMonitorBrightness(h, out var min, out _, out var max) && max > min)
+                        ok = Native.SetMonitorBrightness(h, (uint)Math.Round(min + (max - min) * Math.Clamp(percent, 0, 100) / 100.0));
+                });
+                if (ok) return;
+                Thread.Sleep(60);
+            }
+        }
     }
 
     private static void WithMonitor(Action<IntPtr> action)

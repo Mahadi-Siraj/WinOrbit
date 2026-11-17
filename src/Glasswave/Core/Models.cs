@@ -87,6 +87,10 @@ public sealed class IslandSettings
     public string Monitor { get; set; } = "primary";
     public double OffsetX { get; set; }
     public double OffsetY { get; set; } = 10;
+    /// <summary>While dragging, the island clicks into the horizontal centre when it gets close.</summary>
+    public bool SnapToCentre { get; set; } = true;
+    /// <summary>Only vertical dragging; the island always stays horizontally centred.</summary>
+    public bool KeepCentred { get; set; }
     /// <summary>Per-display offsets, keyed by device name, used when Monitor is "all".</summary>
     public Dictionary<string, double[]> PerMonitorOffset { get; set; } = new();
     public double Scale { get; set; } = 1.0;

@@ -185,7 +185,11 @@ public sealed class IslandPage : PageBase
                 Kit.Combo(monitorOptions, selected, i => { S.Monitor = i == 0 ? "primary" : i == 1 ? "all" : monitors[i - 2].Device; Save(); })),
             Kit.SliderRow("Horizontal offset", "Distance from the centre of the screen. You can also drag the island.", -900, 900, S.OffsetX, v => { S.OffsetX = Math.Round(v); Save(); }, v => $"{v:0}"),
             Kit.SliderRow("Distance from top", null, 0, 120, S.OffsetY, v => { S.OffsetY = Math.Round(v); Save(); }, v => $"{v:0} px"),
-            Kit.Row("Reset position", null, Kit.Btn("Reset", () => { S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Save(); Rebuild(); }, Glyph.Refresh))));
+            Kit.Row("Centre the island", S.OffsetX == 0 ? "It's exactly centred now." : $"It's {Math.Abs(S.OffsetX):0} px {(S.OffsetX < 0 ? "left" : "right")} of centre.",
+                Kit.Btn("Centre now", () => { Hub.Island.Centre(); Rebuild(); }, Glyph.Check, true)),
+            Kit.ToggleRow("Snap to centre while dragging", "The island clicks into the exact centre when you drag it close.", S.SnapToCentre, v => { S.SnapToCentre = v; Save(); }),
+            Kit.ToggleRow("Keep centred", "Dragging only changes the distance from the top.", S.KeepCentred, v => { S.KeepCentred = v; if (v) Hub.Island.Centre(); Save(); Rebuild(); }),
+            Kit.Row("Reset position", "Back to the top centre on every display.", Kit.Btn("Reset", () => { S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Save(); Rebuild(); }, Glyph.Refresh))));
 
         var materials = new[] { "Glass", "Smoked", "Solid" };
         Children.Add(Kit.Section("Appearance", null,

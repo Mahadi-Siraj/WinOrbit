@@ -11,6 +11,8 @@ using Glasswave.Core;
 using Glasswave.Design;
 using Glasswave.Interop;
 using Glasswave.Services;
+using Glasswave.WindowsIntegration;
+using Windows.Devices.Radios;
 
 namespace Glasswave.Island;
 
@@ -21,7 +23,7 @@ namespace Glasswave.Island;
 /// </summary>
 public partial class IslandWindow : Window
 {
-    private const double ExpandedWidth = 460, ExpandedHeight = 272, CollapsedHeight = 38;
+    private const double ExpandedWidth = 460, ExpandedHeight = 290, CollapsedHeight = 38;
 
     public static readonly DependencyProperty RadiusProperty = DependencyProperty.Register(nameof(Radius), typeof(double), typeof(IslandWindow),
         new PropertyMetadata(19.0, (d, e) => ((IslandWindow)d).Pill.CornerRadius = new CornerRadius((double)e.NewValue)));
@@ -410,8 +412,21 @@ public partial class IslandWindow : Window
         if (!_dragging && Math.Abs(dx) + Math.Abs(dy) < 7) return;
         _dragging = true;
         var scale = Monitors.Find(Device).Scale;
-        SetOffset(Math.Round(_pressOffsetX + dx / scale), Math.Max(0, Math.Round(_pressOffsetY + dy / scale)));
+        var x = S.KeepCentred ? 0 : Math.Round(_pressOffsetX + dx / scale);
+        // Magnetic centre: within 18 px of the middle it clicks to exactly centred.
+        if (S.SnapToCentre && Math.Abs(x) <= 18) x = 0;
+        SetOffset(x, Math.Max(0, Math.Round(_pressOffsetY + dy / scale)));
         Place();
+    }
+
+    /// <summary>Put the island back in the exact horizontal centre (keeps its height from the top).</summary>
+    public void Centre()
+    {
+        var (_, y) = Offset();
+        SetOffset(0, y);
+        Hub.Store.Save();
+        Place();
+        Peek(Glyph.Check, "Centred", 1.2);
     }
 
     private void OnPillUp(object sender, MouseButtonEventArgs e)
@@ -420,7 +435,12 @@ public partial class IslandWindow : Window
         if (_dragging) OnPillMove(sender, e);
         _pressed = false;
         Pill.ReleaseMouseCapture();
-        if (_dragging) { _dragging = false; Hub.Store.Save(); }
+        if (_dragging)
+        {
+            _dragging = false;
+            Hub.Store.Save();
+            if (Offset().X == 0 && _pressOffsetX != 0) Peek(Glyph.Check, "Centred", 1.0);
+        }
         else Expand(false);
     }
 
@@ -448,7 +468,9 @@ public partial class IslandWindow : Window
         menu.Items.Add(new Separator());
         Add("Expand on hover", () => { S.ExpandOnHover = !S.ExpandOnHover; Hub.Store.Save(); }, S.ExpandOnHover);
         Add("Auto-hide", () => { S.AutoHide = !S.AutoHide; Hub.Store.Save(); Hub.Island.Apply(); }, S.AutoHide);
-        Add("Reset position", () => { S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Hub.Store.Save(); Hub.Island.Apply(); });
+        Add("Centre the island", Centre);
+        Add("Keep centred", () => { S.KeepCentred = !S.KeepCentred; if (S.KeepCentred) Centre(); Hub.Store.Save(); }, S.KeepCentred);
+        Add("Reset to top centre", () => { S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Hub.Store.Save(); Hub.Island.Apply(); });
         menu.Items.Add(new Separator());
         Add("Hide the island", () => { S.Enabled = false; Hub.Store.Save(); Hub.Island.Apply(); });
         menu.PlacementTarget = Pill;
@@ -529,7 +551,7 @@ public partial class IslandWindow : Window
         switch (id)
         {
             case "media": UpdateMedia(); LoadVolume(); break;
-            case "controls": LoadVolume(); LoadBrightness(); break;
+            case "controls": LoadVolume(); LoadBrightness(); RefreshQuick(); break;
             case "focus": UpdateFocus(); break;
             case "calendar": CalView.ShowToday(); UpdateCalendar(); break;
             case "notes":
@@ -637,26 +659,127 @@ public partial class IslandWindow : Window
         try { await Task.Delay(120, cts.Token); await Task.Run(() => Brightness.Set(target)); } catch (TaskCanceledException) { }
     }
 
+    // ----- quick tiles: each one switches the real setting; the chevron or right-click opens its settings page -----
+    private readonly Dictionary<string, QuickTile> _quick = new();
+    private bool _quickHooked;
+
     private void BuildShortcuts()
     {
-        var items = new List<(string Glyph, string Label, string Uri)>
-        {
-            (Glyph.Wifi, "Wi-Fi", "ms-settings:network-wifi"), (Glyph.Bluetooth, "Bluetooth", "ms-settings:bluetooth"),
-            (Glyph.Sound, "Sound", "ms-settings:sound"), (Glyph.Monitor, "Display", "ms-settings:display"),
-            (Glyph.Moon, "Night light", "ms-settings:nightlight"), (Glyph.Personalize, "Personalise", "ms-settings:personalization"),
-            (Glyph.Shield, "Focus", "ms-settings:quiethours"), (Glyph.Battery, "Power", "ms-settings:powersleep")
-        };
         QShortcuts.Children.Clear();
-        foreach (var (glyph, label, uri) in items)
+        _quick.Clear();
+        void Add(string id, string glyph, string label, Action toggle, Action secondary)
         {
-            var b = new Button { Margin = new Thickness(3), Padding = new Thickness(4, 8, 4, 8), ToolTip = "Open " + label + " settings" };
-            var sp = new StackPanel();
-            sp.Children.Add(Ui.Icon(glyph, 16));
-            sp.Children.Add(Ui.Text(label, "Text.Caption", 11).With(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Margin = new Thickness(0, 5, 0, 0); t.TextWrapping = TextWrapping.NoWrap; }));
-            b.Content = sp;
-            b.Click += (_, _) => { OpenUri(uri); Collapse(); };
-            QShortcuts.Children.Add(b);
+            var tile = new QuickTile { Glyph = glyph, Label = label, Status = "…" };
+            tile.Toggled += toggle;
+            tile.Secondary += () => { secondary(); if (id != "focus") Collapse(); };
+            _quick[id] = tile;
+            QShortcuts.Children.Add(tile);
         }
+        Add("wifi", Glyph.Wifi, "Wi-Fi", () => ToggleRadio("wifi", RadioKind.WiFi), () => OpenUri("ms-settings:network-wifi"));
+        Add("bt", Glyph.Bluetooth, "Bluetooth", () => ToggleRadio("bt", RadioKind.Bluetooth), () => OpenUri("ms-settings:bluetooth"));
+        Add("night", Glyph.Moon, "Night light", () =>
+        {
+            var on = !(_quick["night"].IsOn);
+            if (QuickControls.SetNightLight(on)) SetTile("night", on, on ? "On" : "Off");
+            else OpenUri("ms-settings:nightlight");
+        }, () => OpenUri("ms-settings:nightlight"));
+        Add("dark", Glyph.Color, "Dark mode", () =>
+        {
+            var dark = !QuickControls.WindowsDark;
+            QuickControls.SetWindowsDark(dark);
+            SetTile("dark", dark, dark ? "Dark" : "Light");
+        }, () => OpenUri("ms-settings:colors"));
+        Add("power", Glyph.Diagnostic, "Power mode", () =>
+        {
+            // Balanced → Performance → Efficiency → Balanced
+            var i = QuickControls.PowerModeIndex() ?? 1;
+            var next = i == 1 ? 2 : i == 2 ? 0 : 1;
+            if (QuickControls.SetPowerMode(next)) RefreshQuick();
+        }, () => OpenUri("ms-settings:powersleep"));
+        Add("awake", Glyph.Clock, "Keep awake", () =>
+        {
+            QuickControls.SetKeepAwake(!QuickControls.KeepAwake);
+            RefreshQuick();
+        }, () => OpenUri("ms-settings:powersleep"));
+        Add("focus", Glyph.Stopwatch, "Focus", () =>
+        {
+            var t = Hub.Timers;
+            if (t.Running && t.Mode == TimerMode.Focus) t.Stop();
+            else { t.SetMode(TimerMode.Focus); t.Start(); }
+            RefreshQuick();
+        }, () => ShowTab("focus"));
+        Add("widgets", Glyph.Tiles, "Widgets", () =>
+        {
+            Hub.Settings.Layout.WidgetsVisible = !Hub.Settings.Layout.WidgetsVisible;
+            Hub.Store.Save();
+            Hub.Widgets.Apply();
+            RefreshQuick();
+        }, () => App.Current.ShowMain("widgets"));
+
+        if (!_quickHooked)
+        {
+            _quickHooked = true;
+            QuickControls.RadiosChanged += () => Dispatcher.BeginInvoke(RefreshQuick);
+            Hub.Timers.Changed += () => { if (_expanded && _tab == "controls") UpdateFocusTile(); };
+        }
+    }
+
+    private void SetTile(string id, bool on, string status, bool available = true)
+    {
+        if (!_quick.TryGetValue(id, out var t)) return;
+        if (t.IsOn != on) t.IsOn = on;
+        t.Status = status;
+        t.IsAvailable = available;
+    }
+
+    private async void ToggleRadio(string id, RadioKind kind)
+    {
+        var tile = _quick[id];
+        var want = !tile.IsOn;
+        SetTile(id, want, "…");
+        var result = await QuickControls.SetRadio(kind, want);
+        if (result is null) { RefreshQuick(); Peek(Glyph.Warning, "Windows didn't allow that change", 1.6); }
+        else RefreshQuick();
+    }
+
+    private void UpdateFocusTile()
+    {
+        var t = Hub.Timers;
+        var on = t.Running && t.Mode == TimerMode.Focus;
+        SetTile("focus", on, on ? $"{t.Display} left" : t.Running ? t.ModeLabel : $"{t.FocusMinutes} min");
+    }
+
+    private async void RefreshQuick()
+    {
+        if (_quick.Count == 0) return;
+        var wifi = await QuickControls.FindRadio(RadioKind.WiFi);
+        var bt = await QuickControls.FindRadio(RadioKind.Bluetooth);
+        if (wifi is null) SetTile("wifi", false, "Not available", false);
+        else
+        {
+            var on = wifi.State == RadioState.On;
+            var connected = on && System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                .Any(n => n.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211 && n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up);
+            SetTile("wifi", on, !on ? "Off" : connected ? "Connected" : "On");
+        }
+        if (bt is null) SetTile("bt", false, "Not available", false);
+        else SetTile("bt", bt.State == RadioState.On, bt.State == RadioState.On ? "On" : "Off");
+
+        var night = QuickControls.NightLightOn;
+        if (night is null) SetTile("night", false, "Open settings", false);
+        else SetTile("night", night.Value, night.Value ? "On" : "Off");
+
+        var dark = QuickControls.WindowsDark;
+        SetTile("dark", dark, dark ? "Dark" : "Light");
+
+        var power = QuickControls.PowerModeIndex();
+        if (power is null) SetTile("power", false, "Custom plan", false);
+        else SetTile("power", power.Value == 2, QuickControls.PowerModes[power.Value].Name);
+
+        SetTile("awake", QuickControls.KeepAwake, QuickControls.KeepAwake ? "Screen stays on" : "Off");
+        UpdateFocusTile();
+        var widgets = Hub.Settings.Layout.WidgetsVisible;
+        SetTile("widgets", widgets, widgets ? "Shown" : "Hidden");
     }
 
     public static void OpenUri(string uri)
@@ -899,5 +1022,6 @@ public sealed class IslandController
     public void Expand(string? tab = null) { if (_windows.Count > 0) _windows[0].Expand(false); }
     public void CollapseAll() { foreach (var w in _windows) w.Collapse(); }
     public void Peek(string glyph, string text) { foreach (var w in _windows) w.Peek(glyph, text); }
+    public void Centre() { foreach (var w in _windows) w.Centre(); }
     public void CloseAll() { foreach (var w in _windows.ToList()) w.Close(); _windows.Clear(); }
 }

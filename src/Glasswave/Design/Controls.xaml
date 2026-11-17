@@ -366,8 +366,27 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
-                    <Border Background="Transparent" Height="20">
-                        <Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}" VerticalAlignment="Center"/>
+                    <!-- Liquid glass groove: the fill, a top-lit sheen and a hairline rim -->
+                    <Border Background="Transparent" Height="22">
+                        <Grid Height="6" VerticalAlignment="Center">
+                            <Border CornerRadius="3" Background="{TemplateBinding Background}"/>
+                            <Border CornerRadius="3" Margin="0,0,0,3">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#38FFFFFF" Offset="0"/>
+                                        <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <Border CornerRadius="3" BorderThickness="0.75">
+                                <Border.BorderBrush>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#18000000" Offset="0"/>
+                                        <GradientStop Color="#30FFFFFF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.BorderBrush>
+                            </Border>
+                        </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -376,15 +395,62 @@
     <Style x:Key="SliderThumb" TargetType="Thumb">
         <Setter Property="Template">
             <Setter.Value>
+                <!-- Glass bead: soft contact shadow, pearl body, specular cap and a lit rim -->
                 <ControlTemplate TargetType="Thumb">
-                    <Grid Width="18" Height="18" Background="Transparent">
-                        <Ellipse Fill="White" Stroke="#22000000" StrokeThickness="1"/>
-                        <Ellipse x:Name="dot" Width="8" Height="8" Fill="{DynamicResource T.Accent}"/>
+                    <Grid Width="22" Height="22" Background="Transparent" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="grow" ScaleX="1" ScaleY="1"/>
+                        </Grid.RenderTransform>
+                        <Ellipse Margin="-2,0,-2,-4">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="#40000000" Offset="0.45"/>
+                                    <GradientStop Color="#00000000" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Ellipse Margin="1">
+                            <Ellipse.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                                    <GradientStop Color="#F2F4F7FB" Offset="0.55"/>
+                                    <GradientStop Color="#E6DDE3EC" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Ellipse Margin="1" StrokeThickness="1">
+                            <Ellipse.Stroke>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                                    <GradientStop Color="#30000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Stroke>
+                        </Ellipse>
+                        <Ellipse x:Name="core" Width="7" Height="7" Fill="{DynamicResource T.Accent}" Opacity="0.9"/>
+                        <Ellipse Width="11" Height="5" VerticalAlignment="Top" Margin="0,3,0,0" Fill="#B0FFFFFF" IsHitTestVisible="False"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="dot" Property="Width" Value="10"/>
-                            <Setter TargetName="dot" Property="Height" Value="10"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleX" To="1.14" Duration="0:0:0.16"/>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleY" To="1.14" Duration="0:0:0.16"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.22"/>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.22"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="core" Property="Width" Value="9"/>
+                            <Setter TargetName="core" Property="Height" Value="9"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -392,7 +458,7 @@
         </Setter>
     </Style>
     <Style TargetType="Slider">
-        <Setter Property="Height" Value="22"/>
+        <Setter Property="Height" Value="24"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="IsMoveToPointEnabled" Value="True"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource Focus}"/>

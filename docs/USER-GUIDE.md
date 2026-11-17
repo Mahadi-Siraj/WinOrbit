@@ -17,10 +17,22 @@ Closing the main window keeps the island and widgets running from the tray (turn
 
 * **Click** the capsule to expand; **Esc** or clicking elsewhere collapses it. It also collapses a few seconds after the pointer leaves (configurable; pin it open with the pin button).
 * **Scroll** on the capsule to change volume. **Drag** it to move it; **right-click** for quick options.
+* **Centring:** while you drag, the island clicks into the exact centre when it gets within 18 px. To put it back in one go: right-click › **Centre the island**, or Dynamic Island page › **Centre now**. **Keep centred** locks it horizontally so dragging only changes the distance from the top.
+* **Quick controls tab** — click a tile to switch it; the **›** in its corner (or right-click) opens the matching Windows settings page:
+
+  | Tile | What a click does | How |
+  |---|---|---|
+  | Wi-Fi, Bluetooth | Turns the radio on/off | Windows radio API (supported) |
+  | Night light | On/off | Experimental: Windows has no public API; Glasswave flips the same stored state Windows' own toggle does, after checking its format (unknown format → opens Settings instead). The original is saved in `backups\nightlight-state.bin`. |
+  | Dark mode | Windows apps + taskbar dark/light; Glasswave follows when its mode is Auto | Same backed-up setting as Windows Tweaks › Revert all |
+  | Power mode | Balanced → Best performance → Best power efficiency | Windows' power-mode slider (only with the Balanced plan; otherwise opens Settings) |
+  | Keep awake | Stops sleep and screen-off until switched off or Glasswave quits | Documented power request |
+  | Focus | Starts/stops a focus block (Glasswave's timer, not Windows "Do not disturb", which has no public API) | |
+  | Widgets | Shows/hides all Glasswave widgets | |
 * In the expanded panel: **←/→** or **1–6** switch tabs, **Space** plays/pauses (Media) or starts/pauses (Focus).
 * The capsule shows one live activity at a time — a running timer, a download (opt-in) or what's playing — followed by the time and date.
 * It hides automatically during fullscreen games and videos.
-* Brightness works on monitors that support DDC/CI; otherwise the slider is disabled and says so.
+* Brightness works on monitors that support DDC/CI (most external monitors; not laptop panels yet); otherwise the slider is disabled and says so. A missed reply is retried, so a busy monitor no longer disables the slider.
 
 ## Widgets
 

@@ -48,7 +48,7 @@
                 </StackPanel>
 
                 <!-- ============ Expanded ============ -->
-                <Grid x:Name="Expanded" Opacity="0" Visibility="Collapsed" Margin="14,10,14,14" Cursor="Arrow" Width="432" Height="248" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="Expanded" Opacity="0" Visibility="Collapsed" Margin="14,10,14,14" Cursor="Arrow" Width="432" Height="266" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="38"/>
                         <RowDefinition Height="*"/>
@@ -150,7 +150,7 @@
                                 <Slider x:Name="QBrightness" Grid.Column="1" Minimum="0" Maximum="100" Margin="6,0" AutomationProperties.Name="Brightness" ValueChanged="OnBrightnessSlider"/>
                                 <TextBlock x:Name="QBrightnessText" Grid.Column="2" Style="{StaticResource Text.Caption}" TextAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
-                            <UniformGrid x:Name="QShortcuts" Grid.Row="2" Columns="4" Margin="-3,12,-3,0" VerticalAlignment="Top"/>
+                            <UniformGrid x:Name="QShortcuts" Grid.Row="2" Columns="4" Margin="-3,8,-3,0" VerticalAlignment="Top"/>
                         </Grid>
 
                         <!-- Focus -->

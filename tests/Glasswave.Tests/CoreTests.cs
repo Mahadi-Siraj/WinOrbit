@@ -327,6 +327,39 @@ public class SettingsTests
     public void Hotkey_parsing(string gesture, bool ok) => Assert.Equal(ok, ShellHost.TryParse(gesture, out _, out _));
 }
 
+public class QuickControlTests
+{
+    // Night-light state blob as Windows 11 (build 26300) stores it with night light off.
+    private static readonly byte[] Off = Convert.FromHexString("434201000A0201002A06D4D5ABCD062A2B0E1343420100D00A02C61482B0F69CCDCAF8ED0100000000");
+
+    [Fact]
+    public void Night_light_blob_toggles_on_and_back_off()
+    {
+        Assert.False(Glasswave.WindowsIntegration.QuickControls.NightLightState(Off));
+        var on = Glasswave.WindowsIntegration.QuickControls.NightLightToggled(Off, true)!;
+        Assert.True(Glasswave.WindowsIntegration.QuickControls.NightLightState(on));
+        Assert.Equal(Off.Length + 2, on.Length);
+        Assert.Equal(0x15, on[18]);
+        Assert.Equal(new byte[] { 0x10, 0x00 }, on[23..25]);
+        Assert.NotEqual(Off[10..15], on[10..15]);                       // change counter bumped
+
+        var off = Glasswave.WindowsIntegration.QuickControls.NightLightToggled(on, false)!;
+        Assert.False(Glasswave.WindowsIntegration.QuickControls.NightLightState(off));
+        Assert.Equal(Off.Length, off.Length);
+        Assert.Equal(Off[15..], off[15..]);                              // everything after the counter is back as it was
+    }
+
+    [Fact]
+    public void Night_light_refuses_unknown_format()
+    {
+        var bad = (byte[])Off.Clone();
+        bad[18] = 0x99;
+        Assert.Null(Glasswave.WindowsIntegration.QuickControls.NightLightState(bad));
+        Assert.Null(Glasswave.WindowsIntegration.QuickControls.NightLightToggled(bad, true));
+        Assert.Null(Glasswave.WindowsIntegration.QuickControls.NightLightToggled(new byte[] { 1, 2, 3 }, true));
+    }
+}
+
 public class PrivacyTests
 {
     [Fact]
