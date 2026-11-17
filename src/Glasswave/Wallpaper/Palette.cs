@@ -132,7 +132,7 @@ public sealed class Palette
         if (bgra.Length < 4 || width <= 0 || height <= 0) return Default;
         var count = new int[4096];
         var sumR = new long[4096]; var sumG = new long[4096]; var sumB = new long[4096];
-        double lumSum = 0; var total = 0;
+        double lumSum = 0; var total = 0; var colourfulPixels = 0;
         var step = Math.Max(1, (int)Math.Sqrt(width * height / 20000.0));   // ~20k samples is plenty
         for (var y = 0; y < height; y += step)
         for (var x = 0; x < width; x += step)
@@ -142,6 +142,7 @@ public sealed class Palette
             var key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
             count[key]++; sumR[key] += r; sumG[key] += g; sumB[key] += b;
             lumSum += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            if (IsColourful(r, g, b)) colourfulPixels++;
             total++;
         }
         if (total == 0) return Default;
@@ -169,19 +170,28 @@ public sealed class Palette
         double Score((Color Color, double Weight) s)
         {
             var (_, sat, l) = ColorMath.ToHsl(s.Color);
+            // HSL calls near-black and near-white "saturated"; scale saturation by how visible the colour is.
+            var visible = sat * Math.Min(1, Math.Min(l, 1 - l) / 0.15);
             var lightFit = 1 - Math.Min(1, Math.Abs(l - 0.55) / 0.5);       // mid-tones make the best accents
-            return Math.Pow(sat, 1.4) * Math.Pow(s.Weight, 0.25) * (0.35 + 0.65 * lightFit);
+            return Math.Pow(visible, 1.4) * Math.Pow(s.Weight, 0.25) * (0.35 + 0.65 * lightFit);
         }
+
+        // Share of the image that is genuinely coloured, measured per pixel. A colourful wallpaper often
+        // spreads its colour over many small swatches (gradients, many hues), so swatch weights alone
+        // under-count it; a few desktop icons on a monochrome wallpaper stay well under the threshold.
+        var colourfulShare = colourfulPixels / (double)total;
+        var colourfulImage = colourfulShare >= 0.06;
 
         // Only colours covering a meaningful share of the image may lead. This stops small, scattered
         // details (desktop icons, a logo, a signature) from hijacking the accent of a mostly neutral wallpaper.
-        var ranked = swatches.Where(s => s.Weight >= 0.015).OrderByDescending(Score).ToList();
+        // When the image is colourful overall, smaller coloured swatches may lead too.
+        bool CanLead((Color Color, double Weight) s) =>
+            s.Weight >= 0.015 || colourfulImage && s.Weight >= 0.004 && IsColourful(s.Color.R, s.Color.G, s.Color.B);
+        var ranked = swatches.Where(CanLead).OrderByDescending(Score).ToList();
         if (ranked.Count == 0) ranked = swatches.OrderByDescending(s => s.Weight).ToList();
         var best = ranked[0];
         var (bh, bs, bl) = ColorMath.ToHsl(best.Color);
-        // Share of the image that is genuinely coloured, counting only areas large enough to matter.
-        var colourful = swatches.Where(s => s.Weight >= 0.01 && ColorMath.ToHsl(s.Color).S >= 0.25 && ColorMath.ToHsl(s.Color).L is > 0.12 and < 0.92).Sum(s => s.Weight);
-        var neutral = bs < 0.22 || Score(best) < 0.02 || colourful < 0.06;
+        var neutral = bs < 0.22 || Score(best) < 0.02 || !colourfulImage;
 
         Color accent, secondary;
         if (neutral)
@@ -213,6 +223,17 @@ public sealed class Palette
             AverageLuminance = lumSum / total / 255.0,
             IsNeutral = neutral
         };
+    }
+
+    /// <summary>HSL saturation ≥ 0.25 at a lightness where colour is actually visible (0.12–0.92).</summary>
+    private static bool IsColourful(byte r, byte g, byte b)
+    {
+        int max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b));
+        var l = (max + min) / 510.0;
+        if (l <= 0.12 || l >= 0.92 || max == min) return false;
+        var d = (max - min) / 255.0;
+        var s = l > 0.5 ? d / (2 - (max + min) / 255.0) : d / ((max + min) / 255.0);
+        return s >= 0.25;
     }
 
     private static double Distance(Color a, Color b)

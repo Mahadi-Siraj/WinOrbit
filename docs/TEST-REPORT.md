@@ -25,13 +25,13 @@ Notes:
 
 Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
-## 2. Automated tests — 36 passing
+## 2. Automated tests — 37 passing
 
 `dotnet test tests/Glasswave.Tests` (also run by `tools/build-release.ps1`, in Release):
 
 | Area | Tests |
 |---|---|
-| Palette | monochrome wallpaper with small colourful icons → neutral graphite palette; blue wallpaper → blue accent; two-colour wallpaper → distinct secondary; empty input → default |
+| Palette | monochrome wallpaper with small colourful icons → neutral graphite palette; blue wallpaper → blue accent; two-colour wallpaper → distinct secondary; colour spread over many hues on a dark background → not neutral, accent from the colour, not the background *(fails on the previous code)*; empty input → default |
 | Colour maths | hex parsing (3/6/8 digit, invalid), HSL round-trip, WCAG contrast, accent legibility in dark and light mode *(this test caught a real bug: yellow accents were unreadable on white; fixed)* |
 | Wallpaper | box blur preserves flat colour; live-capture maps 1:1 onto its monitor; blank-capture detection |
 | Rainmeter | INI parser (BOM, comments, duplicate keys); skin scan reads state + metadata from the active variant **and modifies no file**; bundled vs third-party plugins; RunCommand and program launches flagged, links and folders not; non-Rainmeter zip rejected; `.rmskin` contents (skins, plugins) inspected |
@@ -55,7 +55,9 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 | Widget drag, snap, persist | scripted drag | ✅ moved 400×200 px, snapped to the 16 px grid, saved; found and fixed: release point could be lost if the last move event was coalesced |
 | Dark mode | default | ✅ |
 | Light mode | temporary light theme | ✅ window, island and widgets; readability guard thickened the tint over the dark wallpaper |
-| GPU presentation failure | **happened for real**: after a display re-enumeration (Windows event 4107 at 13:20) every hardware-rendered WPF window on this PC, including a minimal test window, showed nothing | ✅ Glasswave's render self-check detected the blank window within ~1 s and switched it to software rendering; UI fully usable; Diagnostics reports it |
+| GPU presentation failure | **happened for real**: after a display re-enumeration (Windows event 4107 at 13:20) every hardware-rendered WPF window on this PC, including a minimal test window, showed nothing | ✅ Glasswave's render self-check detected the blank window within ~1 s and switched it to software rendering; UI fully usable; Diagnostics reports it. Later, with Wallpaper Engine closed by the owner, the same minimal test window drew correctly with the GPU and Glasswave reported "Rendering: Hardware". Wallpaper Engine had also been running earlier while GPU rendering worked, so it isn't proven to be the cause; the failure started with the display re-enumeration |
+| Wallpaper Engine closed | owner closed it; Windows wallpaper is Windows' `img24.jpg` (colourful ribbon on near-black) | **Found and fixed:** the palette called this wallpaper neutral and gave grey glass, because its colour is spread over many small swatches that each fell under the 1 % threshold meant to ignore desktop icons. Colourfulness is now measured per pixel; result: pink accent `#F62761`, gold secondary. All 12 stock Windows wallpapers checked give colourful palettes; the monochrome-with-icons test still passes. **Also fixed:** Glasswave didn't notice a live-wallpaper app starting, and noticed it closing only at the next 3-minute snapshot. A once-a-minute process check now handles both; verified with a stand-in `wallpaper64` process (start noticed after 29 s, stop after 19 s) |
+| Ctrl+Alt+Space with Wallpaper Engine closed | `RegisterHotKey` | still owned by another app, so Wallpaper Engine wasn't the owner; Ctrl+Alt+I remains |
 | Rainmeter, real install | portable Rainmeter 4.5.28 in a temp folder | ✅ Rainmeter page shows version, Running, 7 skins / 4 active, the active variant of Disk; live tests above pass. **Found and fixed:** every `["…"]` click action was flagged "Runs programs" (so illustro's Disk and Welcome, which only open a drive or a web page, were flagged); Rainmeter's own bundled plugins (InputText in illustro\Google) were flagged as untrusted native code; RunCommand was looked for as a measure type, but it is a plugin, so it was never detected. Now only third-party plugins and real program/script launches are flagged, and the chips name them |
 | `.rmskin` import, real | test package handed over by Glasswave's `Install()` → Rainmeter's Skin Installer → Install | ✅ installer showed name/author/version; skin installed into the portable Skins folder, loaded by Rainmeter (`LoadType=Skin`), and listed active by Glasswave. A package with plugin DLLs was inspected (plugin listed) but not installed. Nothing written to `%APPDATA%\Rainmeter` or `Documents\Rainmeter` |
 | `.rmskin` import through the UI | Import .rmskin → Windows file picker → Glasswave's confirm → Skin Installer → Install | ✅ package with plugin DLLs: warning shown with the DLL listed; **Cancel installed nothing**. Clean package: plain confirm → Rainmeter's installer → installed; the library refreshed itself to 8 skins / 5 active and showed the new skin's name, author and description |

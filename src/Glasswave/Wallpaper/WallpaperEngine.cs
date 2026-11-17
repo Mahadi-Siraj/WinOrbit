@@ -47,6 +47,7 @@ public sealed class WallpaperEngine
     /// <summary>Set by the app: skip periodic re-capture while e.g. a fullscreen game runs.</summary>
     public Func<bool> PauseLiveRefresh { get; set; } = () => false;
     private DispatcherTimer? _liveTimer;
+    private DispatcherTimer? _presenceTimer;
 
     /// <summary>The wallpaper file or its colours changed.</summary>
     public event Action? PaletteChanged;
@@ -91,6 +92,22 @@ public sealed class WallpaperEngine
             }
         }
         catch (Exception ex) { Log.Warn("Wallpaper watcher unavailable: " + ex.Message); }
+
+        // Live-wallpaper apps start and quit without any Windows notification. A once-a-minute process-name
+        // check (about a millisecond) notices either, so the glass switches between the live snapshot and the
+        // Windows wallpaper. A just-started app needs a few seconds before it draws, hence the delay.
+        _presenceTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMinutes(1) };
+        _presenceTimer.Tick += (_, _) =>
+        {
+            if (!LiveCaptureAllowed()) return;
+            var app = LiveWallpaper.DetectApp();
+            if (app == LiveApp) return;
+            Log.Info(app is null ? $"{LiveApp} closed; using the Windows wallpaper" : $"{app} started; matching the live wallpaper");
+            var later = new DispatcherTimer { Interval = TimeSpan.FromSeconds(app is null ? 0.5 : 6) };
+            later.Tick += (_, _) => { later.Stop(); _ = RefreshAsync(false); };
+            later.Start();
+        };
+        _presenceTimer.Start();
     }
 
     public void Schedule() { _debounce.Stop(); _debounce.Start(); }

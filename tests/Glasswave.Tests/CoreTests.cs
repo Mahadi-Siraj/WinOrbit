@@ -60,6 +60,23 @@ public class PaletteTests
     }
 
     [Fact]
+    public void Colour_spread_over_many_hues_on_dark_background_is_not_neutral()
+    {
+        // Like Windows' "flow" wallpapers: a near-black indigo background (~80 %) with a ribbon whose colour
+        // sweeps from magenta through red and orange to yellow. No single swatch covers 1 %, but the image is
+        // clearly colourful, and the accent should come from the ribbon, not the dark background.
+        var px = Fill(480, 270, (x, y) =>
+        {
+            if (x is >= 120 and < 360 && y is >= 60 and < 150)
+                return ColorMath.FromHsl(300 + (x - 120) * 0.5, 0.9, 0.45 + 0.25 * (y - 60) / 90.0);
+            return Color.FromRgb(0x13, 0x08, 0x26);
+        });
+        var p = Palette.FromPixels(px, 480, 270);
+        Assert.False(p.IsNeutral);
+        Assert.True(ColorMath.HueDistance(ColorMath.ToHsl(p.Accent).H, 0) <= 65, $"accent {ColorMath.Hex(p.Accent)} should come from the ribbon");
+    }
+
+    [Fact]
     public void Empty_input_falls_back_to_default() => Assert.Same(Palette.Default, Palette.FromPixels(Array.Empty<byte>(), 0, 0));
 }
 

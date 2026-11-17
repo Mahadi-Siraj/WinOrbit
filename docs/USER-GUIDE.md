@@ -79,7 +79,7 @@ All in `%APPDATA%\Glasswave` (portable: `Data\` next to the exe). They are plain
 | No GPU usage | Glasswave reads NVIDIA GPUs through the driver's NVML and others through Windows GPU counters. Some drivers expose neither. |
 | Brightness slider disabled | The monitor doesn't support DDC/CI (or it is disabled in the monitor's OSD menu). |
 | A Rainmeter skin didn't load | Glasswave reports it. Open the skin in Rainmeter's **Manage** (button on the card) and check Rainmeter's log; missing plugins are the usual cause. |
-| The settings window is blank | A graphics-driver state (e.g. after a display mode change) can stop GPU-rendered windows from appearing. Glasswave detects this within a second and switches that window to software rendering automatically (About & Diagnostics › Rendering says so). To make it permanent: **Settings › Software rendering for this window**. Restarting the PC or updating the GPU driver normally restores hardware rendering. |
+| The settings window is blank | A graphics-driver state (e.g. after a display mode change) can stop GPU-rendered windows from appearing. Glasswave detects this within a second and switches that window to software rendering automatically (About & Diagnostics › Rendering says so). To make it permanent: **Settings › Software rendering for this window**. Restarting the PC or updating the GPU driver normally restores hardware rendering; on the test PC, closing Wallpaper Engine was also followed by hardware rendering working again. |
 | Anything else | **About & Diagnostics** shows the log, resource use and a copyable system summary. |
 
 ## Uninstall and rollback
