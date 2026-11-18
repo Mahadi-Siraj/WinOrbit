@@ -381,6 +381,15 @@ public static class Motion
 
     public static void To(IAnimatable target, DependencyProperty property, double to, int ms, IEasingFunction? ease = null, Action? done = null)
     {
+        // The "spring" and "settle" curves are real physics now: interruptible, velocity-preserving, and
+        // (for Spring) with a natural bounce instead of a canned overshoot curve.
+        if (target is DependencyObject obj && ms > 0 && (ReferenceEquals(ease, Spring) || ReferenceEquals(ease, Settle)))
+        {
+            if (ReferenceEquals(ease, Spring)) Springs.To(obj, property, to, ms / 1000.0, Springs.Snappy, done);
+            else Springs.To(obj, property, to, ms / 1000.0 * 0.7, Springs.Smooth, done);
+            return;
+        }
+        if (target is DependencyObject d) Springs.Stop(d, property);
         if (Intensity <= 0.01 || ms <= 0)
         {
             target.BeginAnimation(property, null);

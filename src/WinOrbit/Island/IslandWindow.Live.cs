@@ -51,6 +51,10 @@ public partial class IslandWindow
         Hub.Power.BrightnessChanged += OnBrightness;
         Hub.Power.EnergySaverChanged += OnEnergySaver;
         Hub.Media.Hint += OnMediaHint;
+        Hub.Devices.LockChanged += OnLockKey;
+        Hub.Devices.NetworkChanged += OnNetwork;
+        Hub.Devices.BluetoothChanged += OnBluetooth;
+        Hub.Devices.UsbChanged += OnUsb;
 
         Pill.AllowDrop = true;
         Pill.DragEnter += OnDragEnter;
@@ -73,6 +77,51 @@ public partial class IslandWindow
         Hub.Power.BrightnessChanged -= OnBrightness;
         Hub.Power.EnergySaverChanged -= OnEnergySaver;
         Hub.Media.Hint -= OnMediaHint;
+        Hub.Devices.LockChanged -= OnLockKey;
+        Hub.Devices.NetworkChanged -= OnNetwork;
+        Hub.Devices.BluetoothChanged -= OnBluetooth;
+        Hub.Devices.UsbChanged -= OnUsb;
+    }
+
+    // ------------------------------------------------------------------ keys and connections
+    private static readonly Color Connected = Color.FromRgb(0x30, 0xD1, 0x58), Dropped = Color.FromRgb(0xFF, 0x9F, 0x0A), BtBlue = Color.FromRgb(0x0A, 0x84, 0xFF);
+    private const string GlyphWifi = "", GlyphWifiOff = "", GlyphEthernet = "", GlyphBluetooth = "",
+        GlyphHeadphones = "", GlyphKeyboard = "", GlyphPhone = "", GlyphUsb = "";
+
+    private void OnLockKey(DeviceEvents.LockKey key, bool on)
+    {
+        if (!S.LockKeyAlerts) return;
+        var (cap, name) = key switch
+        {
+            DeviceEvents.LockKey.Caps => (on ? "A" : "a", "Caps Lock"),
+            DeviceEvents.LockKey.Num => ("1", "Num Lock"),
+            _ => ("S", "Scroll Lock")
+        };
+        PeekKey(cap, $"{name} {(on ? "on" : "off")}", on);
+    }
+
+    private void OnNetwork(DeviceEvents.NetKind kind, string name, bool connected)
+    {
+        if (!S.NetworkAlerts) return;
+        var wifi = kind == DeviceEvents.NetKind.WiFi;
+        var label = wifi ? "Wi-Fi" : kind == DeviceEvents.NetKind.Ethernet ? "Ethernet" : "Network";
+        if (connected)
+            Peek(wifi ? GlyphWifi : GlyphEthernet, string.IsNullOrWhiteSpace(name) ? $"{label} connected" : $"Connected · {name}", 3, Connected);
+        else
+            Peek(wifi ? GlyphWifiOff : GlyphEthernet, $"{label} disconnected", 3, Dropped);
+    }
+
+    private void OnBluetooth(string name, string kind, bool connected)
+    {
+        if (!S.BluetoothAlerts) return;
+        var glyph = kind switch { "audio" => GlyphHeadphones, "input" => GlyphKeyboard, "phone" => GlyphPhone, _ => GlyphBluetooth };
+        Peek(glyph, $"{name} {(connected ? "connected" : "disconnected")}", 3, connected ? BtBlue : Dropped);
+    }
+
+    private void OnUsb(string name, bool pluggedIn)
+    {
+        if (!S.UsbAlerts) return;
+        Peek(GlyphUsb, pluggedIn ? $"{name} connected" : $"{name} removed", 2.6, pluggedIn ? (Color?)null : Dropped);
     }
 
     private void OnMediaHint(string message)
@@ -134,6 +183,10 @@ public partial class IslandWindow
             case "volume": ShowHud(Glyph.Volume, 0.42, "42"); break;
             case "mic": Peek(GlyphMic, "Teams is using your microphone", 3); break;
             case "saver": Peek(GlyphLeaf, "Energy saver on", 2.5); break;
+            case "caps": PeekKey("A", "Caps Lock on", true); break;
+            case "wifi": Peek(GlyphWifi, "Connected · Home Wi-Fi", 3, Connected); break;
+            case "bluetooth": Peek(GlyphHeadphones, "Headphones connected", 3, BtBlue); break;
+            case "usb": Peek(GlyphUsb, "USB drive connected", 2.6); break;
         }
     }
 
@@ -153,6 +206,7 @@ public partial class IslandWindow
     private void ShowHud(string glyph, double fraction, string text, Color? color = null, double seconds = 1.6, bool fillFromEmpty = false)
     {
         var first = CHud.Visibility != Visibility.Visible;
+        var appearing = first;
         CHudGlyph.Text = glyph;
         CHudText.Text = text;
         if (color is { } c)
@@ -172,8 +226,13 @@ public partial class IslandWindow
         CPeek.Visibility = Visibility.Collapsed;
         _peekTimer.Stop();
         SetAutoHidden(false);
-        Motion.To(CHudFill, WidthProperty, 132 * Math.Clamp(fraction, 0, 1), first ? 0 : fillFromEmpty ? 900 : 140, fillFromEmpty ? Motion.Settle : Motion.EaseOut);
+        // The meter rides a spring too: rapid volume steps chase each other smoothly instead of restarting.
+        var fill = 132 * Math.Clamp(fraction, 0, 1);
+        if (first) Springs.To(CHudFill, WidthProperty, fill, 0);
+        else if (fillFromEmpty) Motion.To(CHudFill, WidthProperty, fill, 900, Motion.Settle);
+        else Springs.To(CHudFill, WidthProperty, fill, 0.22, 0.86);
         FitCompact();
+        if (appearing) { Pop(CHud); Droplet(1); }
         _hudTimer!.Stop();
         _hudTimer.Start();
     }
@@ -184,6 +243,7 @@ public partial class IslandWindow
         if (CHud.Visibility != Visibility.Visible) return;
         CHud.Visibility = Visibility.Collapsed;
         CNormal.Visibility = Visibility.Visible;
+        Pop(CNormal, 0.9);
         RefreshCompact();
     }
 

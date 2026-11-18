@@ -26,7 +26,7 @@
 
 People stack half a dozen tools to make Windows feel modern — a Dynamic Island app, Rainmeter, a volume-flyout replacement, a clipboard manager, a launcher, a night-light toggle. WinOrbit replaces them with **one** native app:
 
-* **Featherweight.** ~60 MB of RAM and ~0.1 % CPU at idle, measured ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**. Everything is event-driven: nothing polls while you're not looking.
+* **Featherweight.** ~60 MB of RAM and ~0.1 % CPU at idle, measured ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The one small exception is the optional lock-key alert, which checks three key lights five times a second.
 * **Private by design.** No telemetry, analytics, accounts or update checks. **Zero network connections by default**; the two optional online features (weather, synced lyrics) have their own switches and every request is shown in a ledger.
 * **Free forever.** Open source under GPL-3.0 — every copy and fork has to stay free and open.
 * **No admin rights, no hacks.** Per-user install. No DLL injection, no system-file patching, nothing that weakens Windows security.
@@ -37,7 +37,8 @@ People stack half a dozen tools to make Windows feel modern — a Dynamic Island
 A liquid-glass capsule at the top of your screen that comes alive:
 * **Now playing** with album art, an equaliser that moves with the real audio (tinted by the cover), a **seek bar** and ±10 s — Spotify, YouTube in Chrome/Brave/Edge, Apple Music, Media Player, and classic players like **VLC, foobar2000, Winamp, PotPlayer, MPC and mpv**.
 * **Synced lyrics** (opt-in) — the line being sung, right in the capsule.
-* **Live activities** — volume and brightness meter, a green **charging** animation, low-battery warnings, Energy Saver, focus timer, downloads.
+* **Live activities** — volume and brightness meter, a green **charging** animation, low-battery warnings, Energy Saver, focus timer, downloads, **Caps / Num / Scroll Lock**, **Wi-Fi and Ethernet** connecting and dropping, **Bluetooth** devices and **USB** devices coming and going.
+* **Liquid motion** — the island moves on real spring physics: it bounces open, squashes when pressed, bulges like a droplet when something new arrives, and can be redirected mid-motion without a jolt. Optional coloured rims (Prism, Aurora, Sunset, Ocean, Mono, Accent) with a soft glow. Reduced Motion turns all of it off.
 * **Privacy dots** — 🟠 microphone, 🟢 camera, 🔵 location in use, with the app's name. Your security, at a glance.
 * **Control Centre** — 12 liquid-glass tiles that switch the real setting: Wi-Fi, Bluetooth, Night light, Dark mode, Power mode, Microphone, Keep awake, Focus, Widgets, plus Airplane mode, Do not disturb and Energy saver shortcuts; volume and monitor brightness sliders.
 * **Clipboard history** (opt-in, memory-only, skips password-manager copies) and a **file shelf** — drop files on the island, drag them out later.
@@ -102,7 +103,7 @@ Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 f
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build
-dotnet test tests\WinOrbit.Tests          # 91 unit tests
+dotnet test tests\WinOrbit.Tests          # 107 unit tests
 .\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 

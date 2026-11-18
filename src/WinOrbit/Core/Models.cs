@@ -95,6 +95,18 @@ public sealed class IslandSettings
     public bool VolumeHud { get; set; } = true;
     /// <summary>Laptops: announce plugging in/out and warn at 20 % and 10 % battery.</summary>
     public bool BatteryAlerts { get; set; } = true;
+    /// <summary>A key cap with its light when Caps Lock, Num Lock or Scroll Lock is switched.</summary>
+    public bool LockKeyAlerts { get; set; } = true;
+    /// <summary>Wi-Fi or Ethernet connecting and dropping.</summary>
+    public bool NetworkAlerts { get; set; } = true;
+    /// <summary>Paired Bluetooth devices connecting and disconnecting.</summary>
+    public bool BluetoothAlerts { get; set; } = true;
+    /// <summary>USB devices plugged in and removed.</summary>
+    public bool UsbAlerts { get; set; } = true;
+    /// <summary>Island edge: "Glass" (the plain illuminated rim) or a coloured gradient preset.</summary>
+    public string Rim { get; set; } = "Glass";
+    /// <summary>A soft coloured glow around the island in the rim's colours.</summary>
+    public bool RimGlow { get; set; }
     /// <summary>Equaliser bars follow what is actually playing (Windows' output meter) instead of a loop.</summary>
     public bool AudioReactive { get; set; } = true;
     /// <summary>Show a dot while an app uses the microphone or camera, like phones do.</summary>

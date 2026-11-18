@@ -107,6 +107,7 @@ public partial class App : Application
         Hub.Privacy = new PrivacyIndicator(Dispatcher);
         Hub.Clipboard = new ClipboardHistory(store, () => Hub.Settings.Island);
         Hub.Power = new PowerEvents();
+        Hub.Devices = new DeviceEvents(Dispatcher, () => Hub.Settings.Island);
         Hub.Ready = true;
 
         Hub.Theme.Load();
@@ -129,6 +130,7 @@ public partial class App : Application
         Hub.Privacy.Start();
         Hub.Clipboard.Apply();
         Hub.Power.Start();
+        Hub.Devices.Apply();
 
         // First launch: seed a tasteful starter layout so the product is visibly alive.
         if (store.IsFirstRun) SeedFirstRun();

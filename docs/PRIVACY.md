@@ -40,6 +40,9 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 | Window titles of known media players only (VLC, foobar2000, Winamp, PotPlayer, MPC-HC/BE, mpv) and those players' own audio level | Now-playing for players that don't report to Windows. WinOrbit gets Windows' "a title changed" event, checks which program the window belongs to, and reads the title only for those players | No (not logged) |
 | Power source, battery %, laptop brightness, Energy Saver state | Charging/low-battery/brightness activities and the Control Centre | No |
 | Default microphone's mute state | Microphone tile | No |
+| Whether Caps Lock, Num Lock and Scroll Lock are on (`GetKeyState`, three on/off bits) | Lock-key alert. Checked five times a second **only while that alert is on**. WinOrbit never receives keystrokes — no keyboard hook, no raw input | No |
+| Current network connection's type and name (Windows `NetworkStatusChanged` event) | Wi-Fi / Ethernet connected and disconnected alerts | No (not logged) |
+| Names and connection state of **paired** Bluetooth devices; names of plugged-in USB devices (Windows device watchers) | Bluetooth and USB alerts. Windows pushes the changes; nothing scans for nearby devices | No (not logged) |
 
 ## 3. Network access
 

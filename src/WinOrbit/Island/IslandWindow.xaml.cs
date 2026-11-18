@@ -29,7 +29,14 @@ public partial class IslandWindow : Window
     private double HeightFor(string tab) => tab == "controls" ? ControlsHeight : ExpandedHeight;
 
     public static readonly DependencyProperty RadiusProperty = DependencyProperty.Register(nameof(Radius), typeof(double), typeof(IslandWindow),
-        new PropertyMetadata(19.0, (d, e) => ((IslandWindow)d).Pill.CornerRadius = new CornerRadius((double)e.NewValue)));
+        new PropertyMetadata(19.0, (d, e) =>
+        {
+            var w = (IslandWindow)d;
+            var r = Math.Max(0, (double)e.NewValue);
+            w.Pill.CornerRadius = new CornerRadius(r);
+            w.PillRim.CornerRadius = new CornerRadius(r);
+            w.PillGlow.CornerRadius = new CornerRadius(r);
+        }));
     public double Radius { get => (double)GetValue(RadiusProperty); set => SetValue(RadiusProperty, value); }
 
     public string Device { get; }
@@ -63,7 +70,7 @@ public partial class IslandWindow : Window
         _hoverPoll = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(220) };
         _hoverPoll.Tick += (_, _) => PollAutoHide();
         _peekTimer = new DispatcherTimer();
-        _peekTimer.Tick += (_, _) => { _peekTimer.Stop(); CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible; RefreshCompact(); };
+        _peekTimer.Tick += (_, _) => { _peekTimer.Stop(); CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible; Pop(CNormal, 0.9); RefreshCompact(); };
         _hoverIntent = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
         _hoverIntent.Tick += (_, _) => { _hoverIntent.Stop(); if (Pill.IsMouseOver && !_expanded && S.ExpandOnHover) Expand(false); };
 
@@ -91,6 +98,13 @@ public partial class IslandWindow : Window
         };
         Pill.MouseEnter += (_, _) => Motion.To(PillSheen, OpacityProperty, 1, 220);
         Pill.MouseLeave += (_, _) => Motion.To(PillSheen, OpacityProperty, 0, 320);
+        // Liquid response to touch: the capsule lifts a little under the pointer, squashes when pressed and
+        // springs back on release. Only the compact pill reacts; the open panel stays still to be worked in.
+        Pill.MouseEnter += (_, _) => { if (!_expanded) SetPillScale(1.035, 0.32, 0.62); };
+        Pill.MouseLeave += (_, _) => { if (!_expanded) SetPillScale(1, 0.4, 0.6); };
+        Pill.PreviewMouseLeftButtonDown += (_, _) => { if (!_expanded) SetPillScale(0.95, 0.18, 1); };
+        Pill.PreviewMouseLeftButtonUp += (_, _) => { if (!_expanded) SetPillScale(Pill.IsMouseOver ? 1.035 : 1, 0.36, 0.45); };
+        Pill.LostMouseCapture += (_, _) => { if (!_expanded && !Pill.IsMouseOver) SetPillScale(1); };
         Pill.PreviewMouseDown += (_, _) => Poke();
         Pill.PreviewMouseWheel += (_, _) => Poke();
         PreviewKeyDown += (_, _) => Poke();
@@ -182,6 +196,39 @@ public partial class IslandWindow : Window
             case "Solid": Pill.SampleWallpaper = false; Pill.SetResourceReference(GlassSurface.TintProperty, "G.TintSolid"); break;
             default: Pill.SampleWallpaper = true; Pill.SetResourceReference(GlassSurface.TintProperty, "G.Tint"); break;
         }
+        ApplyRim();
+    }
+
+    /// <summary>Coloured rim presets. "Glass" keeps the material's own illuminated edge.</summary>
+    public static readonly (string Id, string Name, string[] Colors)[] Rims =
+    {
+        ("Glass", "Glass", Array.Empty<string>()),
+        ("Accent", "Accent", Array.Empty<string>()),
+        ("Prism", "Prism", new[] { "#FFB340", "#FF4F8B", "#A35BFF", "#3E8BFF" }),
+        ("Aurora", "Aurora", new[] { "#34D399", "#22D3EE", "#6366F1" }),
+        ("Sunset", "Sunset", new[] { "#FB923C", "#F43F5E", "#C026D3" }),
+        ("Ocean", "Ocean", new[] { "#22D3EE", "#3B82F6", "#1E40AF" }),
+        ("Mono", "Mono", new[] { "#F4F4F5", "#71717A" }),
+    };
+
+    private void ApplyRim()
+    {
+        var rim = Rims.FirstOrDefault(r => r.Id == S.Rim);
+        if (rim.Id is null or "Glass") { PillRim.Visibility = PillGlow.Visibility = Visibility.Collapsed; return; }
+        Color[] colors;
+        if (rim.Id == "Accent")
+        {
+            var accent = (TryFindResource("T.Accent") as SolidColorBrush)?.Color ?? Color.FromRgb(0x7C, 0x5C, 0xFF);
+            colors = new[] { WinOrbit.Wallpaper.ColorMath.Lerp(accent, Colors.White, 0.35), accent, WinOrbit.Wallpaper.ColorMath.Lerp(accent, Colors.Black, 0.25) };
+        }
+        else colors = rim.Colors.Select(c => (Color)ColorConverter.ConvertFromString(c)).ToArray();
+        var brush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 1) };
+        for (var i = 0; i < colors.Length; i++) brush.GradientStops.Add(new GradientStop(colors[i], colors.Length == 1 ? 0 : (double)i / (colors.Length - 1)));
+        brush.Freeze();
+        PillRim.BorderBrush = brush;
+        PillRim.Visibility = Visibility.Visible;
+        PillGlow.BorderBrush = brush;
+        PillGlow.Visibility = S.RimGlow ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>Place the window so the pill sits at top-centre of its display plus the user's offset.</summary>
@@ -286,24 +333,87 @@ public partial class IslandWindow : Window
     {
         Compact.Measure(new Size(double.PositiveInfinity, CollapsedHeight));
         var target = Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500);
-        if (Math.Abs(target - Pill.Width) > 1.5 || Pill.HasAnimatedProperties) Motion.To(Pill, WidthProperty, target, 280, Motion.Settle);
+        // Morph the width on a lively spring; retargeting mid-flight keeps the motion continuous.
+        var heading = Springs.TargetOf(Pill, WidthProperty) ?? Pill.Width;
+        if (Math.Abs(target - heading) > 1.5) Springs.To(Pill, WidthProperty, target, 0.4, 0.72);
     }
 
     /// <summary>Briefly show a message in the collapsed pill (track change, timer finished, download done).</summary>
-    public void Peek(string glyph, string text, double seconds = 4)
+    public void Peek(string glyph, string text, double seconds = 4, Color? color = null)
     {
         if (_expanded || !IsVisible) return;
+        var fresh = CPeek.Visibility != Visibility.Visible;
         _hudTimer?.Stop();
         CHud.Visibility = Visibility.Collapsed;
+        CPeekKey.Visibility = Visibility.Collapsed;
+        CPeekGlyph.Visibility = Visibility.Visible;
         CPeekGlyph.Text = glyph;
+        if (color is { } c) CPeekGlyph.Foreground = new SolidColorBrush(c);
+        else CPeekGlyph.SetResourceReference(TextBlock.ForegroundProperty, "T.Accent");
+        ShowPeek(text, seconds, fresh);
+    }
+
+    /// <summary>A lock key changed: a key cap with its indicator light, e.g. [A•] Caps Lock on.</summary>
+    public void PeekKey(string cap, string text, bool on, double seconds = 1.6)
+    {
+        if (_expanded || !IsVisible) return;
+        var fresh = CPeek.Visibility != Visibility.Visible;
+        _hudTimer?.Stop();
+        CHud.Visibility = Visibility.Collapsed;
+        CPeekGlyph.Visibility = Visibility.Collapsed;
+        CPeekKey.Visibility = Visibility.Visible;
+        CPeekKeyText.Text = cap;
+        CPeekKeyLed.Fill = on ? new SolidColorBrush(Color.FromRgb(0x30, 0xD1, 0x58)) : new SolidColorBrush(Color.FromArgb(0x50, 0x9A, 0x9A, 0x9A));
+        CPeekKey.Opacity = on ? 1 : 0.6;
+        ShowPeek(text, seconds, fresh);
+    }
+
+    private void ShowPeek(string text, double seconds, bool fresh)
+    {
         CPeekText.Text = text;
         CNormal.Visibility = Visibility.Collapsed;
         CPeek.Visibility = Visibility.Visible;
         SetAutoHidden(false);
         FitCompact();
+        if (fresh) { Pop(CPeek); Droplet(1); } else Droplet(0.45);
         _peekTimer.Stop();
         _peekTimer.Interval = TimeSpan.FromSeconds(seconds);
         _peekTimer.Start();
+    }
+
+    // ------------------------------------------------------------------ liquid motion
+    private double _restScale = 1;
+
+    /// <summary>The scale the pill settles at: 1, or slightly lifted while the pointer is over it.</summary>
+    private void SetPillScale(double scale, double response = 0.34, double damping = 0.6)
+    {
+        _restScale = scale;
+        Springs.To(PillScale, ScaleTransform.ScaleXProperty, scale, response, damping);
+        Springs.To(PillScale, ScaleTransform.ScaleYProperty, scale, response, damping);
+    }
+
+    /// <summary>
+    /// Something new arrived: the glass bulges down and narrows a touch, then wobbles back — like a drop of
+    /// liquid that just took on more volume. Strength 1 is a new activity; smaller for an update in place.
+    /// </summary>
+    private void Droplet(double strength)
+    {
+        if (_expanded) return;
+        Springs.Kick(PillScale, ScaleTransform.ScaleYProperty, 1.15 * strength, _restScale, 0.36, 0.42);
+        Springs.Kick(PillScale, ScaleTransform.ScaleXProperty, -0.32 * strength, _restScale, 0.36, 0.5);
+    }
+
+    /// <summary>Content materialises: grows from slightly small with a soft bounce while fading in.</summary>
+    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5)
+    {
+        if (Motion.Intensity <= 0.01) { el.Opacity = 1; return; }
+        var st = new ScaleTransform(from, from);
+        el.RenderTransformOrigin = new Point(0.5, originY);
+        el.RenderTransform = st;
+        el.Opacity = 0;
+        Springs.To(st, ScaleTransform.ScaleXProperty, 1, 0.38, 0.6);
+        Springs.To(st, ScaleTransform.ScaleYProperty, 1, 0.38, 0.6);
+        Motion.To(el, OpacityProperty, 1, 170);
     }
 
     private void OnMediaChanged() { RefreshCompact(); if (_expanded && _tab == "media") UpdateMedia(); }
@@ -342,11 +452,14 @@ public partial class IslandWindow : Window
         Expanded.Visibility = Visibility.Visible;
         Pill.Cursor = Cursors.Arrow;
         Motion.To(Compact, OpacityProperty, 0, 110);
-        Motion.To(Pill, WidthProperty, ExpandedWidth, 430, Motion.Spring);
+        // The capsule swells into the panel on one shared spring, so width, height and corners move as one body
+        // and overshoot together a few pixels before settling, like a bubble popping open.
+        SetPillScale(1, 0.4, 0.62);
+        Springs.To(Pill, WidthProperty, ExpandedWidth, 0.52, 0.7);
         Expanded.Height = HeightFor(_tab) - 24;
-        Motion.To(Pill, HeightProperty, HeightFor(_tab), 430, Motion.Spring);
-        Motion.To(this, RadiusProperty, 30, 320);
-        Motion.To(Expanded, OpacityProperty, 1, 300);
+        Springs.To(Pill, HeightProperty, HeightFor(_tab), 0.52, 0.7);
+        Springs.To(this, RadiusProperty, 30, 0.52, 0.7);
+        Pop(Expanded, 0.94, 0);   // the content grows out of the capsule as it opens
         Compact.IsHitTestVisible = false;
         ShowTab(_tab);
         if (keyboard) SetInteractive(true);
@@ -365,15 +478,16 @@ public partial class IslandWindow : Window
         SetInteractive(false);
         Pill.Cursor = Cursors.Hand;
         Compact.IsHitTestVisible = true;
-        var ms = immediate ? 0 : 340;
+        // Drawing back in: a firmer spring with just a hint of give at the end.
+        var response = immediate ? 0 : 0.44;
         Motion.To(Expanded, OpacityProperty, 0, immediate ? 0 : 120, null, () => { if (!_expanded) Expanded.Visibility = Visibility.Collapsed; });
-        Motion.To(Pill, HeightProperty, CollapsedHeight, ms, Motion.Settle);
-        Motion.To(this, RadiusProperty, 19, ms);
+        Springs.To(Pill, HeightProperty, CollapsedHeight, response, 0.8);
+        Springs.To(this, RadiusProperty, 19, response, 0.8);
         Motion.To(Compact, OpacityProperty, 1, immediate ? 0 : 260);
-        Pill.BeginAnimation(WidthProperty, null);
         RefreshCompact();
         Compact.Measure(new Size(double.PositiveInfinity, CollapsedHeight));
-        Motion.To(Pill, WidthProperty, Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500), ms, Motion.Settle);
+        Springs.To(Pill, WidthProperty, Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500), response, 0.8);
+        if (!immediate && !Pill.IsMouseOver) SetPillScale(1);
     }
 
     /// <summary>
@@ -536,7 +650,8 @@ public partial class IslandWindow : Window
         _autoHidden = hidden;
         if (!hidden) _leftAt = DateTime.UtcNow;
         var (_, oy) = Offset();
-        Motion.To(PillShift, TranslateTransform.YProperty, hidden ? -(CollapsedHeight + oy + 8) : 0, hidden ? 300 : 380, hidden ? Motion.EaseInOut : Motion.Spring);
+        if (hidden) Motion.To(PillShift, TranslateTransform.YProperty, -(CollapsedHeight + oy + 8), 300, Motion.EaseInOut);
+        else Springs.To(PillShift, TranslateTransform.YProperty, 0, 0.46, 0.62);   // drops back in with a little bounce
         Pill.IsHitTestVisible = !hidden;
     }
 
@@ -1113,6 +1228,7 @@ public sealed class IslandController
     {
         var s = Hub.Settings.Island;
         Downloads.SetEnabled(s.Enabled && s.WatchDownloads);
+        Hub.Devices?.Apply();
         var targets = !s.Enabled ? new List<string>()
             : s.Monitor == "all" ? Monitors.All().Select(m => m.Device).ToList()
             : new List<string> { s.Monitor == "primary" ? Monitors.Primary.Device : Monitors.Find(s.Monitor).Device };

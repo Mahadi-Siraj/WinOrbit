@@ -11,12 +11,28 @@
             <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1"/>
         </Grid.LayoutTransform>
 
+        <!-- Optional halo in the rim's colours, behind the glass; follows the pill's size and motion -->
+        <Border x:Name="PillGlow" IsHitTestVisible="False" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,1,0,0"
+                BorderThickness="3" CornerRadius="19" Opacity="0.85" RenderTransformOrigin="0.5,0"
+                Width="{Binding ActualWidth, ElementName=Pill}" Height="{Binding ActualHeight, ElementName=Pill}"
+                RenderTransform="{Binding RenderTransform, ElementName=Pill}">
+            <Border.Effect>
+                <BlurEffect Radius="16" RenderingBias="Performance"/>
+            </Border.Effect>
+        </Border>
+
         <d:GlassSurface x:Name="Pill" HorizontalAlignment="Center" VerticalAlignment="Top" Width="220" Height="38" Margin="0,1,0,0"
-                        SampleWallpaper="True" ShadowSize="24" Cursor="Hand" AutomationProperties.Name="Dynamic Island">
+                        SampleWallpaper="True" ShadowSize="24" Cursor="Hand" AutomationProperties.Name="Dynamic Island" RenderTransformOrigin="0.5,0">
             <d:GlassSurface.RenderTransform>
-                <TranslateTransform x:Name="PillShift"/>
+                <!-- Scale hangs from the top edge: presses squash it, new activities make it bulge like a droplet -->
+                <TransformGroup>
+                    <ScaleTransform x:Name="PillScale" ScaleX="1" ScaleY="1"/>
+                    <TranslateTransform x:Name="PillShift"/>
+                </TransformGroup>
             </d:GlassSurface.RenderTransform>
             <Grid ClipToBounds="True">
+                <!-- Optional coloured rim (Island settings › Rim); hidden for the plain glass edge -->
+                <Border x:Name="PillRim" IsHitTestVisible="False" BorderThickness="1.6" CornerRadius="19" Visibility="Collapsed"/>
                 <!-- A soft light that follows the pointer across the glass -->
                 <Border x:Name="PillSheen" IsHitTestVisible="False" Opacity="0">
                     <Border.Background>
@@ -41,6 +57,14 @@
                         <TextBlock x:Name="CHudText" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0" MinWidth="30" TextAlignment="Right"/>
                     </StackPanel>
                     <StackPanel x:Name="CPeek" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                        <!-- Lock keys: a little key cap with an indicator light, like the LED on a keyboard -->
+                        <Border x:Name="CPeekKey" Visibility="Collapsed" MinWidth="24" Height="20" CornerRadius="5" BorderThickness="1.3" Padding="4,0,4,0"
+                                BorderBrush="{DynamicResource T.Text2}" Margin="0,0,9,0" VerticalAlignment="Center">
+                            <Grid>
+                                <TextBlock x:Name="CPeekKeyText" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                <Ellipse x:Name="CPeekKeyLed" Width="4" Height="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2.5,-2,0"/>
+                            </Grid>
+                        </Border>
                         <TextBlock x:Name="CPeekGlyph" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource T.Accent}" Margin="0,0,8,0"/>
                         <TextBlock x:Name="CPeekText" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="320" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
