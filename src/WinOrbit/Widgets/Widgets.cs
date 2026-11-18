@@ -249,9 +249,10 @@ internal sealed class SystemWidget : WidgetView
         if (Instance.Variant == "graph") stack.Children.Add(_spark.With(s => s.Margin = new Thickness(0, 0, 0, 10)));
         foreach (var (id, label) in new[] { ("cpu", "CPU"), ("ram", "Memory"), ("gpu", "GPU"), ("net", "Network") })
         {
-            var head = Ui.Grid("*,auto");
-            head.Children.Add(Ui.Text(label, "Text.Caption", 12));
-            var value = Ui.Text("—", "Text.Body", 12.5, FontWeights.SemiBold).At(0, 1);
+            var head = Ui.Grid("auto,*,auto");
+            head.Children.Add(Ui.LineIcon(Ui.MetricIcon(id), 15, Ui.MetricBrush(id)).With(v => { v.Margin = new Thickness(0, 0, 8, 0); v.VerticalAlignment = VerticalAlignment.Center; }));
+            head.Children.Add(Ui.Text(label, "Text.Caption", 12).With(t => t.VerticalAlignment = VerticalAlignment.Center).At(0, 1));
+            var value = Ui.Text("—", "Text.Body", 12.5, FontWeights.SemiBold).At(0, 2);
             head.Children.Add(value);
             stack.Children.Add(head);
             ProgressBar? bar = null;
@@ -765,9 +766,9 @@ internal sealed class WeatherWidget : WidgetView
             if (r is null || !Running) return;
             _body.Children.Clear();
             var unit = p.WeatherFahrenheit ? "°F" : "°C";
-            var (text, glyph) = WeatherService.Describe(r.Code);
+            var (text, icon) = WeatherService.Describe(r.Code);
             var top = Ui.Grid("auto,*");
-            top.Children.Add(Ui.Icon(glyph, 34, "T.Accent"));
+            top.Children.Add(Ui.LineIcon(icon, 36, "T.Accent", 1.5).With(v => v.VerticalAlignment = VerticalAlignment.Center));
             var sp = new StackPanel { Margin = new Thickness(14, 0, 0, 0) };
             sp.Children.Add(Ui.Text($"{r.Temperature:0}{unit}", "Text.Display", 32));
             sp.Children.Add(Ui.Text($"{text} · feels {r.Feels:0}{unit}", "Text.Caption", 12));
@@ -779,7 +780,7 @@ internal sealed class WeatherWidget : WidgetView
             {
                 var cell = new StackPanel();
                 cell.Children.Add(Ui.Text(d.Date.ToString("ddd", CultureInfo.CurrentCulture), "Text.Caption", 11));
-                cell.Children.Add(Ui.Icon(WeatherService.Describe(d.Code).Glyph, 15).With(t => { t.HorizontalAlignment = HorizontalAlignment.Left; t.Margin = new Thickness(0, 3, 0, 3); }));
+                cell.Children.Add(Ui.LineIcon(WeatherService.Describe(d.Code).Icon, 17, "T.Text").With(t => { t.HorizontalAlignment = HorizontalAlignment.Left; t.Margin = new Thickness(0, 4, 0, 4); }));
                 cell.Children.Add(Ui.Text($"{d.Max:0}° / {d.Min:0}°", "Text.Body", 12));
                 days.Children.Add(cell);
             }

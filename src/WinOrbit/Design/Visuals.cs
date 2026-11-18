@@ -292,6 +292,58 @@ public static class Ui
         return t;
     }
 
+    /// <summary>A <see cref="LineIcons"/> drawing (24×24 path data) at the given size, in a theme brush.</summary>
+    public static FrameworkElement LineIcon(string pathData, double size = 16, string brush = "T.Text", double stroke = 1.7)
+    {
+        var path = LinePath(pathData, stroke);
+        path.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, brush);
+        return new Viewbox { Width = size, Height = size, Child = new Canvas { Width = 24, Height = 24, Children = { path } } };
+    }
+
+    /// <summary>Same, in a fixed colour (the system monitor gives each metric its own).</summary>
+    public static FrameworkElement LineIcon(string pathData, double size, Brush brush, double stroke = 1.7)
+    {
+        var path = LinePath(pathData, stroke);
+        path.Stroke = brush;
+        return new Viewbox { Width = size, Height = size, Child = new Canvas { Width = 24, Height = 24, Children = { path } } };
+    }
+
+    private static System.Windows.Shapes.Path LinePath(string data, double stroke) => new()
+    {
+        Data = Geometry.Parse(data),
+        StrokeThickness = stroke,
+        StrokeStartLineCap = PenLineCap.Round,
+        StrokeEndLineCap = PenLineCap.Round,
+        StrokeLineJoin = PenLineJoin.Round,
+    };
+
+    /// <summary>Per-metric icon colours for the system monitor (soft, readable on dark and light glass).</summary>
+    public static Brush MetricBrush(string id)
+    {
+        var c = id switch
+        {
+            "cpu" => Color.FromRgb(0x4C, 0xC9, 0xF0),
+            "ram" => Color.FromRgb(0xF5, 0xB8, 0x3D),
+            "gpu" => Color.FromRgb(0xFF, 0x7A, 0x7A),
+            "net" => Color.FromRgb(0x5E, 0xEA, 0xD4),
+            "disk" => Color.FromRgb(0xA7, 0x8B, 0xFA),
+            _ => Color.FromRgb(0x7D, 0xD3, 0xFC),
+        };
+        var b = new SolidColorBrush(c);
+        b.Freeze();
+        return b;
+    }
+
+    public static string MetricIcon(string id) => id switch
+    {
+        "cpu" => LineIcons.Cpu,
+        "ram" => LineIcons.Memory,
+        "gpu" => LineIcons.Gpu,
+        "net" => LineIcons.Network,
+        "disk" => LineIcons.Disk,
+        _ => LineIcons.Clock,
+    };
+
     public static Button IconButton(string glyph, string tooltip, Action click, double size = 34, string style = "Button.Icon")
     {
         var b = new Button { Content = glyph, ToolTip = tooltip, Width = size, Height = size, FontSize = Math.Max(11, size * 0.42) };

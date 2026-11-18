@@ -913,7 +913,10 @@ public partial class IslandWindow : Window
             border.SetResourceReference(StyleProperty, "Card.Inset");
             border.Padding = new Thickness(11, 9, 11, 9);
             var grid = Ui.Grid("*", "auto,auto,*");
-            grid.Children.Add(Ui.Text(label, "Text.Label", 10));
+            var head = new StackPanel { Orientation = Orientation.Horizontal };
+            head.Children.Add(Ui.LineIcon(Ui.MetricIcon(id), 13, Ui.MetricBrush(id), 1.8).With(v => { v.Margin = new Thickness(0, 0, 6, 0); v.VerticalAlignment = VerticalAlignment.Center; }));
+            head.Children.Add(Ui.Text(label, "Text.Label", 10).With(t => t.VerticalAlignment = VerticalAlignment.Center));
+            grid.Children.Add(head);
             var value = Ui.Text("—", "Text.Sub", 18).With(t => t.Margin = new Thickness(0, 2, 0, 0)).At(1, 0);
             grid.Children.Add(value);
             var bottom = new Grid { VerticalAlignment = VerticalAlignment.Bottom }.At(2, 0);

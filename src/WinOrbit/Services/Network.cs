@@ -241,19 +241,19 @@ public sealed class WeatherService
         return report;
     }
 
-    /// <summary>WMO weather code → (description, Segoe Fluent glyph).</summary>
-    public static (string Text, string Glyph) Describe(int code) => code switch
+    /// <summary>WMO weather code → (description, line icon path from <see cref="Design.LineIcons"/>).</summary>
+    public static (string Text, string Icon) Describe(int code) => code switch
     {
-        0 => ("Clear", ""),
-        1 or 2 => ("Partly cloudy", ""),
-        3 => ("Overcast", ""),
-        45 or 48 => ("Fog", ""),
-        >= 51 and <= 57 => ("Drizzle", ""),
-        >= 61 and <= 67 => ("Rain", ""),
-        >= 71 and <= 77 => ("Snow", ""),
-        >= 80 and <= 82 => ("Showers", ""),
-        85 or 86 => ("Snow showers", ""),
-        >= 95 => ("Thunderstorm", ""),
-        _ => ("Unknown", "")
+        0 => ("Clear", Design.LineIcons.Sun),
+        1 or 2 => ("Partly cloudy", Design.LineIcons.CloudSun),
+        3 => ("Overcast", Design.LineIcons.Cloud),
+        45 or 48 => ("Fog", Design.LineIcons.Fog),
+        >= 51 and <= 57 => ("Drizzle", Design.LineIcons.Rain),
+        >= 61 and <= 67 => ("Rain", Design.LineIcons.Rain),
+        >= 71 and <= 77 => ("Snow", Design.LineIcons.Snow),
+        >= 80 and <= 82 => ("Showers", Design.LineIcons.Rain),
+        85 or 86 => ("Snow showers", Design.LineIcons.Snow),
+        >= 95 => ("Thunderstorm", Design.LineIcons.Storm),
+        _ => ("Unknown", Design.LineIcons.Cloud)
     };
 }
