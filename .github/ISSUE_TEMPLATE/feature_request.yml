@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an idea or improvement for WinOrbit.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Check the [roadmap](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/docs/ROADMAP.md) first — it may already be planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like?
+      description: Describe the idea and the problem it solves.
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How should it work?
+      description: Mock-ups, examples from other apps, or a step-by-step flow all help.
+  - type: checkboxes
+    id: promises
+    attributes:
+      label: WinOrbit's promises
+      description: Ideas have to keep WinOrbit light, private and safe.
+      options:
+        - label: This works without admin rights, telemetry or injecting into other apps.

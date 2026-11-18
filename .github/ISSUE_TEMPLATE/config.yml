@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/Mahadi-Siraj/WinOrbit/discussions/categories/q-a
+    about: Ask how to do something, or get help setting WinOrbit up.
+  - name: User guide
+    url: https://github.com/Mahadi-Siraj/WinOrbit/blob/main/docs/USER-GUIDE.md
+    about: Every feature, setting and shortcut explained.
+  - name: Report a security vulnerability
+    url: https://github.com/Mahadi-Siraj/WinOrbit/security/advisories/new
+    about: Please report security problems privately, not as a public issue.

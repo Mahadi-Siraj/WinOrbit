@@ -1,0 +1,68 @@
+name: Bug report
+description: Something in WinOrbit doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [open issues](https://github.com/Mahadi-Siraj/WinOrbit/issues) first.
+        **Security problems:** don't post them here — see [SECURITY.md](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the island with Ctrl+Alt+I
+        2. ...
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Dynamic Island
+        - Media / now playing
+        - Control Centre
+        - Launcher
+        - Widgets
+        - Clipboard / file shelf
+        - Tweaks
+        - Settings / installer
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: WinOrbit version
+      description: Shown on the About & Diagnostics page.
+      placeholder: "1.1.1"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Press Win+R, type `winver`.
+      placeholder: "Windows 11 24H2 (26100)"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install type
+      options:
+        - Installer (Setup.exe)
+        - Portable zip
+        - Built from source
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or log
+      description: Drag in screenshots, or attach the log from About & Diagnostics → Open log folder. Remove anything personal first.
