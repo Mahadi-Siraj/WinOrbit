@@ -282,6 +282,23 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Output_devices_list_the_default_first_and_split_their_names()
+    {
+        var list = AudioDevices.Order(new[]
+        {
+            new AudioDevices.Device("b", "Speakers (Realtek(R) Audio)", false),
+            new AudioDevices.Device("c", "Headphones (WH-1000XM4)", true),
+            new AudioDevices.Device("a", "LG TV (NVIDIA High Definition Audio)", false),
+        });
+        Assert.Equal(new[] { "c", "a", "b" }, list.Select(d => d.Id).ToArray());
+        Assert.Equal(("Speakers", "Realtek(R) Audio"), AudioDevices.Split("Speakers (Realtek(R) Audio)"));
+        Assert.Equal(("Digital Output", ""), AudioDevices.Split("Digital Output"));
+        Assert.Equal("", WinOrbit.Island.IslandWindow.DeviceGlyph("Headphones (WH-1000XM4)"));
+        Assert.Equal("", WinOrbit.Island.IslandWindow.DeviceGlyph("LG TV (NVIDIA High Definition Audio)"));
+        Assert.Equal("", WinOrbit.Island.IslandWindow.DeviceGlyph("Speakers (Realtek(R) Audio)"));
+    }
+
+    [Fact]
     public void Rain_soon_title_reads_naturally()
     {
         Assert.Equal("Rain any minute now", RainAlerts.Title(5, "Rain"));

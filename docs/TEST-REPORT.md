@@ -25,6 +25,8 @@ Notes:
 
 Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
+**Re-measured 18 November 2026** (after volume by app, screenshot/download/rain/keyboard-language cards and the island on any edge), release build (ReadyToRun, as installed), started with `--startup`, 30 s settle, then `tools/bench.ps1` for 300 s: **0.078 % CPU of the machine** (0.93 % of one core), **77.5 MB average working set (max 97 MB)**, 169–199 MB private bytes, handles 1126 → 1065, threads 32 → 21 (start-up workers finishing). Same machine; island collapsed, main window closed, no music playing. Raw data: `docs/bench-idle-2026-11-18.json`. The README quotes this run. Opening the main window and every island tab builds their UI and raises the working set to roughly 120 MB until Windows trims it.
+
 Re-check after adding live activities (volume meter, privacy dot, reactive bars, lyrics, clipboard/shelf), release build, 60 s sampled 20 s after start: **0.113 % CPU, 56 MB average working set (max 65 MB), 18 threads, 0 TCP / 0 UDP**. Short sample, so it includes the tail of start-up, and the reactive bars run while music plays; the 5-minute figure above remains the reference.
 
 ## 2. Automated tests — 85 passing

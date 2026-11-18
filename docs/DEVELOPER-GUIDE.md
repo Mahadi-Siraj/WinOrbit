@@ -10,7 +10,7 @@ Requirements: Windows 10 2004+ or 11, the .NET 8 SDK. Optional: Inno Setup 6 for
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 129 unit tests, under a second
+dotnet test tests\WinOrbit.Tests                  # 173 unit tests, under a second
 src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
@@ -50,15 +50,18 @@ Useful command-line switches: `--startup` (tray only), `--page <name>` (open a s
 
 ## 4. The Dynamic Island
 
-The island is one WPF window per display (`IslandWindow`), managed by `IslandController` (bottom of `IslandWindow.xaml.cs`, reached through `Hub.Island`). It is a layered, non-activating, topmost window, 560 × 420 px × the size setting. The visible glass (`Pill`) is a border inside it that changes size; the window itself never resizes.
+The island is one WPF window per display (`IslandWindow`), managed by `IslandController` (`Island/IslandController.cs`, reached through `Hub.Island`). The controller also owns the watchers every island shares — `Downloads`, `Screenshots`, `Rain` and `Language` — and switches each on or off in `Apply()` to match the settings. It is a layered, non-activating, topmost window, 560 × 420 px × the size setting. The visible glass (`Pill`) is a border inside it that changes size; the window itself never resizes.
 
 The class is split into partial files:
 
 | File | Holds |
 |---|---|
 | `IslandWindow.xaml` | Layout: the compact capsule, the card, the expanded panel and one `Grid` per tab |
-| `IslandWindow.xaml.cs` | Shape and corners, placement on the screen edge, expand/collapse, dragging, auto-hide, fullscreen hiding, tabs, media, system, Control Centre, focus timer, notes |
-| `IslandWindow.Live.cs` | Live activities: volume/brightness meter, charging, lock keys, network, radios, Bluetooth/USB, album colours, cards, the `Demo()` previews |
+| `IslandWindow.xaml.cs` | Shape and corners, placement on the screen edge, the collapsed capsule, liquid motion, expand/collapse, pointer (click, drag, wheel), auto-hide, fullscreen hiding, tab switching |
+| `IslandWindow.Cards.cs` | `ShowCard` / `EndCard`: the card pop-up, its switch, artwork, and file actions (click, drag out, buttons) |
+| `IslandWindow.Tabs.cs` | The pages: media, Control Centre (volume, brightness, quick tiles), system monitor, focus timer, quick note, header buttons |
+| `IslandController.cs` | `IslandController` (one island per display, the shared watchers, `Apply()`) and `DownloadWatcher` |
+| `IslandWindow.Live.cs` | Live activities: volume/brightness meter, charging, lock keys, keyboard language, network, radios, Bluetooth/USB, album colours, the `Demo()` previews |
 | `IslandWindow.Calendar.cs` | Calendar page, event parsing, reminders |
 | `IslandWindow.Weather.cs` | Weather page and sky colours |
 | `IslandWindow.Mixer.cs` | Volume by app in the Control Centre (`Services/AppVolume.cs` does the Core Audio work) |
@@ -109,7 +112,7 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 129 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 173 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.
 * Never toggle someone's real Wi-Fi, Bluetooth, dark mode or night light in a test without asking; use the `Demo()` previews instead.

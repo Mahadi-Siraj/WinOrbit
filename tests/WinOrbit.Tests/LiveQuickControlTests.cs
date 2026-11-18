@@ -41,6 +41,18 @@ public class LiveQuickControlTests
         Assert.Equal(before, await State(kind));
     }
 
+    /// <summary>Read-only, so it always runs: the real playback devices, through the same COM calls the picker uses.</summary>
+    [Fact]
+    public void Live_output_devices_are_listed_with_one_default()
+    {
+        var devices = WinOrbit.Services.AudioDevices.List();
+        if (devices.Count == 0) return;   // no sound device (a server, a test runner)
+        Assert.All(devices, d => Assert.False(string.IsNullOrWhiteSpace(d.Name)));
+        Assert.All(devices, d => Assert.StartsWith("{", d.Id));
+        Assert.Equal(1, devices.Count(d => d.IsDefault));
+        Assert.True(devices[0].IsDefault);
+    }
+
     [Fact]
     public void LivePowerMode_cycles_and_restores()
     {

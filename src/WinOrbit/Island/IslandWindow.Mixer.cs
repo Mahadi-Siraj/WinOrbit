@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
 using WinOrbit.Design;
@@ -56,12 +57,20 @@ public partial class IslandWindow
     private void RenderMixer()
     {
         var apps = AppVolume.List();
-        var shape = string.Join("|", apps.Select(a => a.Key + ":" + a.Active));
+        var devices = AudioDevices.List();
+        var shape = string.Join("|", devices.Select(d => d.Id + ":" + d.IsDefault)) + "#" + string.Join("|", apps.Select(a => a.Key + ":" + a.Active));
         if (shape != _mixerShape)
         {
             _mixerShape = shape;
             _mixerRows.Clear();
             QMixer.Children.Clear();
+            // With two or more playback devices, pick where sound goes, above the apps.
+            if (devices.Count > 1)
+            {
+                QMixer.Children.Add(MixerHeading("Output"));
+                foreach (var d in devices) QMixer.Children.Add(DeviceRow(d));
+                QMixer.Children.Add(MixerHeading("Apps"));
+            }
             if (apps.Count == 0)
                 QMixer.Children.Add(Ui.Text("No apps are playing sound right now.", "Text.Caption", 12, brush: "T.Text3").With(t => t.Margin = new Thickness(4, 6, 0, 0)));
             foreach (var app in apps) QMixer.Children.Add(MixerRow(app));
@@ -72,10 +81,62 @@ public partial class IslandWindow
             if (!_mixerRows.TryGetValue(app.Key, out var r)) continue;
             r.Slider.Value = Math.Round(app.Volume * 100);
             r.Value.Text = $"{app.Volume * 100:0}%";
-            r.Mute.Content = app.Muted ? Glyph.Mute : Glyph.Volume;
-            r.Slider.Opacity = app.Muted ? 0.45 : 1;
+            SetMuteLook(r.Mute, r.Slider, app.Muted, app.Name);
         }
         _mixerLoading = false;
+    }
+
+    /// <summary>The mute button shows (and tells screen readers) what pressing it will do.</summary>
+    private static void SetMuteLook(Button mute, Slider slider, bool muted, string app)
+    {
+        mute.Content = muted ? Glyph.Mute : Glyph.Volume;
+        mute.ToolTip = (muted ? "Unmute " : "Mute ") + app;
+        System.Windows.Automation.AutomationProperties.SetName(mute, (string)mute.ToolTip);
+        slider.Opacity = muted ? 0.45 : 1;
+    }
+
+    private static FrameworkElement MixerHeading(string text) =>
+        Ui.Text(text.ToUpperInvariant(), "Text.Caption", 10.5, FontWeights.SemiBold, "T.Text3").With(t => t.Margin = new Thickness(4, 2, 0, 4));
+
+    /// <summary>One playback device: a tick on the one in use; click another to send all sound there.</summary>
+    private FrameworkElement DeviceRow(AudioDevices.Device d)
+    {
+        var (name, detail) = AudioDevices.Split(d.Name);
+        var row = new Button { HorizontalContentAlignment = HorizontalAlignment.Stretch, Height = 34, Margin = new Thickness(0, 0, 0, 4), ToolTip = d.Name, Cursor = System.Windows.Input.Cursors.Hand };
+        row.SetResourceReference(StyleProperty, "Button.Ghost");
+        System.Windows.Automation.AutomationProperties.SetName(row, (d.IsDefault ? "In use: " : "Play sound on ") + d.Name);
+        var g = new Grid();
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
+        var icon = new TextBlock { Text = DeviceGlyph(d.Name), FontSize = 15, FontFamily = (FontFamily)FindResource("F.Icons"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var text = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(4, 0, 6, 0) };
+        text.Inlines.Add(new System.Windows.Documents.Run(name) { FontWeight = d.IsDefault ? FontWeights.SemiBold : FontWeights.Normal });
+        if (detail.Length > 0) text.Inlines.Add(new System.Windows.Documents.Run("  " + detail) { FontSize = 11.5 }.With(r => r.SetResourceReference(TextElement.ForegroundProperty, "T.Text3")));
+        text.SetResourceReference(TextBlock.ForegroundProperty, "T.Text");
+        text.FontSize = 12.5;
+        var tick = new TextBlock { Text = d.IsDefault ? Glyph.Check : "", FontSize = 13, FontFamily = (FontFamily)FindResource("F.Icons"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        tick.SetResourceReference(TextBlock.ForegroundProperty, "T.Accent");
+        Grid.SetColumn(text, 1); Grid.SetColumn(tick, 2);
+        g.Children.Add(icon); g.Children.Add(text); g.Children.Add(tick);
+        row.Content = g;
+        row.Click += (_, _) =>
+        {
+            Poke();
+            if (d.IsDefault) return;
+            if (AudioDevices.SetDefault(d.Id)) { _mixerShape = ""; RenderMixer(); }
+            else { Collapse(); OpenUri("ms-settings:sound"); }   // Windows refused: let the user pick it in Settings
+        };
+        return row;
+    }
+
+    /// <summary>A headphone, speaker or screen icon from the device's name.</summary>
+    internal static string DeviceGlyph(string name)
+    {
+        var n = name.ToLowerInvariant();
+        if (n.Contains("headphone") || n.Contains("headset") || n.Contains("earbud") || n.Contains("airpods") || n.Contains("buds") || n.Contains("hands-free")) return "";
+        if (n.Contains("hdmi") || n.Contains("display") || n.Contains("monitor") || n.Contains("tv") || n.Contains("nvidia high definition")) return "";
+        return "";   // speakers
     }
 
     private FrameworkElement MixerRow(AppVolume.App app)
@@ -116,8 +177,7 @@ public partial class IslandWindow
             _mixerTouched = DateTime.Now;
             var muted = (string)mute.Content != Glyph.Mute;
             AppVolume.SetMute(key, muted);
-            mute.Content = muted ? Glyph.Mute : Glyph.Volume;
-            slider.Opacity = muted ? 0.45 : 1;
+            SetMuteLook(mute, slider, muted, app.Name);
             Poke();
         };
 

@@ -386,15 +386,58 @@ public sealed class AboutPage : PageBase
         var log = new TextBox { Text = Log.Tail(40), IsReadOnly = true, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 11.5, Height = 220, TextWrapping = TextWrapping.NoWrap, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalContentAlignment = VerticalAlignment.Top };
         Children.Add(Kit.Section("Diagnostics log", null, log,
             Kit.Buttons(Kit.Btn("Refresh", () => log.Text = Log.Tail(40), Glyph.Refresh), Kit.Btn("Open log folder", () => Process.Start("explorer.exe", $"\"{Paths.Logs}\""), Glyph.Folder),
-                Kit.Btn("Copy system summary", CopySummary, Glyph.Copy)).With(b => b.Margin = new Thickness(0, 12, 0, 8))));
+                CopyButton()).With(b => b.Margin = new Thickness(0, 12, 0, 8))));
+        Children.Add(Ui.Text("“Copy for a bug report” copies versions, displays and how the island is set up — no names of networks, devices, files or places, and no log lines. Read it before you post it anywhere.", "Text.Caption", 12, brush: "T.Text3").With(x => { x.TextWrapping = TextWrapping.Wrap; x.Margin = new Thickness(4, -4, 4, 12); }));
     }
 
-    private static void CopySummary()
+    private static Button CopyButton()
+    {
+        Button? b = null;
+        b = Kit.Btn("Copy for a bug report", () => CopySummary(b!), Glyph.Copy);
+        return b;
+    }
+
+    private static void CopySummary(Button button)
+    {
+        try { Clipboard.SetText(Summary()); }
+        catch { return; }
+        // Say it worked, then go back to the normal label.
+        var label = button.Content;
+        button.Content = "Copied — paste it into your bug report";
+        var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+        t.Tick += (_, _) => { t.Stop(); button.Content = label; };
+        t.Start();
+    }
+
+    /// <summary>
+    /// What helps someone fix a bug, and nothing personal: versions, displays, rendering and the island's
+    /// configuration. No names of networks, devices, files, apps or places, and no log lines.
+    /// </summary>
+    internal static string Summary()
     {
         var m = Monitors.All();
-        var s = $"WinOrbit {typeof(App).Assembly.GetName().Version}\nWindows {Environment.OSVersion.Version}\n.NET {Environment.Version}\nDisplays: {string.Join("; ", m.Select(x => $"{x.Device} {x.Bounds.Width}x{x.Bounds.Height} @{x.Scale * 100:0}%"))}\n" +
-                $"Rainmeter: {(Hub.Rainmeter.Installed ? Hub.Rainmeter.Version : "not installed")}\nGPU source: {Hub.Monitor.GpuSource}\nWidgets: {Hub.Settings.Widgets.Count}\nTheme: {Hub.Theme.Current.Name}";
-        try { Clipboard.SetText(s); } catch { }
+        var i = Hub.Settings.Island;
+        var on = new (string Name, bool On)[]
+        {
+            ("volume", i.VolumeHud), ("battery", i.BatteryAlerts), ("lock keys", i.LockKeyAlerts), ("keyboard language", i.LanguageAlerts),
+            ("network", i.NetworkAlerts), ("bluetooth", i.BluetoothAlerts), ("usb", i.UsbAlerts), ("modes", i.SystemAlerts),
+            ("screenshots", i.ScreenshotCards), ("downloads", i.WatchDownloads), ("rain", i.RainAlerts), ("reminders", i.EventReminders),
+            ("album colours", i.AlbumTint), ("reactive bars", i.AudioReactive), ("privacy dots", i.PrivacyDot), ("clipboard", i.ClipboardHistory),
+        }.Where(x => x.On).Select(x => x.Name);
+        var lines = new[]
+        {
+            $"WinOrbit {typeof(App).Assembly.GetName().Version?.ToString(3)}{(Paths.Portable ? " (portable)" : "")}",
+            $"Windows {Environment.OSVersion.Version} · .NET {Environment.Version} · {Environment.ProcessorCount} logical CPUs",
+            $"Displays: {string.Join("; ", m.Select(x => $"{x.Bounds.Width}x{x.Bounds.Height} @{x.Scale * 100:0}%{(x.Device == Monitors.Primary.Device ? " (primary)" : "")}"))}",
+            $"Rendering: {(RenderGuard.FellBack ? "software (driver fallback)" : Hub.Settings.General.ForceSoftwareRendering ? "software (forced)" : "hardware")} · GPU source: {Hub.Monitor.GpuSource}",
+            $"Island: {(i.Enabled ? "on" : "off")} · edge {i.Edge} · {i.Shape} {i.Thickness} · size {i.Scale * 100:0}% · {i.Material} · monitor {i.Monitor} · auto-hide {(i.AutoHide ? "on" : "off")} · hide in fullscreen {(i.HideInFullscreen ? "on" : "off")} · reduced motion {(Motion.Intensity <= 0.01 ? "on" : "off")}",
+            $"Live activities on: {string.Join(", ", on)}",
+            $"Tabs: {string.Join(", ", i.Modules)}",
+            $"Widgets: {Hub.Settings.Widgets.Count} · theme: {Hub.Theme.Current.Name} · Rainmeter: {(Hub.Rainmeter.Installed ? Hub.Rainmeter.Version : "not installed")}",
+            $"Network: {(Hub.Settings.Privacy.NetworkAllowed ? "allowed" : "off")} · weather {(Hub.Settings.Privacy.WeatherEnabled ? "on" : "off")} · lyrics {(Hub.Settings.Privacy.LyricsEnabled ? "on" : "off")}",
+            $"Start-up: {App.StartupTime.TotalMilliseconds:0} ms",
+        };
+        return string.Join(Environment.NewLine, lines);
     }
 
     protected override void OnEnter()

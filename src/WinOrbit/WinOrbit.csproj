@@ -22,7 +22,9 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <TieredPGO>true</TieredPGO>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <!-- WFAC010 is a Windows Forms analyser asking WinForms apps to set DPI awareness in code. This is a WPF app:
+         per-monitor-v2 awareness belongs in app.manifest, where Windows reads it before any code runs. -->
+    <NoWarn>$(NoWarn);CA1416;WFAC010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

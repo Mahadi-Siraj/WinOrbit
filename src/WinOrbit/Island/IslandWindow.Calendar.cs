@@ -106,7 +106,8 @@ public partial class IslandWindow
         when.Margin = new Thickness(0, 0, 7, 0); when.VerticalAlignment = VerticalAlignment.Center; when.MinWidth = 34;
         var title = Ui.Text(ev.Title, "Text.Body", 12.5);
         title.TextTrimming = TextTrimming.CharacterEllipsis; title.VerticalAlignment = VerticalAlignment.Center; title.ToolTip = ev.Title;
-        var remove = new Button { Content = Glyph.Cancel, FontSize = 9, Width = 20, Height = 20, ToolTip = "Remove", Visibility = Visibility.Hidden };
+        // Faded out rather than hidden, so the keyboard (Tab) and screen readers can still reach it.
+        var remove = new Button { Content = Glyph.Cancel, FontSize = 9, Width = 20, Height = 20, ToolTip = "Remove", Opacity = 0 };
         remove.SetResourceReference(StyleProperty, "Button.Icon");
         System.Windows.Automation.AutomationProperties.SetName(remove, "Remove " + ev.Title);
         remove.Click += (_, _) =>
@@ -116,8 +117,10 @@ public partial class IslandWindow
             UpdateCalendar();
             CalView.Build();
         };
-        row.MouseEnter += (_, _) => remove.Visibility = Visibility.Visible;
-        row.MouseLeave += (_, _) => remove.Visibility = Visibility.Hidden;
+        row.MouseEnter += (_, _) => remove.Opacity = 1;
+        row.MouseLeave += (_, _) => { if (!remove.IsKeyboardFocused) remove.Opacity = 0; };
+        remove.GotKeyboardFocus += (_, _) => remove.Opacity = 1;
+        remove.LostKeyboardFocus += (_, _) => { if (!row.IsMouseOver) remove.Opacity = 0; };
 
         Grid.SetColumn(when, 1); Grid.SetColumn(title, 2); Grid.SetColumn(remove, 3);
         row.Children.Add(bar); row.Children.Add(when); row.Children.Add(title); row.Children.Add(remove);

@@ -395,7 +395,62 @@ internal interface IAudioMeterInformation
 internal interface IMMDevice
 {
     [PreserveSig] int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object iface);
+    [PreserveSig] int OpenPropertyStore(int access, out IPropertyStore store);
+    [PreserveSig] int GetId(out IntPtr id);
+    [PreserveSig] int GetState(out int state);
 }
+
+[ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IMMDeviceCollection
+{
+    [PreserveSig] int GetCount(out int count);
+    [PreserveSig] int Item(int index, out IMMDevice device);
+}
+
+[ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IPropertyStore
+{
+    [PreserveSig] int GetCount(out int count);
+    [PreserveSig] int GetAt(int index, out PropertyKey key);
+    [PreserveSig] int GetValue(ref PropertyKey key, out PropVariant value);
+}
+
+/// <summary>Enough of PROPVARIANT to read a string property (VT_LPWSTR). Free with PropVariantClear.</summary>
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+internal struct PropVariant
+{
+    [FieldOffset(0)] public ushort Type;
+    [FieldOffset(8)] public IntPtr Pointer;
+}
+
+internal static class PropVariantNative
+{
+    [DllImport("ole32.dll")] public static extern int PropVariantClear(ref PropVariant pv);
+}
+
+/// <summary>
+/// Undocumented (but stable since Windows 7) interface Windows' own Sound settings use to change the default audio
+/// device; apps such as EarTrumpet use it too. Only <see cref="SetDefaultEndpoint"/> is called. Earlier methods
+/// are declared only to keep the vtable order and are never called.
+/// </summary>
+[ComImport, Guid("F8679F50-850A-41CF-9C72-430F290290C8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IPolicyConfig
+{
+    [PreserveSig] int GetMixFormat(IntPtr a, IntPtr b);
+    [PreserveSig] int GetDeviceFormat(IntPtr a, int b, IntPtr c);
+    [PreserveSig] int ResetDeviceFormat(IntPtr a);
+    [PreserveSig] int SetDeviceFormat(IntPtr a, IntPtr b, IntPtr c);
+    [PreserveSig] int GetProcessingPeriod(IntPtr a, int b, IntPtr c, IntPtr d);
+    [PreserveSig] int SetProcessingPeriod(IntPtr a, IntPtr b);
+    [PreserveSig] int GetShareMode(IntPtr a, IntPtr b);
+    [PreserveSig] int SetShareMode(IntPtr a, IntPtr b);
+    [PreserveSig] int GetPropertyValue(IntPtr a, IntPtr b, IntPtr c);
+    [PreserveSig] int SetPropertyValue(IntPtr a, IntPtr b, IntPtr c);
+    [PreserveSig] int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string deviceId, int role);
+}
+
+[ComImport, Guid("870AF99C-171D-4F9E-AF0D-E63DF40C2BC9")]
+internal class PolicyConfigCom { }
 
 [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IAudioEndpointVolume

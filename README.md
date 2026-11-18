@@ -26,7 +26,7 @@
 
 People stack half a dozen tools to make Windows feel modern — a Dynamic Island app, Rainmeter, a volume-flyout replacement, a clipboard manager, a launcher, a night-light toggle. WinOrbit replaces them with **one** native app:
 
-* **Featherweight.** ~60 MB of RAM and ~0.1 % CPU at idle, measured ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The small exceptions: the lock-key alert checks three key lights about eight times a second, and — only if you have more than one keyboard — the keyboard-language card checks which keyboard is in use four times a second.
+* **Featherweight.** About 80 MB of RAM in use and under 0.1 % CPU at idle, measured over five minutes ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The small exceptions: the lock-key alert checks three key lights about eight times a second, and — only if you have more than one keyboard — the keyboard-language card checks which keyboard is in use four times a second.
 * **Private by design.** No telemetry, analytics, accounts or update checks. **Zero network connections by default**; the two optional online features (weather, synced lyrics) have their own switches and every request is shown in a ledger.
 * **Free forever.** Open source under GPL-3.0 — every copy and fork has to stay free and open.
 * **No admin rights, no hacks.** Per-user install. No DLL injection, no system-file patching, nothing that weakens Windows security.
@@ -42,7 +42,7 @@ A liquid-glass capsule at the top of your screen that comes alive:
 * **Shapes** — Capsule, Rounded, Square, Notch (flush with the top of the screen, like a camera notch) or Drop, in Slim, Regular or Tall; every shape morphs on the same springs.
 * **Album colours** — while a song plays, the glass glows with its artwork's colours and cross-fades when the track changes; a new song opens a card with the cover, title and artist. An "Album" rim uses the same colours.
 * **Privacy dots** — 🟠 microphone, 🟢 camera, 🔵 location in use, with the app's name. Your security, at a glance.
-* **Control Centre** — 12 liquid-glass tiles that switch the real setting: Wi-Fi, Bluetooth, Night light, Dark mode, Power mode, Microphone, Keep awake, Focus, Widgets, plus Airplane mode, Do not disturb and Energy saver shortcuts; volume and monitor brightness sliders, and **volume by app** — a slider and mute for each app playing sound.
+* **Control Centre** — 12 liquid-glass tiles that switch the real setting: Wi-Fi, Bluetooth, Night light, Dark mode, Power mode, Microphone, Keep awake, Focus, Widgets, plus Airplane mode, Do not disturb and Energy saver shortcuts; volume and monitor brightness sliders, and **volume by app** — a slider and mute for each app playing sound — plus a one-click **output device** switch (speakers, headphones, HDMI).
 * **Clipboard history** (opt-in, memory-only, skips password-manager copies) and a **file shelf** — drop files on the island, drag them out later.
 * **Calendar with events** — pick a day, type "9:30 Stand-up" and press Enter; the island grows into a reminder card ten minutes before and when it starts. Events stay on this PC.
 * **Weather** (optional, off until you turn it on) — now, the next twelve hours and three days, while the glass takes on the sky's colours: blue on a clear day, slate in rain, indigo at night.
@@ -97,6 +97,7 @@ All changeable in Settings.
 | Multiple monitors, display scaling above 100 %, laptops (battery/brightness), Windows 10 | 🧪 |
 | VLC can only be *controlled* (not just shown) after switching on its global media keys — see the [user guide](docs/USER-GUIDE.md) | ⚠️ |
 | Night light uses an undocumented Windows setting (format-checked, falls back to Settings) | ⚠️ |
+| Switching the output device uses an undocumented Windows interface (`IPolicyConfig`, the one Sound settings uses; falls back to Settings) | ⚠️ |
 | Do not disturb, airplane mode and Energy Saver can't be switched by apps (Windows offers no API) — their tiles open the right panel | ⚠️ |
 | Reading other apps' notifications needs a packaged (MSIX) build — planned | ⚠️ |
 | See-through taskbar: impossible on Windows 11 without injecting into Explorer, which WinOrbit refuses to do | ➖ |
@@ -109,7 +110,7 @@ Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 f
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build
-dotnet test tests\WinOrbit.Tests          # 129 unit tests
+dotnet test tests\WinOrbit.Tests          # 173 unit tests
 .\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 

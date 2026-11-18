@@ -62,6 +62,12 @@ body:
         - Portable zip
         - Built from source
   - type: textarea
+    id: summary
+    attributes:
+      label: Setup summary (optional)
+      description: In WinOrbit, About & Diagnostics → **Copy for a bug report**, then paste here. It has versions, displays and island settings — no personal names.
+      render: text
+  - type: textarea
     id: extra
     attributes:
       label: Screenshots or log

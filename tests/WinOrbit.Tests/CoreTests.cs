@@ -416,13 +416,13 @@ public class LiveActivityTests
     }
 
     [Fact]
-    public void Lyrics_need_both_switches_and_never_touch_the_network_when_off()
+    public async Task Lyrics_need_both_switches_and_never_touch_the_network_when_off()
     {
         var privacy = new PrivacySettings { NetworkAllowed = true, LyricsEnabled = false };
         var net = new NetworkGate(() => privacy);
         var lyrics = new LyricsService(net, () => privacy);
         Assert.False(lyrics.Enabled);
-        Assert.Null(lyrics.GetAsync("Song", "Artist", "", TimeSpan.FromMinutes(3)).Result);
+        Assert.Null(await lyrics.GetAsync("Song", "Artist", "", TimeSpan.FromMinutes(3)));
         Assert.Equal(0, net.RequestCount);
         privacy.LyricsEnabled = true; privacy.NetworkAllowed = false;
         Assert.False(lyrics.Enabled);
