@@ -619,7 +619,20 @@ public partial class IslandWindow : Window
             ShowMediaCard();
     }
     private void OnTimerChanged() { if (!_expanded) RefreshCompact(); else if (_tab == "focus") UpdateFocus(); }
-    private void OnTimerCompleted(TimerMode mode) => Peek(Glyph.Check, mode switch { TimerMode.Focus => "Focus block complete — take a break", TimerMode.Break => "Break over — ready to focus", _ => "Countdown finished" }, 7);
+    private void OnTimerCompleted(TimerMode mode)
+    {
+        var (title, sub) = TimerDoneText(mode, Hub.Timers.Total, Hub.Timers.BreakMinutes);
+        if (_expanded || !IsVisible) Peek(Glyph.Check, $"{title} — {sub}", 7);
+        else ShowCard(Glyph.Check, title, sub, Color.FromRgb(0x30, 0xD1, 0x58), 8);
+    }
+
+    /// <summary>The "done" card's words. <paramref name="total"/> is the countdown's length (focus/break use their own).</summary>
+    internal static (string Title, string Subtitle) TimerDoneText(TimerMode mode, TimeSpan total, int breakMinutes) => mode switch
+    {
+        TimerMode.Focus => ("Focus block complete", $"Time for a {breakMinutes}-minute break"),
+        TimerMode.Break => ("Break over", "Ready for the next focus block"),
+        _ => ("Timer done", Launcher.TimerCommand.Describe(total) + " finished"),
+    };
     private void OnDownloadsChanged()
     {
         if (!S.WatchDownloads) return;

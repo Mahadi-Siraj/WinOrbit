@@ -63,6 +63,7 @@ Wave 5 — **built after 1.2, not released yet** (18–19 Nov 2026; committed, w
 * ✅ **Bluetooth battery** on the "Connected" card, when the device reports it to Windows (🧪 no Bluetooth headset on the test PC; checked with the preview).
 * ✅ **Smarter lyrics matching**: "Artist - Song (Official Video)" titles from video sites are cleaned and split.
 * ✅ **Check for updates** button — only when clicked, through the network gate.
+* ✅ **Timers from the launcher** — `timer 5 min`, `focus 50`, `stopwatch`; a "Timer done" card when a countdown ends.
 * ✅ Copy a setup summary for bug reports; backups leave out Windows-tweak originals; accessibility fixes; island code split into smaller files; render check no longer misfires while the monitor is off.
 * 📦 winget manifest prepared in `packaging/winget/` (not submitted).
 

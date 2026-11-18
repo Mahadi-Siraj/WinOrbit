@@ -182,6 +182,7 @@ public static class LauncherIndex
         }
         if (Units.TryConvert(q, out var converted))
             results.Add(new LauncherItem { Kind = ItemKind.Calc, Key = "unit", Title = "= " + converted, Subtitle = "Enter copies the result", Glyph = "", Score = 10_000, Run = () => Clipboard.SetText(converted) });
+        if (TimerCommand.Item(q, Hub.Timers) is { } timer) results.Add(timer);
 
         var counts = Hub.Store.Data.LaunchCounts;
         foreach (var item in _apps.Concat(snapshot))

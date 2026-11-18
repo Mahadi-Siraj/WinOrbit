@@ -569,6 +569,16 @@ public sealed class TimerService
         Changed?.Invoke();
     }
 
+    /// <summary>A countdown of any length from 1 second to 24 hours (the launcher's "timer 90s", "timer 1h 30m").</summary>
+    public void SetCountdown(TimeSpan length)
+    {
+        Stop(false);
+        Mode = TimerMode.Countdown;
+        _banked = TimeSpan.Zero;
+        Total = length < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : length > TimeSpan.FromHours(24) ? TimeSpan.FromHours(24) : length;
+        Changed?.Invoke();
+    }
+
     public void Toggle() { if (Running) Stop(false); else Start(); }
 
     public void Start()
