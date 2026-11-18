@@ -357,6 +357,18 @@ internal interface IAudioSessionControl2
     [PreserveSig] int GetSessionIdentifier(out IntPtr id);
     [PreserveSig] int GetSessionInstanceIdentifier(out IntPtr id);
     [PreserveSig] int GetProcessId(out uint pid);
+    /// <summary>S_OK (0) for the "System sounds" session, S_FALSE (1) for an app.</summary>
+    [PreserveSig] int IsSystemSoundsSession();
+}
+
+/// <summary>One audio session's own volume and mute — the per-app sliders in the Windows volume mixer.</summary>
+[ComImport, Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface ISimpleAudioVolume
+{
+    [PreserveSig] int SetMasterVolume(float level, ref Guid ctx);
+    [PreserveSig] int GetMasterVolume(out float level);
+    [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid ctx);
+    [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
 }
 
 /// <summary>Peak level of what the device is playing (0..1) — the same meter the Windows volume mixer shows.</summary>

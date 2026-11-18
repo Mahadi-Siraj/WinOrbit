@@ -197,6 +197,28 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Volume_mixer_groups_sessions_by_app()
+    {
+        AppVolume.Session S(string proc, string? name, double vol, bool muted, int state, bool system = false) => new(proc, name, null, vol, muted, state, system);
+        var apps = AppVolume.Group(new[]
+        {
+            S("chrome", "Google Chrome", 0.5, false, 0),   // a quiet tab
+            S("chrome", null, 0.8, false, 1),              // a playing tab
+            S("", null, 1, false, 0, system: true),
+            S("Discord", "Discord", 0.3, true, 0),
+            S("spotify", "Spotify", 0.9, false, 2),        // expired: gone
+            S("", null, 1, false, 1),                      // no process: dropped
+        });
+        Assert.Equal(new[] { "chrome", "Discord", "system" }, apps.Select(a => a.Key));   // playing first, System sounds last
+        var chrome = apps[0];
+        Assert.Equal("Google Chrome", chrome.Name);
+        Assert.True(chrome.Active);
+        Assert.Equal(0.8, chrome.Volume);
+        Assert.True(apps[1].Muted);
+        Assert.Equal("System sounds", apps[2].Name);
+    }
+
+    [Fact]
     public void Island_hides_for_fullscreen_and_chosen_apps_but_not_kept_ones()
     {
         var s = new WinOrbit.Core.IslandSettings { ShowOverFullscreenApps = { "POWERPNT.EXE" }, HideForApps = { "obs64" } };

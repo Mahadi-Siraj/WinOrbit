@@ -236,22 +236,29 @@
                                     <ColumnDefinition Width="38"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="44"/>
+                                    <ColumnDefinition Width="38"/>
                                 </Grid.ColumnDefinitions>
                                 <Button x:Name="QMute" Style="{StaticResource Button.Icon}" Content="&#xE767;" ToolTip="Mute" AutomationProperties.Name="Mute" Click="OnMute"/>
                                 <Slider x:Name="QVolume" Grid.Column="1" Minimum="0" Maximum="100" Margin="6,0" AutomationProperties.Name="Volume" ValueChanged="OnVolumeSlider"/>
                                 <TextBlock x:Name="QVolumeText" Grid.Column="2" Style="{StaticResource Text.Caption}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                <Button x:Name="QMixerButton" Grid.Column="3" Style="{StaticResource Button.Icon}" Content="&#xE9E9;" ToolTip="Volume by app" AutomationProperties.Name="Volume by app" Click="OnMixerButton"/>
                             </Grid>
                             <Grid x:Name="QBrightnessRow" Grid.Row="1" Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="38"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="44"/>
+                                    <ColumnDefinition Width="38"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="&#xE706;" Style="{StaticResource Icon}" FontSize="15"/>
                                 <Slider x:Name="QBrightness" Grid.Column="1" Minimum="0" Maximum="100" Margin="6,0" AutomationProperties.Name="Brightness" ValueChanged="OnBrightnessSlider"/>
                                 <TextBlock x:Name="QBrightnessText" Grid.Column="2" Style="{StaticResource Text.Caption}" TextAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
                             <UniformGrid x:Name="QShortcuts" Grid.Row="2" Columns="4" Margin="-3,8,-3,0" VerticalAlignment="Top"/>
+                            <!-- Volume by app: replaces the tiles while open -->
+                            <ScrollViewer x:Name="QMixerScroll" Grid.Row="2" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                                <StackPanel x:Name="QMixer"/>
+                            </ScrollViewer>
                         </Grid>
 
                         <!-- Focus -->

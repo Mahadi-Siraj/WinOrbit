@@ -24,6 +24,9 @@ public static class AppIcons
     /// <summary>Icon for an AppsFolder id, or null. Call on the UI thread.</summary>
     public static ImageSource? Get(string appId, int size = 32) => Shell("shell:AppsFolder\\" + appId, size, 0x5);   // SIIGBF_ICONONLY | BIGGERSIZEOK
 
+    /// <summary>The icon of a program file (an .exe), as Explorer shows it, or null. Call on the UI thread.</summary>
+    public static ImageSource? ForFile(string path, int size = 32) => Shell(path, size, 0x5);
+
     /// <summary>
     /// A file's real thumbnail — for music files, the embedded album cover Explorer shows — or null when the
     /// file has none (no generic icon is returned).

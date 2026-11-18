@@ -18,6 +18,7 @@ Closing the main window keeps the island and widgets running from the tray (turn
 * **Click** the capsule to expand; **Esc** or clicking elsewhere collapses it. It also collapses a few seconds after the pointer leaves (configurable; pin it open with the pin button).
 * **Scroll** on the capsule to change volume. **Drag** it to move it; **right-click** for quick options.
 * **Centring:** while you drag, the island clicks into the exact centre when it gets within 18 px. To put it back in one go: right-click › **Centre the island**, or Dynamic Island page › **Centre now**. **Keep centred** locks it horizontally so dragging only changes the distance from the top.
+* **Volume by app** — in the Control Centre, the mixer button at the end of the volume row swaps the tiles for one slider per app that has sound (the same list as Windows' volume mixer), each with its own mute button. Apps playing right now come first; apps that start or stop appear within a couple of seconds. Press the button again (now showing tiles) to go back. The volumes are Windows' own, so they stay set after WinOrbit closes.
 * **Quick controls tab** — click a tile to switch it; the **›** in its corner (or right-click) opens the matching Windows settings page:
 
   | Tile | What a click does | How |
