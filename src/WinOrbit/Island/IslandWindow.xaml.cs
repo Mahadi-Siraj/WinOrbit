@@ -666,6 +666,7 @@ public partial class IslandWindow : Window
         Compact.IsHitTestVisible = false;
         // Fill and lay out the panel BEFORE anything moves. Doing this mid-motion is what made the first frames
         // of opening late (25–50 ms); now the motion starts only once the heavy work is done.
+        if (S.OpenTo == "Launcher") _tab = HomeTab;
         Expanded.Opacity = 0;
         Expanded.Visibility = Visibility.Visible;
         Expanded.Height = HeightFor(_tab) - 24;
@@ -750,7 +751,9 @@ public partial class IslandWindow : Window
         if (e.Key == Key.Escape) { Collapse(); e.Handled = true; return; }
         if (typing) return;
         var tabs = ActiveTabs();
-        var i = tabs.IndexOf(_tab);
+        tabs.Insert(0, HomeTab);   // the launcher is the first stop when stepping through with the arrows
+        var i = Math.Max(0, tabs.IndexOf(_tab));
+        if (e.Key is Key.Home or Key.D0 or Key.NumPad0 && Keyboard.Modifiers == ModifierKeys.None) { ShowHome(); e.Handled = true; return; }
         if (e.Key is Key.Right or Key.Left && Keyboard.FocusedElement is not Slider)
         {
             var next = tabs[(i + (e.Key == Key.Right ? 1 : tabs.Count - 1)) % tabs.Count];
@@ -761,7 +764,7 @@ public partial class IslandWindow : Window
         else if (e.Key == Key.Space && _tab == "focus" && Keyboard.FocusedElement is not Button) { Hub.Timers.Toggle(); e.Handled = true; }
         else if (e.Key is >= Key.D1 and <= Key.D9 && Keyboard.Modifiers == ModifierKeys.None)
         {
-            var n = e.Key - Key.D1;
+            var n = e.Key - Key.D1 + 1;   // 1–9 are the modules; 0 and Home open the launcher
             if (n < tabs.Count) { ShowTab(tabs[n]); e.Handled = true; }
         }
     }
@@ -908,8 +911,10 @@ public partial class IslandWindow : Window
     {
         Tabs.Children.Clear();
         var active = ActiveTabs();
-        if (!active.Contains(_tab)) _tab = active[0];
-        foreach (var t in AllTabs.Where(t => active.Contains(t.Id)))
+        if (!active.Contains(_tab) && _tab != HomeTab) _tab = active[0];
+        BuildHome(active);
+        // The launcher's own button leads the bar; the modules follow.
+        foreach (var t in new[] { (Id: HomeTab, Glyph: Glyph.Tiles, Name: "All modules") }.Concat(AllTabs.Where(t => active.Contains(t.Id))))
         {
             var rb = new RadioButton { GroupName = "IslandTabs" + GetHashCode(), ToolTip = t.Name, Tag = t.Id, Padding = new Thickness(11, 6, 11, 6), IsChecked = t.Id == _tab };
             rb.SetResourceReference(StyleProperty, "Segment");
@@ -933,6 +938,7 @@ public partial class IslandWindow : Window
         _loadingUi = true;
         foreach (var rb in Tabs.Children.OfType<RadioButton>()) rb.IsChecked = (string)rb.Tag == id;
         _loadingUi = false;
+        TabHome.Visibility = id == HomeTab ? Visibility.Visible : Visibility.Collapsed;
         TabMedia.Visibility = id == "media" ? Visibility.Visible : Visibility.Collapsed;
         TabSystem.Visibility = id == "system" ? Visibility.Visible : Visibility.Collapsed;
         TabControls.Visibility = id == "controls" ? Visibility.Visible : Visibility.Collapsed;
@@ -941,12 +947,13 @@ public partial class IslandWindow : Window
         TabNotes.Visibility = id == "notes" ? Visibility.Visible : Visibility.Collapsed;
         TabClipboard.Visibility = id == "clipboard" ? Visibility.Visible : Visibility.Collapsed;
         TabShelf.Visibility = id == "shelf" ? Visibility.Visible : Visibility.Collapsed;
-        var view = id switch { "media" => (FrameworkElement)TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
+        var view = id switch { HomeTab => (FrameworkElement)TabHome, "media" => TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
         Motion.Enter(view, 8, 220);
         _mediaTick.Stop();
         UpdateMonitorSubscription();
         switch (id)
         {
+            case HomeTab: RefreshHome(); PopTiles(); break;
             case "media": UpdateMedia(); LoadVolume(); break;
             case "controls": LoadVolume(); LoadBrightness(); RefreshQuick(); break;
             case "focus": UpdateFocus(); break;

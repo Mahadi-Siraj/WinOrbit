@@ -111,6 +111,8 @@ public sealed class IslandSettings
     public string Shape { get; set; } = "Capsule";
     /// <summary>Collapsed height: "Slim", "Regular" or "Tall".</summary>
     public string Thickness { get; set; } = "Regular";
+    /// <summary>What the island opens to: "Last" (the last panel used) or "Launcher" (the grid of modules).</summary>
+    public string OpenTo { get; set; } = "Last";
     /// <summary>While a song plays, the glass takes on the colours of its artwork.</summary>
     public bool AlbumTint { get; set; } = true;
     /// <summary>Pop-ups when dark/light mode, night light, airplane mode or Energy Saver are switched.</summary>

@@ -37,7 +37,8 @@ Closing the main window keeps the island and widgets running from the tray (turn
 * **Seeking:** on the Media tab, click or drag the bar, or use −10 / +10. Works when the player allows it (YouTube in Chrome/Brave/Edge, Spotify, Media Player); otherwise the bar is greyed out.
 * **VLC and other classic players:** the island reads the song from the player's title bar. VLC doesn't accept outside controls unless you turn on its global media keys: VLC › Tools › Preferences › Hotkeys, in the **Global** column set Play/Pause, Next and Previous to your keyboard's media keys, then Save. (WinOrbit never sends commands straight to VLC's window — that crashes VLC 3.0.23.)
 * **Preview** live activities (charging, low battery, volume, microphone, Caps Lock, Wi-Fi, Bluetooth, USB, Wi-Fi switched off, Bluetooth switched on, dark mode, night light, airplane mode, Energy Saver, a new song) from Dynamic Island › Live activities, or type "preview" in the launcher.
-* In the expanded panel: **←/→** or **1–6** switch tabs, **Space** plays/pauses (Media) or starts/pauses (Focus).
+* In the expanded panel: **←/→** or **1–9** switch tabs, **Space** plays/pauses (Media) or starts/pauses (Focus).
+* **All modules:** the first button in the panel's tab bar (or **Home** / **0**) shows every module as a coloured tile with a live line — the song playing, the focus countdown, today's date, your note, clipboard and Shelf counts. Click a tile to open it. To open the island on this grid every time, set Dynamic Island › Modules › **Open to** › Launcher.
 * The capsule shows one live activity at a time — a running timer, a download (opt-in) or what's playing — followed by the time and date.
 * It hides automatically during fullscreen games and videos.
 * Brightness works on monitors that support DDC/CI (most external monitors; not laptop panels yet); otherwise the slider is disabled and says so. A missed reply is retried, so a busy monitor no longer disables the slider.

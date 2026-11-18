@@ -253,7 +253,10 @@ public sealed class IslandPage : PageBase
                 Save();
             }, modules.Children.Count > 0, glyph));
         }
-        Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. Use ←/→ or the number keys to switch with the keyboard.", modules));
+        var openTo = new[] { "Last", "Launcher" };
+        modules.Children.Add(Kit.Row("Open to", "Last panel reopens what you used last; Launcher opens the grid of all modules first.",
+            Kit.Segmented(new[] { "Last panel", "Launcher" }, Math.Max(0, Array.IndexOf(openTo, S.OpenTo)), i => { S.OpenTo = openTo[i]; Save(); }), true));
+        Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. The grid button (or Home / 0) shows every module as a launcher; ←/→ or the number keys switch with the keyboard.", modules));
 
         Children.Add(Kit.Section("Behaviour", null,
             Kit.ToggleRow("Hide during fullscreen apps and games", "Gets completely out of the way of games, videos and presentations.", S.HideInFullscreen, v => { S.HideInFullscreen = v; Save(); }, false),

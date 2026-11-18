@@ -97,6 +97,18 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Launcher_tiles_each_have_their_own_colours()
+    {
+        string[] modules = { "media", "system", "controls", "focus", "calendar", "notes", "clipboard", "shelf" };
+        var tops = modules.Select(m => WinOrbit.Island.IslandWindow.TileColors(m).Top).ToList();
+        Assert.Equal(modules.Length, tops.Distinct().Count());
+        // Every tile is a gradient, and an unknown module still gets a (grey) tile rather than nothing.
+        Assert.All(modules, m => { var (t, b) = WinOrbit.Island.IslandWindow.TileColors(m); Assert.NotEqual(t, b); });
+        Assert.DoesNotContain(WinOrbit.Island.IslandWindow.TileColors("unknown").Top, tops);
+        Assert.Equal("home", WinOrbit.Island.IslandWindow.HomeTab);
+    }
+
+    [Fact]
     public void Render_check_tells_a_blank_window_from_a_drawn_one()
     {
         int w = 64, h = 48;
