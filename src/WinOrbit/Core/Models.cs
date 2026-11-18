@@ -332,6 +332,10 @@ public sealed class CalendarEvent
     /// <summary>Start time, or null for an all-day event.</summary>
     public TimeSpan? Time { get; set; }
     public string Title { get; set; } = "";
+    /// <summary>The event's UID when it came from an imported .ics file (re-importing replaces it); null when typed in.</summary>
+    public string? Uid { get; set; }
+    /// <summary>The .ics file name it was imported from; null when typed in.</summary>
+    public string? Source { get; set; }
 
     [JsonIgnore] public DateTime? Start => Time is { } t ? Date.Date + t : null;
 }

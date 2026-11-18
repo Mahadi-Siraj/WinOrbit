@@ -141,6 +141,12 @@ public partial class IslandWindow
         CalView.Build();
     }
 
+    public void RefreshCalendar()
+    {
+        CalView.Build();
+        if (_expanded && _tab == "calendar") UpdateCalendar();
+    }
+
     // ----- reminders -----
 
     /// <summary>Runs on the minute: shows a card for an event about to start (or just started).</summary>

@@ -1728,5 +1728,7 @@ public sealed class IslandController
     public void Peek(string glyph, string text) { foreach (var w in _windows) w.Peek(glyph, text); }
     public void Centre() { foreach (var w in _windows) w.Centre(); }
     public void Demo(string what) { foreach (var w in _windows) w.Demo(what); }
+    /// <summary>Events changed outside the island (an import): redraw the month marks and the open day.</summary>
+    public void RefreshCalendar() { foreach (var w in _windows) w.RefreshCalendar(); }
     public void CloseAll() { foreach (var w in _windows.ToList()) w.Close(); _windows.Clear(); }
 }

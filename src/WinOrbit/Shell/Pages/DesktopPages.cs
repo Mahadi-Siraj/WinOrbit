@@ -169,6 +169,30 @@ public sealed class IslandPage : PageBase
     public override string Subtitle => "A living capsule at the top of your screen. Click it to expand; scroll on it for volume; drag it to move. Press " + Hub.Settings.General.HotkeyIsland + " to open it with the keyboard.";
     private static IslandSettings S => Hub.Settings.Island;
     private static void Save() { Hub.Store.Save(); Hub.Island.Apply(); }
+
+    private void ImportCalendar()
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Import calendar events", Filter = "Calendar file|*.ics;*.ical;*.ifb" };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var info = new FileInfo(dlg.FileName);
+            if (info.Length > 20 * 1024 * 1024) { Dialogs.Message("File too large", "That calendar file is over 20 MB. Export a shorter date range and try again."); return; }
+            var result = IcsImport.Parse(File.ReadAllText(dlg.FileName), DateTime.Now, info.Name);
+            if (result.Events.Count == 0)
+            {
+                Dialogs.Message("No events found", "That file has no events between 30 days ago and a year from now.");
+                return;
+            }
+            var added = IcsImport.Merge(Hub.Store.Data.Events, result.Events);
+            Hub.Store.SaveData();
+            Hub.Island.RefreshCalendar();
+            Dialogs.Message("Events imported", $"{added} event{(added == 1 ? "" : "s")} from {info.Name} are in the island's calendar now."
+                + (result.Skipped > 0 ? $" {result.Skipped} cancelled or unreadable event{(result.Skipped == 1 ? " was" : "s were")} left out." : ""));
+            Rebuild();
+        }
+        catch (Exception ex) { Dialogs.Message("Import failed", ex.Message); }
+    }
     private static bool Side => S.Edge is "Left" or "Right";
 
     /// <summary>A list of apps (process names) as removable chips, plus "Add app…" which lists the apps open right now.</summary>
@@ -292,6 +316,19 @@ public sealed class IslandPage : PageBase
             }, modules.Children.Count > 0, glyph));
         }
         Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. Use ←/→ or the number keys to switch with the keyboard.", modules));
+
+        var imported = Hub.Store.Data.Events.Count(e => e.Source is not null);
+        Children.Add(Kit.Section("Calendar events", "Bring in events from Outlook, Google Calendar or Apple Calendar: export the calendar as an .ics file, then import it here. It is a one-time copy onto this PC — nothing syncs and nothing goes online.",
+            Kit.Row("Import an .ics file", "Repeating events are filled in from 30 days ago to a year ahead. Importing the same calendar again updates its events instead of doubling them.", Kit.Btn("Import…", ImportCalendar, Glyph.Import), false),
+            Kit.Row("Remove imported events", imported == 0 ? "No imported events." : $"{imported} imported event{(imported == 1 ? "" : "s")}. Events you typed in the island stay.",
+                Kit.Btn("Remove", () =>
+                {
+                    if (!Dialogs.Confirm("Remove imported events?", "Every event that came from an .ics file is removed from WinOrbit. Events you typed yourself are kept, and your other calendars are not touched.", "Remove")) return;
+                    Hub.Store.Data.Events.RemoveAll(e => e.Source is not null);
+                    Hub.Store.SaveData();
+                    Hub.Island.RefreshCalendar();
+                    Rebuild();
+                }, Glyph.Delete).With(b => b.IsEnabled = imported > 0))));
 
         Children.Add(Kit.Section("Behaviour", null,
             Kit.ToggleRow("Hide during fullscreen apps and games", "Gets out of the way the moment a game, video or presentation goes fullscreen on the island's screen, and drops back in when it ends.", S.HideInFullscreen, v => { S.HideInFullscreen = v; Save(); }, false),
