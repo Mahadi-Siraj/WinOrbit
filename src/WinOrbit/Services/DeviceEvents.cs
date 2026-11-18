@@ -1,8 +1,11 @@
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
+using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
+using Windows.Devices.Radios;
 using Windows.Networking.Connectivity;
 using WinOrbit.Core;
+using WinOrbit.WindowsIntegration;
 
 namespace WinOrbit.Services;
 
@@ -13,8 +16,11 @@ namespace WinOrbit.Services;
 /// Privacy and cost:
 ///   • Lock keys: WinOrbit asks Windows whether the three lock lights are on, five times a second, only while that
 ///     alert is switched on. It never sees which keys you type.
-///   • Network: Windows pushes a NetworkStatusChanged event; WinOrbit reads the connection's name and type only.
+///   • Network: the Wi-Fi service (WLAN API) pushes "connected"/"disconnected" the moment the radio associates, and
+///     Windows' NetworkStatusChanged covers Ethernet and anything else; only the connection's name and type are read.
+///   • Radios: the Wi-Fi and Bluetooth radios' own StateChanged events (switched on or off from anywhere).
 ///   • Bluetooth and USB: Windows device watchers push added/removed/changed events; only device names are read.
+///     Paired Bluetooth devices also report ConnectionStatusChanged, which arrives seconds before the watcher's update.
 /// Everything stays on this PC. The first state seen after start-up is treated as state, not as an event, so
 /// launching WinOrbit doesn't announce every device that was already connected.
 /// </summary>
@@ -30,6 +36,8 @@ public sealed class DeviceEvents : IDisposable
     public event Action<string, string, bool>? BluetoothChanged;
     /// <summary>(name, plugged in).</summary>
     public event Action<string, bool>? UsbChanged;
+    /// <summary>(Wi-Fi or Bluetooth, switched on).</summary>
+    public event Action<RadioKind, bool>? RadioChanged;
 
     private readonly Dispatcher _ui;
     private readonly Func<IslandSettings> _settings;
@@ -56,7 +64,9 @@ public sealed class DeviceEvents : IDisposable
         var on = s.Enabled;
         try { SetKeys(on && s.LockKeyAlerts); } catch (Exception ex) { Log.Warn("Lock-key alerts unavailable: " + ex.Message); }
         try { SetNetwork(on && s.NetworkAlerts); } catch (Exception ex) { Log.Warn("Network alerts unavailable: " + ex.Message); }
+        try { SetWlan(on && s.NetworkAlerts); } catch (Exception ex) { Log.Warn("Wi-Fi notifications unavailable: " + ex.Message); }
         try { SetBluetooth(on && s.BluetoothAlerts); } catch (Exception ex) { Log.Warn("Bluetooth alerts unavailable: " + ex.Message); }
+        try { SetRadios(on && s.NetworkAlerts, on && s.BluetoothAlerts); } catch (Exception ex) { Log.Warn("Radio alerts unavailable: " + ex.Message); }
         try { SetUsb(on && s.UsbAlerts); } catch (Exception ex) { Log.Warn("USB alerts unavailable: " + ex.Message); }
     }
 
@@ -68,7 +78,8 @@ public sealed class DeviceEvents : IDisposable
         if (!on) { _keys?.Stop(); _keys = null; return; }
         if (_keys is not null) return;
         _caps = Toggled(VkCapital); _num = Toggled(VkNumLock); _scroll = Toggled(VkScroll);
-        _keys = new DispatcherTimer(DispatcherPriority.Background, _ui) { Interval = TimeSpan.FromMilliseconds(200) };
+        // 120 ms: below what a person perceives as a delay after pressing the key; three bit reads per tick.
+        _keys = new DispatcherTimer(DispatcherPriority.Normal, _ui) { Interval = TimeSpan.FromMilliseconds(120) };
         _keys.Tick += (_, _) => CheckKeys();
         _keys.Start();
     }
@@ -92,7 +103,7 @@ public sealed class DeviceEvents : IDisposable
         {
             _net = ReadNetwork();
             _netKnown = true;
-            _netDebounce = new DispatcherTimer(DispatcherPriority.Background, _ui) { Interval = TimeSpan.FromSeconds(1.5) };
+            _netDebounce = new DispatcherTimer(DispatcherPriority.Normal, _ui) { Interval = TimeSpan.FromSeconds(0.5) };
             _netDebounce.Tick += (_, _) => { _netDebounce!.Stop(); CheckNetwork(); };
             NetworkInformation.NetworkStatusChanged += OnNetworkStatus;
         }
@@ -114,8 +125,108 @@ public sealed class DeviceEvents : IDisposable
         _net = now;
         if (!_netKnown || now == before) return;
         if (before.Kind != NetKind.None && (now.Kind != before.Kind || now.Name != before.Name))
-            NetworkChanged?.Invoke(before.Kind, before.Name, false);
-        if (now.Kind != NetKind.None) NetworkChanged?.Invoke(now.Kind, now.Name, true);
+            AnnounceNet(before.Kind, before.Name, false);
+        if (now.Kind != NetKind.None) AnnounceNet(now.Kind, now.Name, true);
+    }
+
+    /// <summary>One way out for both network sources, so the fast Wi-Fi path and the general path never double up.</summary>
+    private async void AnnounceNet(NetKind kind, string name, bool connected)
+    {
+        if (!connected && kind == NetKind.WiFi)
+        {
+            // Switching the Wi-Fi radio off also drops the connection. Give the radio's own event a moment and
+            // let "Wi-Fi off" speak for both, instead of two pop-ups back to back.
+            await Task.Delay(450);
+            if (_wifiRadio is { } r && r.State != RadioState.On) return;
+        }
+        if (Bounce($"net|{kind}|{name}|{connected}", 10)) return;
+        lock (_recent) _recent.Remove($"net|{kind}|{name}|{!connected}");   // a quick flip the other way still shows
+        NetworkChanged?.Invoke(kind, name, connected);
+    }
+
+    // ------------------------------------------------------------------ Wi-Fi service notifications (instant)
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WlanNotification { public uint Source, Code; public Guid Interface; public uint Size; public IntPtr Data; }
+    private delegate void WlanCallback(IntPtr data, IntPtr context);
+    [DllImport("wlanapi.dll")] private static extern uint WlanOpenHandle(uint version, IntPtr reserved, out uint negotiated, out IntPtr handle);
+    [DllImport("wlanapi.dll")] private static extern uint WlanCloseHandle(IntPtr handle, IntPtr reserved);
+    [DllImport("wlanapi.dll")] private static extern uint WlanRegisterNotification(IntPtr handle, uint source, bool ignoreDuplicate, WlanCallback? callback, IntPtr context, IntPtr reserved, out uint previous);
+    private const uint WlanSourceAcm = 0x8, AcmConnectionComplete = 10, AcmDisconnected = 21;
+    private IntPtr _wlan;
+    private WlanCallback? _wlanCallback;   // kept alive while registered
+
+    private void SetWlan(bool on)
+    {
+        if (on == (_wlan != IntPtr.Zero)) return;
+        if (!on)
+        {
+            WlanRegisterNotification(_wlan, 0, true, null, IntPtr.Zero, IntPtr.Zero, out _);
+            WlanCloseHandle(_wlan, IntPtr.Zero);
+            _wlan = IntPtr.Zero; _wlanCallback = null;
+            return;
+        }
+        if (WlanOpenHandle(2, IntPtr.Zero, out _, out var h) != 0) return;   // no Wi-Fi service (desktop PC without Wi-Fi)
+        _wlanCallback = OnWlan;
+        if (WlanRegisterNotification(h, WlanSourceAcm, true, _wlanCallback, IntPtr.Zero, IntPtr.Zero, out _) != 0) { WlanCloseHandle(h, IntPtr.Zero); _wlanCallback = null; return; }
+        _wlan = h;
+    }
+
+    // Raised on a Wi-Fi service thread. WLAN_CONNECTION_NOTIFICATION_DATA: mode (4 bytes), profile name (256 UTF-16
+    // chars), SSID (4 + 32), BSS type (4), security (4), reason code (4) at byte 560.
+    private void OnWlan(IntPtr data, IntPtr context)
+    {
+        try
+        {
+            var n = Marshal.PtrToStructure<WlanNotification>(data);
+            if (n.Source != WlanSourceAcm || (n.Code != AcmConnectionComplete && n.Code != AcmDisconnected) || n.Data == IntPtr.Zero || n.Size < 564) return;
+            var connected = n.Code == AcmConnectionComplete;
+            if (connected && Marshal.ReadInt32(n.Data, 560) != 0) return;   // a failed attempt
+            var name = Marshal.PtrToStringUni(n.Data + 4) ?? "";
+            _ui.BeginInvoke(() =>
+            {
+                if (!_netKnown) return;
+                if (connected) _net = (NetKind.WiFi, name);
+                else if (_net.Kind == NetKind.WiFi) _net = (NetKind.None, "");
+                AnnounceNet(NetKind.WiFi, name, connected);
+            });
+        }
+        catch { }
+    }
+
+    // ------------------------------------------------------------------ Wi-Fi and Bluetooth radios
+    private Radio? _wifiRadio, _btRadio;
+    private bool _radiosHooked, _wifiRadioWanted, _btRadioWanted;
+    private readonly Dictionary<RadioKind, bool> _radioOn = new();
+
+    private async void SetRadios(bool wifi, bool bt)
+    {
+        _wifiRadioWanted = wifi; _btRadioWanted = bt;
+        if (_radiosHooked || !(wifi || bt)) return;
+        _radiosHooked = true;   // once found, the radios stay subscribed (one cheap event each); the flags above gate them
+        try
+        {
+            _wifiRadio = await QuickControls.FindRadio(RadioKind.WiFi);
+            _btRadio = await QuickControls.FindRadio(RadioKind.Bluetooth);
+            foreach (var r in new[] { _wifiRadio, _btRadio })
+            {
+                if (r is null) continue;
+                lock (_radioOn) _radioOn[r.Kind] = r.State == RadioState.On;
+                r.StateChanged += OnRadioState;
+            }
+        }
+        catch (Exception ex) { Log.Warn("Radios unavailable: " + ex.Message); }
+    }
+
+    private void OnRadioState(Radio r, object _)
+    {
+        var on = r.State == RadioState.On;
+        lock (_radioOn)
+        {
+            if (_radioOn.TryGetValue(r.Kind, out var was) && was == on) return;   // Windows repeats the same state
+            _radioOn[r.Kind] = on;
+        }
+        if (r.Kind == RadioKind.WiFi ? !_wifiRadioWanted : !_btRadioWanted) return;
+        _ui.BeginInvoke(() => RadioChanged?.Invoke(r.Kind, on));
     }
 
     internal static NetKind KindOf(uint ianaType) => ianaType switch { 71 => NetKind.WiFi, 6 => NetKind.Ethernet, _ => NetKind.Other };
@@ -144,42 +255,92 @@ public sealed class DeviceEvents : IDisposable
             foreach (var w in new[] { _bt, _ble }) StopWatcher(w);
             _bt = _ble = null; _btReady = _bleReady = false;
             lock (_btDevices) _btDevices.Clear();
+            lock (_btLinks) { foreach (var d in _btLinks.Values) try { d.Dispose(); } catch { } _btLinks.Clear(); }
             return;
         }
-        _bt = BtWatcher(ClassicBt, () => _btReady = true);
-        _ble = BtWatcher(LowEnergyBt, () => _bleReady = true);
+        _btOn = true;
+        _bt = BtWatcher(ClassicBt, false, () => _btReady = true);
+        _ble = BtWatcher(LowEnergyBt, true, () => _bleReady = true);
     }
 
-    private DeviceWatcher BtWatcher(string protocol, Action ready)
+    private DeviceWatcher BtWatcher(string protocol, bool lowEnergy, Action ready)
     {
         var aqs = $"System.Devices.Aep.ProtocolId:=\"{protocol}\" AND System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True";
         var w = DeviceInformation.CreateWatcher(aqs, BtProps, DeviceInformationKind.AssociationEndpoint);
-        w.Added += (_, d) => { lock (_btDevices) _btDevices[d.Id] = (d.Name, IsConnected(d.Properties), BtKind(d.Name, d.Properties)); };
-        w.Updated += (_, u) => OnBtUpdate(u);
-        w.Removed += (_, u) => { lock (_btDevices) _btDevices.Remove(u.Id); };
+        w.Added += (sender, d) =>
+        {
+            lock (_btDevices) _btDevices[d.Id] = (d.Name, IsConnected(d.Properties), BtKind(d.Name, d.Properties));
+            _ = Link(d.Id, lowEnergy);
+        };
+        w.Updated += (_, u) => { if (u.Properties.TryGetValue("System.Devices.Aep.IsConnected", out var v) && v is bool c) BtSet(u.Id, c); };
+        w.Removed += (_, u) =>
+        {
+            lock (_btDevices) _btDevices.Remove(u.Id);
+            lock (_btLinks) if (_btLinks.Remove(u.Id, out var l)) try { l.Dispose(); } catch { }
+        };
         w.EnumerationCompleted += (_, _) => ready();
         w.Start();
         return w;
     }
 
+    // The fast path: the Bluetooth stack raises ConnectionStatusChanged as soon as the link comes up or drops,
+    // a few seconds before the device watcher's property update. Holding the object does not connect anything.
+    private readonly Dictionary<string, IDisposable> _btLinks = new();
+    private volatile bool _btOn;
+
+    private async Task Link(string id, bool lowEnergy)
+    {
+        try
+        {
+            IDisposable? link = null;
+            if (lowEnergy)
+            {
+                var d = await BluetoothLEDevice.FromIdAsync(id);
+                if (d is not null) { d.ConnectionStatusChanged += (s, _) => BtSet(id, s.ConnectionStatus == BluetoothConnectionStatus.Connected); link = d; }
+            }
+            else
+            {
+                var d = await BluetoothDevice.FromIdAsync(id);
+                if (d is not null) { d.ConnectionStatusChanged += (s, _) => BtSet(id, s.ConnectionStatus == BluetoothConnectionStatus.Connected); link = d; }
+            }
+            if (link is null) return;
+            lock (_btLinks)
+            {
+                if (!_btOn) { link.Dispose(); return; }   // switched off meanwhile
+                if (_btLinks.Remove(id, out var old)) try { old.Dispose(); } catch { }
+                _btLinks[id] = link;
+            }
+        }
+        catch { /* the watcher's updates still cover this device */ }
+    }
+
     private static bool IsConnected(IReadOnlyDictionary<string, object> props)
         => props.TryGetValue("System.Devices.Aep.IsConnected", out var v) && v is bool b && b;
 
-    private void OnBtUpdate(DeviceInformationUpdate u)
+    /// <summary>Both Bluetooth sources end here; the stored state makes the second one to arrive a no-op.</summary>
+    private void BtSet(string id, bool connected)
     {
-        if (!u.Properties.TryGetValue("System.Devices.Aep.IsConnected", out var v) || v is not bool connected) return;
         string name, kind;
         bool was;
         lock (_btDevices)
         {
-            if (!_btDevices.TryGetValue(u.Id, out var known)) return;
+            if (!_btDevices.TryGetValue(id, out var known)) return;
             (name, was, kind) = known;
-            _btDevices[u.Id] = (name, connected, kind);
+            _btDevices[id] = (name, connected, kind);
         }
         if (was == connected || !(_btReady && _bleReady) || string.IsNullOrWhiteSpace(name)) return;
         // Some devices drop and reconnect within a second (headsets switching profiles): announce once.
         if (Bounce("bt|" + name + connected, 4)) return;
-        _ui.BeginInvoke(() => BluetoothChanged?.Invoke(name, kind, connected));
+        _ui.BeginInvoke(async () =>
+        {
+            if (!connected)
+            {
+                // Bluetooth switched off drops every device at once; "Bluetooth off" says it all.
+                await Task.Delay(450);
+                if (_btRadio is { } r && r.State != RadioState.On) return;
+            }
+            BluetoothChanged?.Invoke(name, kind, connected);
+        });
     }
 
     /// <summary>"audio", "input", "phone" or "" — from the Bluetooth class of device, or the name as a fallback.</summary>
@@ -281,6 +442,9 @@ public sealed class DeviceEvents : IDisposable
     {
         _keys?.Stop();
         if (_netOn) NetworkInformation.NetworkStatusChanged -= OnNetworkStatus;
+        try { SetWlan(false); } catch { }
+        foreach (var r in new[] { _wifiRadio, _btRadio }) if (r is not null) r.StateChanged -= OnRadioState;
         foreach (var w in new[] { _bt, _ble, _usb }) StopWatcher(w);
+        lock (_btLinks) { foreach (var d in _btLinks.Values) try { d.Dispose(); } catch { } _btLinks.Clear(); }
     }
 }

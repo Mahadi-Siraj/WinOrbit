@@ -55,6 +55,7 @@ public partial class IslandWindow
         Hub.Devices.NetworkChanged += OnNetwork;
         Hub.Devices.BluetoothChanged += OnBluetooth;
         Hub.Devices.UsbChanged += OnUsb;
+        Hub.Devices.RadioChanged += OnRadio;
 
         Pill.AllowDrop = true;
         Pill.DragEnter += OnDragEnter;
@@ -81,12 +82,17 @@ public partial class IslandWindow
         Hub.Devices.NetworkChanged -= OnNetwork;
         Hub.Devices.BluetoothChanged -= OnBluetooth;
         Hub.Devices.UsbChanged -= OnUsb;
+        Hub.Devices.RadioChanged -= OnRadio;
     }
 
     // ------------------------------------------------------------------ keys and connections
     private static readonly Color Connected = Color.FromRgb(0x30, 0xD1, 0x58), Dropped = Color.FromRgb(0xFF, 0x9F, 0x0A), BtBlue = Color.FromRgb(0x0A, 0x84, 0xFF);
     private const string GlyphWifi = "", GlyphWifiOff = "", GlyphEthernet = "", GlyphBluetooth = "",
         GlyphHeadphones = "", GlyphKeyboard = "", GlyphPhone = "", GlyphUsb = "";
+
+    private static readonly Color Neutral = Color.FromRgb(0xA1, 0xA1, 0xAA), KeyLit = Color.FromRgb(0xF4, 0xF4, 0xF5);
+
+    private Color AccentColor() => (TryFindResource("T.Accent") as SolidColorBrush)?.Color ?? BtBlue;
 
     private void OnLockKey(DeviceEvents.LockKey key, bool on)
     {
@@ -97,7 +103,7 @@ public partial class IslandWindow
             DeviceEvents.LockKey.Num => ("1", "Num Lock"),
             _ => ("S", "Scroll Lock")
         };
-        PeekKey(cap, $"{name} {(on ? "on" : "off")}", on);
+        ShowCard("", name, on ? "On" : "Off", on ? KeyLit : Neutral, 1.8, toggle: on, cap: cap, switchColor: Connected);
     }
 
     private void OnNetwork(DeviceEvents.NetKind kind, string name, bool connected)
@@ -105,23 +111,32 @@ public partial class IslandWindow
         if (!S.NetworkAlerts) return;
         var wifi = kind == DeviceEvents.NetKind.WiFi;
         var label = wifi ? "Wi-Fi" : kind == DeviceEvents.NetKind.Ethernet ? "Ethernet" : "Network";
+        var hasName = !string.IsNullOrWhiteSpace(name);
         if (connected)
-            Peek(wifi ? GlyphWifi : GlyphEthernet, string.IsNullOrWhiteSpace(name) ? $"{label} connected" : $"Connected · {name}", 3, Connected);
+            ShowCard(wifi ? GlyphWifi : GlyphEthernet, hasName ? name : label, $"{label} connected", Connected, 3);
         else
-            Peek(wifi ? GlyphWifiOff : GlyphEthernet, $"{label} disconnected", 3, Dropped);
+            ShowCard(wifi ? GlyphWifiOff : GlyphEthernet, $"{label} disconnected", hasName ? name : "", Dropped, 3);
+    }
+
+    private void OnRadio(Windows.Devices.Radios.RadioKind kind, bool on)
+    {
+        var wifi = kind == Windows.Devices.Radios.RadioKind.WiFi;
+        if (wifi ? !S.NetworkAlerts : !S.BluetoothAlerts) return;
+        var glyph = wifi ? (on ? GlyphWifi : GlyphWifiOff) : GlyphBluetooth;
+        ShowCard(glyph, wifi ? "Wi-Fi" : "Bluetooth", on ? "On" : "Off", on ? BtBlue : Neutral, 2.2, toggle: on, switchColor: BtBlue);
     }
 
     private void OnBluetooth(string name, string kind, bool connected)
     {
         if (!S.BluetoothAlerts) return;
         var glyph = kind switch { "audio" => GlyphHeadphones, "input" => GlyphKeyboard, "phone" => GlyphPhone, _ => GlyphBluetooth };
-        Peek(glyph, $"{name} {(connected ? "connected" : "disconnected")}", 3, connected ? BtBlue : Dropped);
+        ShowCard(glyph, name, connected ? "Connected" : "Disconnected", connected ? BtBlue : Dropped, 3);
     }
 
     private void OnUsb(string name, bool pluggedIn)
     {
         if (!S.UsbAlerts) return;
-        Peek(GlyphUsb, pluggedIn ? $"{name} connected" : $"{name} removed", 2.6, pluggedIn ? (Color?)null : Dropped);
+        ShowCard(GlyphUsb, name, pluggedIn ? "Connected" : "Removed", pluggedIn ? AccentColor() : Dropped, 2.6);
     }
 
     private void OnMediaHint(string message)
@@ -183,10 +198,12 @@ public partial class IslandWindow
             case "volume": ShowHud(Glyph.Volume, 0.42, "42"); break;
             case "mic": Peek(GlyphMic, "Teams is using your microphone", 3); break;
             case "saver": Peek(GlyphLeaf, "Energy saver on", 2.5); break;
-            case "caps": PeekKey("A", "Caps Lock on", true); break;
-            case "wifi": Peek(GlyphWifi, "Connected · Home Wi-Fi", 3, Connected); break;
-            case "bluetooth": Peek(GlyphHeadphones, "Headphones connected", 3, BtBlue); break;
-            case "usb": Peek(GlyphUsb, "USB drive connected", 2.6); break;
+            case "caps": ShowCard("", "Caps Lock", "On", KeyLit, 2.4, toggle: true, cap: "A", switchColor: Connected); break;
+            case "wifi": ShowCard(GlyphWifi, "Home Wi-Fi", "Wi-Fi connected", Connected, 3); break;
+            case "bluetooth": ShowCard(GlyphHeadphones, "Headphones", "Connected", BtBlue, 3); break;
+            case "usb": ShowCard(GlyphUsb, "USB drive", "Connected", AccentColor(), 2.6); break;
+            case "wifi-radio": ShowCard(GlyphWifiOff, "Wi-Fi", "Off", Neutral, 2.6, toggle: false, switchColor: BtBlue); break;
+            case "bt-radio": ShowCard(GlyphBluetooth, "Bluetooth", "On", BtBlue, 2.6, toggle: true); break;
         }
     }
 
@@ -205,6 +222,7 @@ public partial class IslandWindow
 
     private void ShowHud(string glyph, double fraction, string text, Color? color = null, double seconds = 1.6, bool fillFromEmpty = false)
     {
+        EndCard();
         var first = CHud.Visibility != Visibility.Visible;
         var appearing = first;
         CHudGlyph.Text = glyph;

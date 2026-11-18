@@ -97,8 +97,51 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- ============ Card: connections, radios, lock keys ============
+                     The capsule grows taller and the content nests concentrically inside it: the icon tile's corners
+                     are the pill's radius minus the margin, so the gap around it is even all the way round. -->
+                <Grid x:Name="Card" Visibility="Collapsed" Opacity="0" Margin="10" IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid x:Name="CardTile" Width="44" Height="44" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform><ScaleTransform x:Name="CardTileScale"/></Grid.RenderTransform>
+                        <Border x:Name="CardTileFill" CornerRadius="22"/>
+                        <!-- a lit upper edge, like light catching the rim of a glass bead -->
+                        <Border CornerRadius="22" BorderThickness="1">
+                            <Border.BorderBrush>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#55FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#08FFFFFF" Offset="0.5"/>
+                                    <GradientStop Color="#18FFFFFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.BorderBrush>
+                        </Border>
+                        <TextBlock x:Name="CardGlyph" Style="{StaticResource Icon}" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CardCap" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </Grid>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,14,0">
+                        <TextBlock x:Name="CardTitle" FontSize="14.5" FontWeight="SemiBold" MaxWidth="250" TextTrimming="CharacterEllipsis">
+                            <TextBlock.RenderTransform><TranslateTransform x:Name="CardTitleShift"/></TextBlock.RenderTransform>
+                        </TextBlock>
+                        <TextBlock x:Name="CardSub" FontSize="12" Foreground="{DynamicResource T.Text2}" Margin="0,1,0,0" MaxWidth="250" TextTrimming="CharacterEllipsis">
+                            <TextBlock.RenderTransform><TranslateTransform x:Name="CardSubShift"/></TextBlock.RenderTransform>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- On/off states get a little switch that flips while you watch -->
+                    <Grid x:Name="CardSwitch" Grid.Column="2" Width="40" Height="24" Margin="0,0,6,0" VerticalAlignment="Center" Visibility="Collapsed">
+                        <Border x:Name="CardSwitchTrack" CornerRadius="12"/>
+                        <Ellipse x:Name="CardKnob" Width="20" Height="20" Fill="White" HorizontalAlignment="Left" Margin="2,0,0,0">
+                            <Ellipse.RenderTransform><TranslateTransform x:Name="CardKnobShift"/></Ellipse.RenderTransform>
+                            <Ellipse.Effect><DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.35" RenderingBias="Performance"/></Ellipse.Effect>
+                        </Ellipse>
+                    </Grid>
+                </Grid>
+
                 <!-- ============ Expanded ============ -->
-                <Grid x:Name="Expanded" Opacity="0" Visibility="Collapsed" Margin="14,10,14,14" Cursor="Arrow" Width="432" Height="266" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="Expanded" Opacity="0" Visibility="Hidden" Margin="14,10,14,14" Cursor="Arrow" Width="432" Height="266" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="38"/>
                         <RowDefinition Height="*"/>

@@ -38,6 +38,7 @@ public static class Springs
     private static readonly Dictionary<RefKey, State> Active = new();
     private static bool _hooked;
     private static TimeSpan _last = TimeSpan.Zero;
+    private static double _frame = 1 / 60.0;   // learned display frame length
 
     /// <summary>Gentle, no overshoot. Good for sizes that must never dip below their target.</summary>
     public const double Smooth = 1.0;
@@ -104,7 +105,7 @@ public static class Springs
         s.Omega = 2 * Math.PI / Math.Max(0.05, period);
         s.Zeta = Math.Clamp(damping, 0.05, 1.0);
         var span = Math.Max(Math.Abs(s.To), Math.Abs(s.X - s.To));
-        s.Rest = span <= 2.5 ? 0.0008 : 0.08;   // opacity/scale settle finer than pixel sizes
+        s.Rest = span <= 2.5 ? 0.0015 : 0.3;   // opacity/scale settle finer than pixel sizes; sub-pixel tails are invisible
     }
 
     private static void Hook()
@@ -120,15 +121,45 @@ public static class Springs
         if (!_hooked) return;
         _hooked = false;
         CompositionTarget.Rendering -= OnFrame;
+        ReportFrames();
+    }
+
+    // ---- optional frame-pacing probe (set WINORBIT_FRAMES=1): logs how evenly frames arrived during each motion
+    private static readonly bool Probe = Environment.GetEnvironmentVariable("WINORBIT_FRAMES") == "1";
+    private static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
+    private static readonly List<double> Gaps = new();
+    private static double _lastWall;
+
+    private static void NoteFrame()
+    {
+        if (!Probe) return;
+        var now = Clock.Elapsed.TotalMilliseconds;
+        if (_lastWall > 0) Gaps.Add(now - _lastWall);
+        _lastWall = now;
+    }
+
+    private static void ReportFrames()
+    {
+        if (!Probe || Gaps.Count < 3) { Gaps.Clear(); _lastWall = 0; return; }
+        var sorted = Gaps.OrderBy(g => g).ToArray();
+        Core.Log.Info($"Frames: n={Gaps.Count} mean={Gaps.Average():0.0}ms p50={sorted[sorted.Length / 2]:0.0} p95={sorted[(int)(sorted.Length * 0.95)]:0.0} max={sorted[^1]:0.0} >20ms={Gaps.Count(g => g > 20)} >34ms={Gaps.Count(g => g > 34)}");
+        Gaps.Clear(); _lastWall = 0;
     }
 
     private static void OnFrame(object? sender, EventArgs e)
     {
         var now = e is RenderingEventArgs r ? r.RenderingTime : TimeSpan.FromTicks(DateTime.UtcNow.Ticks);
         if (now == _last) return;   // WPF can raise Rendering twice for one frame
-        var dt = _last == TimeSpan.Zero ? 1 / 60.0 : Math.Clamp((now - _last).TotalSeconds, 0, 1 / 20.0);
+        NoteFrame();
+        var gap = _last == TimeSpan.Zero ? _frame : (now - _last).TotalSeconds;
         _last = now;
-        if (dt <= 0) return;
+        if (gap <= 0) return;
+        // Frame-locked stepping: every rendered frame advances the motion by one display frame. A late frame
+        // (the UI thread was busy) then costs a moment of time instead of a visible jump — motion stays even.
+        // The frame length is learned from the display, so 60, 120 and 144 Hz all run at true speed.
+        if (gap < _frame * 1.5) _frame += (gap - _frame) * 0.1;
+        _frame = Math.Clamp(_frame, 1 / 240.0, 1 / 30.0);
+        var dt = Math.Min(gap, _frame);
 
         List<RefKey>? finished = null;
         List<Action>? callbacks = null;

@@ -127,6 +127,26 @@ public partial class IslandWindow : Window
         return IntPtr.Zero;
     }
 
+    /// <summary>
+    /// Once start-up has settled, draw the hidden panel and card for a single frame at zero opacity, so WPF builds
+    /// their visuals now rather than during the first open (which otherwise stalls one frame for ~90 ms).
+    /// </summary>
+    private void WarmUp()
+    {
+        Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, async () =>
+        {
+            await Task.Delay(3500);   // after the entrance animation, never during it
+            if (_expanded || _card || !IsLoaded) return;
+            Expanded.IsHitTestVisible = false;
+            Expanded.Opacity = 0; Card.Opacity = 0;
+            Expanded.Visibility = Visibility.Visible; Card.Visibility = Visibility.Visible;
+            await Task.Delay(120);   // a few frames
+            if (!_expanded) Expanded.Visibility = Visibility.Hidden;
+            if (!_card) Card.Visibility = Visibility.Collapsed;
+            Expanded.IsHitTestVisible = true;
+        });
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         BuildSystemTiles();
@@ -143,12 +163,17 @@ public partial class IslandWindow : Window
         ApplySettings();
         UpdateClock();
         AlignClock();
+        WarmUp();
         if (Motion.Intensity > 0.01)
         {
             Pill.Opacity = 0;
             PillShift.Y = -30;
-            Motion.To(Pill, OpacityProperty, S.Opacity, 420);
-            Motion.To(PillShift, TranslateTransform.YProperty, 0, 520, Motion.Spring);
+            // Drop in once start-up work (widgets, wallpaper, devices) has finished, so the entrance runs on a free thread.
+            Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
+            {
+                Motion.To(Pill, OpacityProperty, S.Opacity, 420);
+                Motion.To(PillShift, TranslateTransform.YProperty, 0, 520, Motion.Spring);
+            });
         }
     }
 
@@ -331,6 +356,7 @@ public partial class IslandWindow : Window
 
     private void FitNow()
     {
+        if (_card) return;   // a card owns the capsule's size until it ends
         Compact.Measure(new Size(double.PositiveInfinity, CollapsedHeight));
         var target = Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500);
         // Morph the width on a lively spring; retargeting mid-flight keeps the motion continuous.
@@ -342,6 +368,7 @@ public partial class IslandWindow : Window
     public void Peek(string glyph, string text, double seconds = 4, Color? color = null)
     {
         if (_expanded || !IsVisible) return;
+        EndCard();
         var fresh = CPeek.Visibility != Visibility.Visible;
         _hudTimer?.Stop();
         CHud.Visibility = Visibility.Collapsed;
@@ -357,6 +384,7 @@ public partial class IslandWindow : Window
     public void PeekKey(string cap, string text, bool on, double seconds = 1.6)
     {
         if (_expanded || !IsVisible) return;
+        EndCard();
         var fresh = CPeek.Visibility != Visibility.Visible;
         _hudTimer?.Stop();
         CHud.Visibility = Visibility.Collapsed;
@@ -379,6 +407,115 @@ public partial class IslandWindow : Window
         _peekTimer.Stop();
         _peekTimer.Interval = TimeSpan.FromSeconds(seconds);
         _peekTimer.Start();
+    }
+
+    // ------------------------------------------------------------------ card pop-ups
+    private const double CardHeight = 64;
+    private static readonly Color SwitchOff = Color.FromArgb(0x60, 0x78, 0x78, 0x80);
+    private bool _card;
+    private DispatcherTimer? _cardTimer, _switchDelay;
+
+    /// <summary>
+    /// A larger pop-up for connections, radios and lock keys: the capsule swells into a taller card with an icon
+    /// tile, a title and a subtitle. Pieces arrive on their own springs (tile first with a bounce, then the text),
+    /// and on/off states get a switch that visibly flips. A new card while one is showing updates it in place.
+    /// </summary>
+    /// <param name="cap">Show this letter in a key cap instead of an icon (lock keys).</param>
+    /// <param name="toggle">Show an on/off switch that flips to this state.</param>
+    /// <param name="switchColor">The switch's "on" colour when it differs from the tile (e.g. a grey "off" tile).</param>
+    public void ShowCard(string glyph, string title, string subtitle, Color color, double seconds = 3, bool? toggle = null, string? cap = null, Color? switchColor = null)
+    {
+        if (_expanded || !IsVisible) return;
+        var fresh = !_card;
+        _card = true;
+        _hudTimer?.Stop(); _peekTimer.Stop();
+        CHud.Visibility = Visibility.Collapsed; CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible;
+
+        var ink = new SolidColorBrush(color); ink.Freeze();
+        CardGlyph.Visibility = cap is null ? Visibility.Visible : Visibility.Collapsed;
+        CardCap.Visibility = cap is null ? Visibility.Collapsed : Visibility.Visible;
+        CardGlyph.Text = glyph; CardCap.Text = cap ?? "";
+        CardGlyph.Foreground = ink; CardCap.Foreground = ink;
+        var fill = new LinearGradientBrush(Color.FromArgb(0x50, color.R, color.G, color.B), Color.FromArgb(0x24, color.R, color.G, color.B), 90);
+        fill.Freeze();
+        CardTileFill.Background = fill;
+        CardTitle.Text = title;
+        CardSub.Text = subtitle;
+        CardSub.Visibility = string.IsNullOrWhiteSpace(subtitle) ? Visibility.Collapsed : Visibility.Visible;
+        CardSwitch.Visibility = toggle is null ? Visibility.Collapsed : Visibility.Visible;
+
+        Card.Visibility = Visibility.Visible;
+        Card.Width = double.NaN;
+        Card.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var width = Math.Clamp(Card.DesiredSize.Width + 20 + 10, 240, 460);
+        // Fixed at its final width and centred: the growing glass reveals it from the middle outwards, and the
+        // text never reflows (or truncates) mid-motion.
+        Card.Width = width - 20;
+
+        SetAutoHidden(false);
+        Motion.To(Compact, OpacityProperty, 0, 90);
+        // The capsule grows into the card on one spring, with a soft overshoot, like the island making room.
+        Springs.To(Pill, WidthProperty, width, 0.46, 0.68);
+        Springs.To(Pill, HeightProperty, CardHeight, 0.46, 0.68);
+        Springs.To(this, RadiusProperty, CardHeight / 2, 0.46, 0.68);
+
+        if (Motion.Intensity > 0.01)
+        {
+            if (fresh) { Card.Opacity = 0; Motion.To(Card, OpacityProperty, 1, 160); }
+            // The tile lands first with a bounce; the title and subtitle glide in a beat behind it.
+            CardTileScale.ScaleX = CardTileScale.ScaleY = fresh ? 0.35 : 0.8;
+            Springs.To(CardTileScale, ScaleTransform.ScaleXProperty, 1, 0.42, 0.52);
+            Springs.To(CardTileScale, ScaleTransform.ScaleYProperty, 1, 0.42, 0.52);
+            CardTitleShift.X = 12; CardSubShift.X = 20;
+            Springs.To(CardTitleShift, TranslateTransform.XProperty, 0, 0.42, 0.85);
+            Springs.To(CardSubShift, TranslateTransform.XProperty, 0, 0.52, 0.85);
+        }
+        else Card.Opacity = 1;
+
+        if (toggle is { } on) FlipSwitch(on, switchColor ?? color);
+
+        _cardTimer ??= new DispatcherTimer();
+        _cardTimer.Stop();
+        _cardTimer.Interval = TimeSpan.FromSeconds(seconds);
+        _cardTimer.Tick -= OnCardTimer;
+        _cardTimer.Tick += OnCardTimer;
+        _cardTimer.Start();
+    }
+
+    private void OnCardTimer(object? sender, EventArgs e) => EndCard();
+
+    /// <summary>The switch starts in the old position and flips once the card has opened, so you see it change.</summary>
+    private void FlipSwitch(bool on, Color color)
+    {
+        const double travel = 16;   // 40 track − 20 knob − 2 × 2 inset
+        var track = new SolidColorBrush(on ? SwitchOff : color);
+        CardSwitchTrack.Background = track;
+        CardKnobShift.X = on ? 0 : travel;
+        _switchDelay?.Stop();
+        _switchDelay = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Motion.Intensity > 0.01 ? 220 : 0) };
+        _switchDelay.Tick += (_, _) =>
+        {
+            _switchDelay!.Stop();
+            Springs.To(CardKnobShift, TranslateTransform.XProperty, on ? travel : 0, 0.3, 0.62);
+            track.BeginAnimation(SolidColorBrush.ColorProperty,
+                new System.Windows.Media.Animation.ColorAnimation(on ? color : SwitchOff, TimeSpan.FromMilliseconds(Motion.Intensity > 0.01 ? 200 : 0)));
+        };
+        _switchDelay.Start();
+    }
+
+    private void EndCard()
+    {
+        if (!_card) return;
+        _card = false;
+        _cardTimer?.Stop();
+        _switchDelay?.Stop();
+        Motion.To(Card, OpacityProperty, 0, 120, null, () => { if (!_card) Card.Visibility = Visibility.Collapsed; });
+        if (_expanded) return;   // opening the panel takes over the size
+        Motion.To(Compact, OpacityProperty, 1, 240);
+        Springs.To(Pill, HeightProperty, CollapsedHeight, 0.42, 0.8);
+        Springs.To(this, RadiusProperty, 19, 0.42, 0.8);
+        Pop(CNormal, 0.92);
+        RefreshCompact();   // springs the width back to the capsule's content
     }
 
     // ------------------------------------------------------------------ liquid motion
@@ -404,14 +541,16 @@ public partial class IslandWindow : Window
     }
 
     /// <summary>Content materialises: grows from slightly small with a soft bounce while fading in.</summary>
-    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5)
+    /// <param name="cache">Render the content once as a bitmap while it scales (big panels), then go back to crisp live rendering.</param>
+    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5, bool cache = false)
     {
         if (Motion.Intensity <= 0.01) { el.Opacity = 1; return; }
         var st = new ScaleTransform(from, from);
         el.RenderTransformOrigin = new Point(0.5, originY);
         el.RenderTransform = st;
         el.Opacity = 0;
-        Springs.To(st, ScaleTransform.ScaleXProperty, 1, 0.38, 0.6);
+        if (cache) el.CacheMode = new BitmapCache { RenderAtScale = VisualTreeHelper.GetDpi(el).DpiScaleX, SnapsToDevicePixels = true };
+        Springs.To(st, ScaleTransform.ScaleXProperty, 1, 0.38, 0.6, () => { if (cache) el.CacheMode = null; });
         Springs.To(st, ScaleTransform.ScaleYProperty, 1, 0.38, 0.6);
         Motion.To(el, OpacityProperty, 1, 170);
     }
@@ -445,23 +584,28 @@ public partial class IslandWindow : Window
         if (_expanded || !IsVisible) { if (keyboard && _expanded) SetInteractive(true); return; }
         _expanded = true;
         _peekTimer.Stop();
+        if (_card) { _card = false; _cardTimer?.Stop(); Card.Visibility = Visibility.Collapsed; Card.Opacity = 0; }
         CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible;
         _hudTimer?.Stop(); CHud.Visibility = Visibility.Collapsed;
         SetAutoHidden(false);
         UpdateEqualizerDrive();
-        Expanded.Visibility = Visibility.Visible;
         Pill.Cursor = Cursors.Arrow;
+        Compact.IsHitTestVisible = false;
+        // Fill and lay out the panel BEFORE anything moves. Doing this mid-motion is what made the first frames
+        // of opening late (25–50 ms); now the motion starts only once the heavy work is done.
+        Expanded.Opacity = 0;
+        Expanded.Visibility = Visibility.Visible;
+        Expanded.Height = HeightFor(_tab) - 24;
+        ShowTab(_tab);
+        Expanded.UpdateLayout();
         Motion.To(Compact, OpacityProperty, 0, 110);
         // The capsule swells into the panel on one shared spring, so width, height and corners move as one body
         // and overshoot together a few pixels before settling, like a bubble popping open.
         SetPillScale(1, 0.4, 0.62);
         Springs.To(Pill, WidthProperty, ExpandedWidth, 0.52, 0.7);
-        Expanded.Height = HeightFor(_tab) - 24;
         Springs.To(Pill, HeightProperty, HeightFor(_tab), 0.52, 0.7);
         Springs.To(this, RadiusProperty, 30, 0.52, 0.7);
-        Pop(Expanded, 0.94, 0);   // the content grows out of the capsule as it opens
-        Compact.IsHitTestVisible = false;
-        ShowTab(_tab);
+        Pop(Expanded, 0.94, 0, cache: true);   // the content grows out of the capsule as it opens
         if (keyboard) SetInteractive(true);
         ArmCollapse();   // the short count applies only once the pointer has been inside and left
     }
@@ -480,7 +624,7 @@ public partial class IslandWindow : Window
         Compact.IsHitTestVisible = true;
         // Drawing back in: a firmer spring with just a hint of give at the end.
         var response = immediate ? 0 : 0.44;
-        Motion.To(Expanded, OpacityProperty, 0, immediate ? 0 : 120, null, () => { if (!_expanded) Expanded.Visibility = Visibility.Collapsed; });
+        Motion.To(Expanded, OpacityProperty, 0, immediate ? 0 : 120, null, () => { if (!_expanded) Expanded.Visibility = Visibility.Hidden; });   // Hidden keeps it laid out for the next open
         Springs.To(Pill, HeightProperty, CollapsedHeight, response, 0.8);
         Springs.To(this, RadiusProperty, 19, response, 0.8);
         Motion.To(Compact, OpacityProperty, 1, immediate ? 0 : 260);

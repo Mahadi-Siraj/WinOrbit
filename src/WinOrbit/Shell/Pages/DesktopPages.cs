@@ -224,7 +224,8 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("Charging", () => Hub.Island.Demo("charging")), Kit.Btn("Low battery", () => Hub.Island.Demo("low")),
                 Kit.Btn("Volume", () => Hub.Island.Demo("volume")), Kit.Btn("Microphone", () => Hub.Island.Demo("mic")),
                 Kit.Btn("Caps Lock", () => Hub.Island.Demo("caps")), Kit.Btn("Wi-Fi", () => Hub.Island.Demo("wifi")),
-                Kit.Btn("Bluetooth", () => Hub.Island.Demo("bluetooth")), Kit.Btn("USB", () => Hub.Island.Demo("usb"))))));
+                Kit.Btn("Bluetooth", () => Hub.Island.Demo("bluetooth")), Kit.Btn("USB", () => Hub.Island.Demo("usb")),
+                Kit.Btn("Wi-Fi off", () => Hub.Island.Demo("wifi-radio")), Kit.Btn("Bluetooth on", () => Hub.Island.Demo("bt-radio"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]
