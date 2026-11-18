@@ -468,6 +468,14 @@ public class WindowPlayerTests
     public void Idle_player_windows_are_not_tracks(string window, string? suffix, string app)
         => Assert.Null(WinOrbit.Services.WindowPlayers.ParseTitle(window, suffix, app));
 
+    [Theory]
+    [InlineData("y2mate.com - VØJ Narvent  Memory Reboot", "Memory Reboot", true)]
+    [InlineData("Memory Reboot", "Memory Reboot", true)]
+    [InlineData("y2mate.com - Wuys  GOAT Ultra slowed  Reverb", "Memory Reboot", false)]
+    [InlineData("ab", "ab", false)]
+    public void Vlc_recent_file_matches_the_shown_title(string file, string title, bool expected)
+        => Assert.Equal(expected, WinOrbit.Services.WindowPlayers.NameMatches(file, title, ""));
+
     [Fact]
     public void Low_battery_warnings_fire_once_per_threshold()
     {

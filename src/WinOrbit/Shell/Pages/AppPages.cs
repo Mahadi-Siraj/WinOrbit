@@ -329,7 +329,7 @@ public sealed class AboutPage : PageBase
             var made = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
             if (AppInfo.Author.Length > 0) made.Children.Add(Ui.Text("Made by " + AppInfo.Author, "Text.Body", 13, FontWeights.SemiBold).With(x => { x.VerticalAlignment = VerticalAlignment.Center; x.Margin = new Thickness(0, 0, 12, 0); }));
             if (AppInfo.InstagramUrl is { } ig) made.Children.Add(Kit.Btn("Instagram  @" + AppInfo.Instagram.TrimStart('@'), () => Island.IslandWindow.OpenUri(ig), null, false, ig).With(b => b.Margin = new Thickness(0, 0, 8, 0)));
-            if (AppInfo.GitHubUrl is { } gh) made.Children.Add(Kit.Btn("GitHub  " + AppInfo.GitHub, () => Island.IslandWindow.OpenUri(gh), null, false, gh));
+            if (AppInfo.GitHubUrl is { } gh) made.Children.Add(Kit.Btn("GitHub  " + AppInfo.GitHubName, () => Island.IslandWindow.OpenUri(gh), null, false, gh));
             t.Children.Add(made);
         }
         head.Children.Add(t.At(0, 1));

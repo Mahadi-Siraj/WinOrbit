@@ -161,6 +161,37 @@ public sealed class WindowPlayers : IDisposable
         if (playing != Current.Playing) { Current = Current with { Playing = playing }; Changed?.Invoke(); }
     }
 
+    // ------------------------------------------------------------------ album art for VLC
+    /// <summary>
+    /// The file VLC is playing, from its own recent-files list (newest first), matched against the title VLC
+    /// shows so a stale entry is never used. Null when it can't be matched.
+    /// </summary>
+    public static string? VlcFile(string title, string artist)
+    {
+        try
+        {
+            var ini = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "vlc", "vlc-qt-interface.ini");
+            if (!File.Exists(ini)) return null;
+            var line = File.ReadLines(ini).SkipWhile(l => l.Trim() != "[RecentsMRL]").Skip(1).FirstOrDefault(l => l.StartsWith("list=", StringComparison.Ordinal));
+            if (line is null) return null;
+            foreach (var mrl in line[5..].Split(", ").Take(5))
+            {
+                if (!Uri.TryCreate(mrl.Trim(), UriKind.Absolute, out var uri) || !uri.IsFile) continue;
+                var path = uri.LocalPath;
+                if (File.Exists(path) && NameMatches(Path.GetFileNameWithoutExtension(path), title, artist)) return path;
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    internal static bool NameMatches(string fileName, string title, string artist)
+    {
+        static string Norm(string s) => new string(s.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+        var f = Norm(fileName); var t = Norm(title);
+        return t.Length >= 3 && f.Contains(t) || t.Length > 0 && t.Contains(f) && f.Length >= 3;
+    }
+
     // ------------------------------------------------------------------ controls
     // Never post WM_APPCOMMAND or keystrokes to these windows: VLC 3.0.23 crashes on a posted WM_APPCOMMAND
     // (reproduced twice). The safe route is a real media-key press, but Windows hands media keys to whichever
@@ -175,7 +206,7 @@ public sealed class WindowPlayers : IDisposable
         if (Current is null) return null;
         if (Current.App == "VLC")
         {
-            if (!VlcHasGlobalMediaKeys()) return "VLC only takes outside controls with global media keys: in VLC, Tools › Preferences › Hotkeys, set the Global column for Play/Pause, Next and Previous";
+            if (!VlcHasGlobalMediaKeys()) return "Turn on VLC's global media keys to control it from here: in VLC, Tools › Preferences › Hotkeys, set the Global column for Play/Pause, Next and Previous to your media keys, then Save";
         }
         else if (otherSessionExists) return $"{Current.App} can't be controlled from outside while another app is also playing media";
         Native.keybd_event(mediaKey, 0, 1, UIntPtr.Zero);

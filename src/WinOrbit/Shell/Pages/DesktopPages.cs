@@ -242,7 +242,7 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Expand on hover", "Opens after resting the pointer on it briefly.", S.ExpandOnHover, v => { S.ExpandOnHover = v; Save(); }),
             Kit.SliderRow("Hover delay", "How long the pointer must rest before it opens, so sweeping past the top of the screen doesn't open it.", 0, 1200, S.HoverDelayMs, v => { S.HoverDelayMs = (int)Math.Round(v / 20) * 20; Save(); }, v => $"{v:0} ms", true, 20),
             Kit.ToggleRow("Announce track changes", "Briefly shows the new song in the capsule.", S.PeekOnMediaChange, v => { S.PeekOnMediaChange = v; Save(); }),
-            Kit.SliderRow("Collapse after", "Closes automatically when the pointer leaves. 0 keeps it open until you click away.", 0, 30, S.AutoCollapseSeconds, v => { S.AutoCollapseSeconds = (int)v; Save(); }, v => v < 1 ? "Never" : $"{v:0} s", true, 1)));
+            Kit.SliderRow("Shrink after", "Seconds without any interaction before the open island shrinks back (2.5 s after the pointer leaves). 0 keeps it open until you click away.", 0, 30, S.AutoCollapseSeconds, v => { S.AutoCollapseSeconds = (int)v; Save(); }, v => v < 1 ? "Never" : $"{v:0} s", true, 1)));
 
         Children.Add(Kit.Section("Accessibility", null,
             Kit.Row("Keyboard", $"{Hub.Settings.General.HotkeyIsland} opens the island and gives it keyboard focus. Tab moves between controls, Esc closes. The island never steals focus when clicked with the mouse.", Kit.Btn("Change shortcut", () => Owner?.Navigate("settings")), false),

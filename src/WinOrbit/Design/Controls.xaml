@@ -448,9 +448,34 @@
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
                         </Trigger>
+                        <!-- Dragging: the bead stretches like a droplet and wobbles back to round on release -->
                         <Trigger Property="IsDragging" Value="True">
                             <Setter TargetName="core" Property="Width" Value="9"/>
                             <Setter TargetName="core" Property="Height" Value="9"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleX" To="1.36" Duration="0:0:0.16">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleY" To="0.86" Duration="0:0:0.16">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleX" To="1.12" Duration="0:0:0.55">
+                                            <DoubleAnimation.EasingFunction><ElasticEase Oscillations="2" Springiness="5" EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="grow" Storyboard.TargetProperty="ScaleY" To="1.12" Duration="0:0:0.55">
+                                            <DoubleAnimation.EasingFunction><ElasticEase Oscillations="2" Springiness="5" EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

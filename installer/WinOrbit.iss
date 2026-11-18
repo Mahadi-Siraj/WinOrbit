@@ -15,9 +15,9 @@ AppId={{7E1C2A9B-5D4F-4C3B-9A61-2F0E8B6D4C10}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
-AppPublisher=Mahadi Siraj
+AppPublisher=mssatalite
 AppPublisherURL=https://github.com/Mahadi-Siraj
-AppSupportURL=https://github.com/Mahadi-Siraj/Windows-Cuatomization-App-I-need/issues
+AppSupportURL=https://github.com/Mahadi-Siraj/WinOrbit/issues
 AppComments=Dynamic Island, widgets and liquid-glass desktop for Windows. Free, open source, no telemetry.
 ; Same AppId as the earlier "Glasswave" builds, so this upgrades them in place.
 DefaultDirName={localappdata}\Programs\{#AppName}

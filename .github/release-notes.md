@@ -22,4 +22,4 @@ Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScree
 
 Upgrading from a build named *Glasswave* keeps your settings.
 
-Made by **Mahadi Siraj** — [Instagram @mssatalite](https://www.instagram.com/mssatalite/) · [GitHub @Mahadi-Siraj](https://github.com/Mahadi-Siraj)
+Made by **mssatalite** — [Instagram @mssatalite](https://www.instagram.com/mssatalite/) · [GitHub: Mahadi Siraj](https://github.com/Mahadi-Siraj)

@@ -57,7 +57,7 @@ public partial class IslandWindow : Window
         _clock = new DispatcherTimer(DispatcherPriority.Background);
         _clock.Tick += (_, _) => { UpdateClock(); AlignClock(); };
         _collapseTimer = new DispatcherTimer();
-        _collapseTimer.Tick += (_, _) => { _collapseTimer.Stop(); if (!_pinned && !Pill.IsMouseOver) Collapse(); };
+        _collapseTimer.Tick += (_, _) => { _collapseTimer.Stop(); if (!BusyInside) Collapse(); else ArmCollapse(); };
         _mediaTick = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _mediaTick.Tick += (_, _) => UpdateMediaProgress();
         _hoverPoll = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(220) };
@@ -78,7 +78,22 @@ public partial class IslandWindow : Window
         Pill.MouseMove += OnPillMove;
         Pill.MouseLeftButtonUp += OnPillUp;
         Pill.MouseEnter += (_, _) => { _collapseTimer.Stop(); if (S.ExpandOnHover && !_expanded) { _hoverIntent.Stop(); _hoverIntent.Start(); } };
-        Pill.MouseLeave += (_, _) => { _leftAt = DateTime.UtcNow; ArmCollapse(); };
+        Pill.MouseLeave += (_, _) => { _leftAt = DateTime.UtcNow; ArmCollapse(true); };
+        Pill.PreviewMouseMove += (_, e) =>
+        {
+            Poke();
+            if (Pill.ActualWidth < 1) return;
+            var p = e.GetPosition(Pill);
+            var c = new Point(p.X / Pill.ActualWidth, p.Y / Pill.ActualHeight);
+            PillSheenBrush.Center = c; PillSheenBrush.GradientOrigin = c;
+            // Narrower light on the compact pill, a broader glow over the open panel.
+            PillSheenBrush.RadiusX = _expanded ? 0.42 : 0.3; PillSheenBrush.RadiusY = _expanded ? 0.5 : 1.2;
+        };
+        Pill.MouseEnter += (_, _) => Motion.To(PillSheen, OpacityProperty, 1, 220);
+        Pill.MouseLeave += (_, _) => Motion.To(PillSheen, OpacityProperty, 0, 320);
+        Pill.PreviewMouseDown += (_, _) => Poke();
+        Pill.PreviewMouseWheel += (_, _) => Poke();
+        PreviewKeyDown += (_, _) => Poke();
         Pill.MouseWheel += OnWheel;
         Pill.MouseRightButtonUp += (_, e) => { if (!_expanded) { ShowMenu(); e.Handled = true; } };
     }
@@ -294,6 +309,9 @@ public partial class IslandWindow : Window
     private void OnMediaChanged() { RefreshCompact(); if (_expanded && _tab == "media") UpdateMedia(); }
     private void OnTrackChanged()
     {
+        // New song: title and artwork glide in rather than snapping.
+        if (_expanded && _tab == "media") { Motion.Enter(MTitle, 8, 300); Motion.Enter(MArtist, 10, 360); Motion.Enter(MArt, 6, 320); }
+        else if (CMedia.Visibility == Visibility.Visible) Motion.Enter(CMedia, 6, 280);
         if (S.PeekOnMediaChange && S.ShowMedia && !string.IsNullOrWhiteSpace(Hub.Media.Title))
             Peek(Glyph.Music, string.IsNullOrWhiteSpace(Hub.Media.Artist) ? Hub.Media.Title : $"{Hub.Media.Title} — {Hub.Media.Artist}");
     }
@@ -332,6 +350,7 @@ public partial class IslandWindow : Window
         Compact.IsHitTestVisible = false;
         ShowTab(_tab);
         if (keyboard) SetInteractive(true);
+        ArmCollapse(!Pill.IsMouseOver);
     }
 
     public void Collapse(bool immediate = false)
@@ -357,13 +376,22 @@ public partial class IslandWindow : Window
         Motion.To(Pill, WidthProperty, Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500), ms, Motion.Settle);
     }
 
-    private void ArmCollapse()
+    /// <summary>
+    /// Shrink back after a few seconds without interaction (default 6 s), or 2.5 s after the pointer leaves.
+    /// Any pointer movement, click, scroll or key press restarts the count.
+    /// </summary>
+    private void ArmCollapse(bool leaving = false)
     {
         _collapseTimer.Stop();
         if (!_expanded || _pinned || S.AutoCollapseSeconds <= 0) return;
-        _collapseTimer.Interval = TimeSpan.FromSeconds(Math.Max(1, S.AutoCollapseSeconds));
+        var seconds = Math.Max(1, S.AutoCollapseSeconds);
+        _collapseTimer.Interval = TimeSpan.FromSeconds(leaving ? Math.Min(2.5, seconds) : seconds);
         _collapseTimer.Start();
     }
+
+    private void Poke() { if (_expanded) ArmCollapse(!Pill.IsMouseOver); }
+
+    private bool BusyInside => _pinned || _seekDragging || NotesBox.IsKeyboardFocusWithin || Mouse.LeftButton == MouseButtonState.Pressed && Pill.IsMouseOver;
 
     /// <summary>Keyboard interaction is opt-in: only then does the island accept focus.</summary>
     private void SetInteractive(bool on)
@@ -529,6 +557,12 @@ public partial class IslandWindow : Window
             S.ModulesVersion = 1;
             Hub.Store.Save();
         }
+        if (S.ModulesVersion < 2)
+        {
+            if (S.AutoCollapseSeconds == 8) S.AutoCollapseSeconds = 6;   // the old default felt long
+            S.ModulesVersion = 2;
+            Hub.Store.Save();
+        }
         var list = AllTabs.Select(t => t.Id).Where(id => S.Modules.Contains(id)).ToList();
         if (list.Count == 0) list.Add("media");
         return list;
@@ -633,6 +667,7 @@ public partial class IslandWindow : Window
             MPos.Text = known ? T(m.Position) : "";
         }
         MDur.Text = known ? T(m.Duration) : "";
+        MSeek.Visibility = MPos.Visibility = MDur.Visibility = known ? Visibility.Visible : Visibility.Hidden;   // nothing to show for players without a timeline
         MSeek.IsEnabled = canSeek;
         MSeek.Opacity = known ? 1 : 0.35;
         MSeek.ToolTip = canSeek ? null : known ? $"{m.Source} doesn't let other apps change the position" : null;
@@ -734,32 +769,32 @@ public partial class IslandWindow : Window
             _quick[id] = tile;
             QShortcuts.Children.Add(tile);
         }
-        Add("wifi", Glyph.Wifi, "Wi-Fi", () => ToggleRadio("wifi", RadioKind.WiFi), () => OpenUri("ms-settings:network-wifi"));
-        Add("bt", Glyph.Bluetooth, "Bluetooth", () => ToggleRadio("bt", RadioKind.Bluetooth), () => OpenUri("ms-settings:bluetooth"));
+        Add("wifi", LineIcons.WiFi, "Wi-Fi", () => ToggleRadio("wifi", RadioKind.WiFi), () => OpenUri("ms-settings:network-wifi"));
+        Add("bt", LineIcons.Bluetooth, "Bluetooth", () => ToggleRadio("bt", RadioKind.Bluetooth), () => OpenUri("ms-settings:bluetooth"));
         // Windows offers apps no way to switch these; the tile shows what it can and opens the right place.
-        Add("airplane", "", "Airplane mode", () => { OpenUri("ms-settings:network-airplanemode"); Collapse(); }, () => OpenUri("ms-settings:network-airplanemode"));
-        Add("dnd", "", "Do not disturb", () => { OpenUri("ms-actioncenter:"); Collapse(); }, () => OpenUri("ms-settings:notifications"));
-        Add("night", Glyph.Moon, "Night light", () =>
+        Add("airplane", LineIcons.Airplane, "Airplane mode", () => { OpenUri("ms-settings:network-airplanemode"); Collapse(); }, () => OpenUri("ms-settings:network-airplanemode"));
+        Add("dnd", LineIcons.Moon, "Do not disturb", () => { OpenUri("ms-actioncenter:"); Collapse(); }, () => OpenUri("ms-settings:notifications"));
+        Add("night", LineIcons.Sun, "Night light", () =>
         {
             var on = !(_quick["night"].IsOn);
             if (QuickControls.SetNightLight(on)) SetTile("night", on, on ? "On" : "Off");
             else OpenUri("ms-settings:nightlight");
         }, () => OpenUri("ms-settings:nightlight"));
-        Add("dark", Glyph.Color, "Dark mode", () =>
+        Add("dark", LineIcons.Contrast, "Dark mode", () =>
         {
             var dark = !QuickControls.WindowsDark;
             QuickControls.SetWindowsDark(dark);
             SetTile("dark", dark, dark ? "Dark" : "Light");
         }, () => OpenUri("ms-settings:colors"));
-        Add("saver", "", "Energy saver", () => { OpenUri("ms-settings:batterysaver"); Collapse(); }, () => OpenUri("ms-settings:batterysaver"));
-        Add("power", Glyph.Diagnostic, "Power mode", () =>
+        Add("saver", LineIcons.Leaf, "Energy saver", () => { OpenUri("ms-settings:batterysaver"); Collapse(); }, () => OpenUri("ms-settings:batterysaver"));
+        Add("power", LineIcons.Bolt, "Power mode", () =>
         {
             // Balanced → Performance → Efficiency → Balanced
             var i = QuickControls.PowerModeIndex() ?? 1;
             var next = i == 1 ? 2 : i == 2 ? 0 : 1;
             if (QuickControls.SetPowerMode(next)) RefreshQuick();
         }, () => OpenUri("ms-settings:powersleep"));
-        Add("mic", "", "Microphone", () =>
+        Add("mic", LineIcons.Mic, "Microphone", () =>
         {
             var muted = Audio.GetMicMute();
             if (muted is null) { OpenUri("ms-settings:sound"); return; }
@@ -767,19 +802,19 @@ public partial class IslandWindow : Window
             RefreshQuick();
             Peek(muted.Value ? "" : "", muted.Value ? "Microphone on" : "Microphone muted", 1.5);
         }, () => OpenUri("ms-settings:sound"));
-        Add("awake", Glyph.Clock, "Keep awake", () =>
+        Add("awake", LineIcons.Cup, "Keep awake", () =>
         {
             QuickControls.SetKeepAwake(!QuickControls.KeepAwake);
             RefreshQuick();
         }, () => OpenUri("ms-settings:powersleep"));
-        Add("focus", Glyph.Stopwatch, "Focus", () =>
+        Add("focus", LineIcons.Target, "Focus", () =>
         {
             var t = Hub.Timers;
             if (t.Running && t.Mode == TimerMode.Focus) t.Stop();
             else { t.SetMode(TimerMode.Focus); t.Start(); }
             RefreshQuick();
         }, () => ShowTab("focus"));
-        Add("widgets", Glyph.Tiles, "Widgets", () =>
+        Add("widgets", LineIcons.Grid, "Widgets", () =>
         {
             Hub.Settings.Layout.WidgetsVisible = !Hub.Settings.Layout.WidgetsVisible;
             Hub.Store.Save();

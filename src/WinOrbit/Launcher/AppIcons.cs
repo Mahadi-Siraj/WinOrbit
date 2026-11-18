@@ -22,15 +22,23 @@ public static class AppIcons
     [StructLayout(LayoutKind.Sequential)] private struct BITMAP { public int bmType, bmWidth, bmHeight, bmWidthBytes; public ushort bmPlanes, bmBitsPixel; public IntPtr bmBits; }
 
     /// <summary>Icon for an AppsFolder id, or null. Call on the UI thread.</summary>
-    public static ImageSource? Get(string appId, int size = 32)
+    public static ImageSource? Get(string appId, int size = 32) => Shell("shell:AppsFolder\\" + appId, size, 0x5);   // SIIGBF_ICONONLY | BIGGERSIZEOK
+
+    /// <summary>
+    /// A file's real thumbnail — for music files, the embedded album cover Explorer shows — or null when the
+    /// file has none (no generic icon is returned).
+    /// </summary>
+    public static ImageSource? Thumbnail(string path, int size = 256) => Shell(path, size, 0x8 | 0x1);              // SIIGBF_THUMBNAILONLY | BIGGERSIZEOK
+
+    private static ImageSource? Shell(string parsingName, int size, int flags)
     {
-        if (Cache.TryGetValue(appId, out var cached)) return cached;
+        var cacheKey = parsingName + "|" + size + "|" + flags;
+        if (Cache.TryGetValue(cacheKey, out var cached)) return cached;
         ImageSource? result = null;
         try
         {
-            SHCreateItemFromParsingName("shell:AppsFolder\\" + appId, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out var factory);
-            // SIIGBF_ICONONLY (0x4) | SIIGBF_BIGGERSIZEOK (0x1)
-            if (factory.GetImage(new SIZE { cx = size, cy = size }, 0x5, out var hbmp) == 0 && hbmp != IntPtr.Zero)
+            SHCreateItemFromParsingName(parsingName, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out var factory);
+            if (factory.GetImage(new SIZE { cx = size, cy = size }, flags, out var hbmp) == 0 && hbmp != IntPtr.Zero)
             {
                 try
                 {
@@ -52,7 +60,8 @@ public static class AppIcons
             Marshal.ReleaseComObject(factory);
         }
         catch { result = null; }
-        Cache[appId] = result;
+        if (Cache.Count > 400) Cache.Clear();
+        Cache[cacheKey] = result;
         return result;
     }
 }

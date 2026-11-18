@@ -77,8 +77,18 @@ public partial class IslandWindow
 
     private void OnMediaHint(string message)
     {
-        if (_expanded && _tab == "media") { MLyric.Text = message; MLyric.Visibility = Visibility.Visible; MLyric.TextWrapping = TextWrapping.Wrap; return; }
-        Peek(Glyph.Info, message, 6);
+        // One short line; the full how-to sits in the tooltip.
+        var parts = message.Split(':', 2);
+        var shortText = parts[0].Trim();
+        if (_expanded && _tab == "media")
+        {
+            MLyric.Text = shortText;
+            MLyric.ToolTip = message;
+            MLyric.TextWrapping = TextWrapping.NoWrap;
+            MLyric.Visibility = Visibility.Visible;
+            return;
+        }
+        Peek(Glyph.Info, shortText, 5);
     }
 
     // ------------------------------------------------------------------ power: charging, battery, brightness

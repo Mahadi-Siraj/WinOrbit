@@ -111,10 +111,10 @@ Contributions are welcome — open an issue or a pull request.
 
 ## Made by
 
-**Mahadi Siraj** — [Instagram @mssatalite](https://www.instagram.com/mssatalite/) · [GitHub @Mahadi-Siraj](https://github.com/Mahadi-Siraj)
+**mssatalite** — [Instagram @mssatalite](https://www.instagram.com/mssatalite/) · [GitHub: Mahadi Siraj](https://github.com/Mahadi-Siraj)
 
 If WinOrbit earns a spot on your desktop, a ⭐ on the repo helps others find it.
 
 ## License
 
-[GPL-3.0](LICENSE) © Mahadi Siraj. You can use, study, share and change WinOrbit; any version you share must stay free and open under the same licence and keep the credit.
+[GPL-3.0](LICENSE) © mssatalite. You can use, study, share and change WinOrbit; any version you share must stay free and open under the same licence and keep the credit.

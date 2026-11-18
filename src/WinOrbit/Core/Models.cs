@@ -116,7 +116,7 @@ public sealed class IslandSettings
     public bool AutoHide { get; set; }
     public bool HideInFullscreen { get; set; } = true;
     public bool ExpandOnHover { get; set; }
-    public int AutoCollapseSeconds { get; set; } = 8;
+    public int AutoCollapseSeconds { get; set; } = 6;
     public bool PeekOnMediaChange { get; set; } = true;
     public bool ShowTime { get; set; } = true;
     public bool ShowDate { get; set; } = true;

@@ -71,38 +71,65 @@ public sealed class MediaService
         try
         {
             _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            _manager.CurrentSessionChanged += (_, _) => _ui.BeginInvoke(Attach);
+            _manager.CurrentSessionChanged += (_, _) => _ui.BeginInvoke(Rebind);
+            _manager.SessionsChanged += (_, _) => _ui.BeginInvoke(Rebind);
             Available = true;
-            Attach();
+            Rebind();
         }
         catch (Exception ex) { Log.Warn("Media session API unavailable: " + ex.Message); }
     }
 
-    private void Attach()
+    // Windows' "current" session is often not the one playing (a paused browser tab can hold it while
+    // Media Player plays), so every session is watched and the island follows whichever is playing.
+    private List<GlobalSystemMediaTransportControlsSession> _all = new();
+
+    private void Rebind()
     {
         try
         {
-            if (_session is not null)
+            foreach (var s in _all)
             {
-                _session.MediaPropertiesChanged -= OnProps;
-                _session.PlaybackInfoChanged -= OnPlayback;
-                _session.TimelinePropertiesChanged -= OnTimeline;
+                s.MediaPropertiesChanged -= OnProps;
+                s.PlaybackInfoChanged -= OnPlayback;
+                s.TimelinePropertiesChanged -= OnTimeline;
             }
-            _session = _manager?.GetCurrentSession();
-            if (_session is not null)
+            _all = _manager?.GetSessions().ToList() ?? new();
+            foreach (var s in _all)
             {
-                _session.MediaPropertiesChanged += OnProps;
-                _session.PlaybackInfoChanged += OnPlayback;
-                _session.TimelinePropertiesChanged += OnTimeline;
+                s.MediaPropertiesChanged += OnProps;
+                s.PlaybackInfoChanged += OnPlayback;
+                s.TimelinePropertiesChanged += OnTimeline;
             }
-            _ = RefreshAsync(true);
+            Choose(true);
         }
-        catch (Exception ex) { Log.Error("Media attach", ex); }
+        catch (Exception ex) { Log.Error("Media sessions", ex); }
     }
 
-    private void OnProps(GlobalSystemMediaTransportControlsSession s, MediaPropertiesChangedEventArgs e) => _ui.BeginInvoke(() => _ = RefreshAsync(true));
-    private void OnPlayback(GlobalSystemMediaTransportControlsSession s, PlaybackInfoChangedEventArgs e) => _ui.BeginInvoke(() => _ = RefreshAsync(false));
-    private void OnTimeline(GlobalSystemMediaTransportControlsSession s, TimelinePropertiesChangedEventArgs e) => _ui.BeginInvoke(() => _ = RefreshAsync(false));
+    private static bool SessionPlaying(GlobalSystemMediaTransportControlsSession s)
+    {
+        try { return s.GetPlaybackInfo()?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing; }
+        catch { return false; }
+    }
+
+    /// <summary>Follow the playing session: the current one if it plays, else any that plays, else stay or fall back to current.</summary>
+    private void Choose(bool forceRefresh)
+    {
+        GlobalSystemMediaTransportControlsSession? current = null;
+        try { current = _manager?.GetCurrentSession(); } catch { }
+        var best = current is not null && SessionPlaying(current) ? current
+            : _all.FirstOrDefault(SessionPlaying)
+            ?? (_session is not null && _all.Any(s => s.SourceAppUserModelId == _session.SourceAppUserModelId) ? _all.First(s => s.SourceAppUserModelId == _session.SourceAppUserModelId) : null)
+            ?? current ?? _all.FirstOrDefault();
+        var changed = !ReferenceEquals(best, _session) && best?.SourceAppUserModelId != _session?.SourceAppUserModelId;
+        _session = best;
+        _ = RefreshAsync(changed || forceRefresh);
+    }
+
+    private bool IsCurrent(GlobalSystemMediaTransportControlsSession s) => _session is not null && s.SourceAppUserModelId == _session.SourceAppUserModelId;
+
+    private void OnProps(GlobalSystemMediaTransportControlsSession s, MediaPropertiesChangedEventArgs e) => _ui.BeginInvoke(() => { if (IsCurrent(s)) _ = RefreshAsync(true); else Choose(false); });
+    private void OnPlayback(GlobalSystemMediaTransportControlsSession s, PlaybackInfoChangedEventArgs e) => _ui.BeginInvoke(() => Choose(false));
+    private void OnTimeline(GlobalSystemMediaTransportControlsSession s, TimelinePropertiesChangedEventArgs e) => _ui.BeginInvoke(() => { if (IsCurrent(s)) _ = RefreshAsync(false); });
 
     private async Task RefreshAsync(bool properties)
     {
@@ -114,8 +141,11 @@ public sealed class MediaService
             {
                 var wasWindow = _usingWindow;
                 _usingWindow = true;
+                var sameTrack = Title == wp.Title && Artist == wp.Artist && wasWindow;
                 Title = wp.Title; Artist = wp.Artist; Album = ""; Source = wp.App; IsPlaying = wp.Playing;
-                Art = null; Duration = TimeSpan.Zero; _position = TimeSpan.Zero; _positionAt = default;
+                // VLC doesn't share artwork; take the embedded cover from the file it's playing (what Explorer shows).
+                if (!sameTrack || Art is null) Art = wp.App == "VLC" && WindowPlayers.VlcFile(wp.Title, wp.Artist) is { } file ? Launcher.AppIcons.Thumbnail(file) : null;
+                Duration = TimeSpan.Zero; _position = TimeSpan.Zero; _positionAt = default;
                 HasSession = true;
                 var wkey = Title + "|" + Artist;
                 var wNew = wkey != _trackKey;
@@ -210,7 +240,8 @@ public sealed class MediaService
         if (bang > 0) s = s[..bang];
         s = Path.GetFileNameWithoutExtension(s);
         if (s.Contains("Spotify", StringComparison.OrdinalIgnoreCase)) return "Spotify";
-        if (s.Contains("ZuneMusic", StringComparison.OrdinalIgnoreCase)) return "Media Player";
+        if (s.Contains("ZuneMusic", StringComparison.OrdinalIgnoreCase) || s.Contains("ZuneVideo", StringComparison.OrdinalIgnoreCase)) return "Media Player";
+        if (s.Contains("brave", StringComparison.OrdinalIgnoreCase)) return "Brave";
         if (s.Contains("chrome", StringComparison.OrdinalIgnoreCase)) return "Chrome";
         if (s.Contains("msedge", StringComparison.OrdinalIgnoreCase) || s.Contains("MicrosoftEdge", StringComparison.OrdinalIgnoreCase)) return "Edge";
         if (s.Contains("firefox", StringComparison.OrdinalIgnoreCase)) return "Firefox";
