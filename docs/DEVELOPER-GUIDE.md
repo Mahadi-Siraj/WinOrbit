@@ -61,6 +61,8 @@ The class is split into partial files:
 | `IslandWindow.Live.cs` | Live activities: volume/brightness meter, charging, lock keys, network, radios, Bluetooth/USB, album colours, cards, the `Demo()` previews |
 | `IslandWindow.Calendar.cs` | Calendar page, event parsing, reminders |
 | `IslandWindow.Weather.cs` | Weather page and sky colours |
+| `IslandWindow.Mixer.cs` | Volume by app in the Control Centre (`Services/AppVolume.cs` does the Core Audio work) |
+| `IslandWindow.Files.cs` | File cards: screenshot saved (`Services/ScreenshotWatcher.cs`) and download finished; open, drag out, show in folder |
 
 ### Motion
 
@@ -89,7 +91,7 @@ The class is split into partial files:
 **Add a live activity**
 1. Raise an event from a service in `Services/` (event-driven; poll only if Windows offers no notification).
 2. Subscribe in `InitLive()` and unsubscribe in `CleanupLive()`.
-3. Show it with `ShowCard(glyph, title, subtitle, colour, seconds)` or `Peek(glyph, text)`.
+3. Show it with `ShowCard(glyph, title, subtitle, colour, seconds)` or `Peek(glyph, text)`. A card about a file can take `onClick` (a click does this instead of opening the island), `file` (dragging the card drags the file out) and `actions` (small icon buttons on the right); it then waits while the pointer rests on it.
 4. Add a case to `Demo()` and a Preview button on the Island settings page, so it can be checked without the real event.
 5. Gate it behind a setting in `IslandSettings` if people may not want it.
 

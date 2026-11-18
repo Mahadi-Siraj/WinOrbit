@@ -226,6 +226,16 @@ public static class Native
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern int SHEmptyRecycleBin(IntPtr hwnd, string? root, uint flags);
     [DllImport("shell32.dll")] public static extern UIntPtr SHAppBarMessage(uint msg, ref APPBARDATA data);
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    public static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid id, uint flags, IntPtr token, out IntPtr path);
+
+    /// <summary>A known folder's path (it follows the user if they moved it, e.g. to OneDrive), or null.</summary>
+    public static string? KnownFolder(Guid id)
+    {
+        if (SHGetKnownFolderPath(id, 0, IntPtr.Zero, out var p) != 0) return null;
+        try { return Marshal.PtrToStringUni(p); }
+        finally { Marshal.FreeCoTaskMem(p); }
+    }
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr SHGetFileInfo(string path, uint attrs, ref SHFILEINFO info, uint size, uint flags);
 
     // ---------- kernel32 ----------

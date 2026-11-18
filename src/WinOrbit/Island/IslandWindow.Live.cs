@@ -58,6 +58,7 @@ public partial class IslandWindow
         Hub.Devices.RadioChanged += OnRadio;
         Hub.Devices.ModeChanged += OnMode;
 
+        InitFiles();
         Pill.AllowDrop = true;
         Pill.DragEnter += OnDragEnter;
         Pill.DragOver += OnDragOver;
@@ -85,6 +86,7 @@ public partial class IslandWindow
         Hub.Devices.UsbChanged -= OnUsb;
         Hub.Devices.RadioChanged -= OnRadio;
         Hub.Devices.ModeChanged -= OnMode;
+        CleanupFiles();
     }
 
     // ------------------------------------------------------------------ keys and connections
@@ -239,6 +241,9 @@ public partial class IslandWindow
             case "usb": ShowCard(GlyphUsb, "USB drive", "Connected", AccentColor(), 2.6); break;
             case "wifi-radio": ShowCard(GlyphWifiOff, "Wi-Fi", "Off", Neutral, 2.6, toggle: false, switchColor: BtBlue); break;
             case "bt-radio": ShowCard(GlyphBluetooth, "Bluetooth", "On", BtBlue, 2.6, toggle: true); break;
+            case "screenshot": DemoScreenshot(); break;
+            case "download": ShowCard(Glyph.Download, "report.pdf", "Downloaded · click to open", Connected, 4,
+                actions: new (string, string, Action)[] { (Glyph.Folder, "Show in folder", () => { }) }); break;
         }
     }
 
@@ -597,7 +602,7 @@ public partial class IslandWindow
 
     private void OnDragEnter(object sender, DragEventArgs e)
     {
-        if (!HasFiles(e) || !S.Modules.Contains("shelf")) { e.Effects = DragDropEffects.None; e.Handled = true; return; }
+        if (_dragOut || !HasFiles(e) || !S.Modules.Contains("shelf")) { e.Effects = DragDropEffects.None; e.Handled = true; return; }
         if (!_expanded) Expand(false);
         if (_tab != "shelf") ShowTab("shelf");
         _pinned = true;   // stay open while the user aims for the shelf
@@ -608,12 +613,13 @@ public partial class IslandWindow
 
     private void OnDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = HasFiles(e) ? DragDropEffects.Link : DragDropEffects.None;
+        e.Effects = HasFiles(e) && !_dragOut ? DragDropEffects.Link : DragDropEffects.None;
         e.Handled = true;
     }
 
     private void OnDrop(object sender, DragEventArgs e)
     {
+        if (_dragOut) { e.Handled = true; return; }
         ShelfZone.SetResourceReference(Border.BorderBrushProperty, "T.Stroke");
         _pinned = false;
         if (e.Data.GetData(DataFormats.FileDrop) is string[] files)

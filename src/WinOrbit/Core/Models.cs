@@ -103,6 +103,8 @@ public sealed class IslandSettings
     public bool BluetoothAlerts { get; set; } = true;
     /// <summary>USB devices plugged in and removed.</summary>
     public bool UsbAlerts { get; set; } = true;
+    /// <summary>A card with a thumbnail when a screenshot is saved: click to open, drag it into any app.</summary>
+    public bool ScreenshotCards { get; set; } = true;
     /// <summary>Island edge: "Glass" (the plain illuminated rim) or a coloured gradient preset.</summary>
     public string Rim { get; set; } = "Glass";
     /// <summary>A soft coloured glow around the island in the rim's colours.</summary>

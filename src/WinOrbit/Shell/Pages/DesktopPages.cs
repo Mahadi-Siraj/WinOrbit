@@ -241,7 +241,7 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Now playing", null, S.ShowMedia, v => { S.ShowMedia = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Active timer", null, S.ShowTimer, v => { S.ShowTimer = v; Save(); }, true, Glyph.Stopwatch),
             Kit.ToggleRow("CPU and memory", "Samples system load only while visible.", S.ShowSystem, v => { S.ShowSystem = v; Save(); }, true, Glyph.Chip),
-            Kit.ToggleRow("Download activity", "Watches your Downloads folder for files that browsers are still downloading. Only file names are read, locally.", S.WatchDownloads, v => { S.WatchDownloads = v; Save(); }, true, Glyph.Download)));
+            Kit.ToggleRow("Download activity", "Watches your Downloads folder for files that browsers are still downloading, and shows a card when one finishes — click it to open the file, or drag it into any app. Only file names are read, locally.", S.WatchDownloads, v => { S.WatchDownloads = v; Save(); }, true, Glyph.Download)));
 
         Children.Add(Kit.Section("Live activities", "Things the island shows on its own, the moment they happen. Windows pushes these events; the lock-key check is the one exception, noted below.",
             Kit.ToggleRow("Volume and brightness meter", "Changing the volume — keyboard keys, the taskbar, scrolling on the island — or a laptop's brightness shows a glass meter in the capsule.", S.VolumeHud, v => { S.VolumeHud = v; Save(); }, false, Glyph.Volume),
@@ -250,6 +250,7 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Wi-Fi and Ethernet", "Connected (with the network's name) and disconnected. Read locally from Windows; nothing is sent anywhere.", S.NetworkAlerts, v => { S.NetworkAlerts = v; Save(); }, true, Glyph.Wifi),
             Kit.ToggleRow("Bluetooth devices", "Your paired headphones, keyboards, mice and phones connecting and disconnecting.", S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(); }, true, Glyph.Bluetooth),
             Kit.ToggleRow("USB devices", "Drives, mice, controllers and other USB devices plugged in or removed, by name.", S.UsbAlerts, v => { S.UsbAlerts = v; Save(); }, true, Glyph.Usb),
+            Kit.ToggleRow("Screenshots", "A card with a thumbnail when a screenshot lands in your Screenshots folder (Win+PrtScn, Snipping Tool). Click it to open the picture, drag it straight into a chat or email, or show it in its folder.", S.ScreenshotCards, v => { S.ScreenshotCards = v; Save(); }, true, Glyph.Photo),
             Kit.ToggleRow("Display and system modes", "Dark or light mode, night light and airplane mode switching on or off. Windows signals each change; nothing is checked on a timer.", S.SystemAlerts, v => { S.SystemAlerts = v; Save(); }, true, Glyph.Moon),
             Kit.ToggleRow("Event reminders", "A card ten minutes before, and when, an event you added in the island's calendar starts.", S.EventReminders, v => { S.EventReminders = v; Save(); }, true, Glyph.Calendar),
             Kit.ToggleRow("Album colours", "While a song plays, the glass glows with the colours of its artwork and cross-fades when the track changes. The Album rim uses them too. Worked out on this PC from the artwork Windows already has.", S.AlbumTint, v => { S.AlbumTint = v; Save(); }, true, Glyph.Color),
@@ -265,7 +266,8 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("Wi-Fi off", () => Hub.Island.Demo("wifi-radio")), Kit.Btn("Bluetooth on", () => Hub.Island.Demo("bt-radio")),
                 Kit.Btn("Dark mode", () => Hub.Island.Demo("dark")), Kit.Btn("Night light", () => Hub.Island.Demo("night")),
                 Kit.Btn("Airplane mode", () => Hub.Island.Demo("airplane")), Kit.Btn("Energy saver", () => Hub.Island.Demo("saver")),
-                Kit.Btn("New song", () => Hub.Island.Demo("song")), Kit.Btn("Event reminder", () => Hub.Island.Demo("event"))))));
+                Kit.Btn("New song", () => Hub.Island.Demo("song")), Kit.Btn("Event reminder", () => Hub.Island.Demo("event")),
+                Kit.Btn("Screenshot", () => Hub.Island.Demo("screenshot")), Kit.Btn("Download", () => Hub.Island.Demo("download"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]

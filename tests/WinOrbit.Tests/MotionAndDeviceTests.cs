@@ -196,6 +196,31 @@ public class MotionAndDeviceTests
         Assert.Equal(20, From("Right", 1900, 500));
     }
 
+    [Theory]
+    [InlineData(@"C:\Pics\Screenshots\Screenshot 2026-11-18 231500.png", true)]
+    [InlineData(@"C:\Pics\Screenshots\shot.JPG", true)]
+    [InlineData(@"C:\Pics\Screenshots\clip.jpeg", true)]
+    [InlineData(@"C:\Pics\Screenshots\~tmp1234.png", false)]
+    [InlineData(@"C:\Pics\Screenshots\.thumb.png", false)]
+    [InlineData(@"C:\Pics\Screenshots\desktop.ini", false)]
+    [InlineData(@"C:\Pics\Screenshots\recording.mp4", false)]
+    public void Screenshot_watcher_only_counts_finished_pictures(string path, bool expected)
+        => Assert.Equal(expected, ScreenshotWatcher.IsScreenshot(path));
+
+    [Theory]
+    [InlineData(@"C:\Downloads\report.pdf", true)]
+    [InlineData(@"C:\Downloads\photo.JPG", true)]
+    [InlineData(@"C:\Downloads\archive.zip", true)]
+    [InlineData(@"C:\Downloads\setup.exe", false)]
+    [InlineData(@"C:\Downloads\Setup.MSI", false)]
+    [InlineData(@"C:\Downloads\run.ps1", false)]
+    [InlineData(@"C:\Downloads\invoice.pdf.js", false)]
+    [InlineData(@"C:\Downloads\link.lnk", false)]
+    [InlineData(@"C:\Downloads\disk.iso", false)]
+    [InlineData(@"C:\Downloads\noextension", false)]
+    public void A_click_never_runs_a_downloaded_program(string path, bool opens)
+        => Assert.Equal(opens, WinOrbit.Island.IslandWindow.SafeToOpen(path));
+
     [Fact]
     public void Volume_mixer_groups_sessions_by_app()
     {

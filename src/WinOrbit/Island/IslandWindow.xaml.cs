@@ -579,12 +579,17 @@ public partial class IslandWindow : Window
     /// <param name="toggle">Show an on/off switch that flips to this state.</param>
     /// <param name="switchColor">The switch's "on" colour when it differs from the tile (e.g. a grey "off" tile).</param>
     /// <param name="art">Fill the tile with this image (album artwork) instead of an icon.</param>
-    public void ShowCard(string glyph, string title, string subtitle, Color color, double seconds = 3, bool? toggle = null, string? cap = null, Color? switchColor = null, ImageSource? art = null)
+    /// <param name="onClick">Clicking the card does this (and closes it) instead of opening the island.</param>
+    /// <param name="file">Dragging the card drags this file into another app.</param>
+    /// <param name="actions">Small icon buttons on the right of the card.</param>
+    public void ShowCard(string glyph, string title, string subtitle, Color color, double seconds = 3, bool? toggle = null, string? cap = null, Color? switchColor = null, ImageSource? art = null,
+        Action? onClick = null, string? file = null, IReadOnlyList<(string Glyph, string Name, Action Do)>? actions = null)
     {
         if (_expanded || !IsVisible) return;
         var fresh = !_card;
         _card = true;
         _cardIsMedia = false;
+        SetCardActions(onClick, file, actions);
         _hudTimer?.Stop(); _peekTimer.Stop();
         CHud.Visibility = Visibility.Collapsed; CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible;
 
@@ -645,7 +650,45 @@ public partial class IslandWindow : Window
         _cardTimer.Start();
     }
 
-    private void OnCardTimer(object? sender, EventArgs e) => EndCard();
+    private void OnCardTimer(object? sender, EventArgs e)
+    {
+        // A card you can act on waits while the pointer rests on it.
+        if (CardInteractive && Pill.IsMouseOver) return;
+        EndCard();
+    }
+
+    private Action? _cardClick;
+    private string? _cardFile;
+    private bool _dragOut;
+    private bool CardInteractive => _card && (_cardClick is not null || _cardFile is not null || CardActions.Children.Count > 0);
+
+    private void SetCardActions(Action? onClick, string? file, IReadOnlyList<(string Glyph, string Name, Action Do)>? actions)
+    {
+        _cardClick = onClick;
+        _cardFile = file;
+        CardActions.Children.Clear();
+        foreach (var (glyph, name, act) in actions ?? Array.Empty<(string, string, Action)>())
+        {
+            var b = new Button { Content = glyph, FontSize = 14, Width = 32, Height = 32, Margin = new Thickness(2, 0, 0, 0), ToolTip = name };
+            b.SetResourceReference(StyleProperty, "Button.Icon");
+            System.Windows.Automation.AutomationProperties.SetName(b, name);
+            b.Click += (_, _) => { EndCard(); act(); };
+            CardActions.Children.Add(b);
+        }
+        CardActions.Visibility = CardActions.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        // Plain cards let every click through to the capsule; cards with buttons take them.
+        Card.IsHitTestVisible = CardActions.Children.Count > 0;
+    }
+
+    /// <summary>Drag the card's file out into another app (a chat, an email, a folder).</summary>
+    private void DragCardFile(string file)
+    {
+        _cardTimer?.Stop();
+        _dragOut = true;
+        try { DragDrop.DoDragDrop(Pill, new DataObject(DataFormats.FileDrop, new[] { file }), DragDropEffects.Copy | DragDropEffects.Link); }
+        catch (Exception ex) { Log.Warn("Card drag: " + ex.Message); }
+        finally { _dragOut = false; EndCard(); }
+    }
 
     /// <summary>Artwork fills the tile edge to edge; the icon and key cap step aside.</summary>
     private void SetCardArt(ImageSource art)
@@ -686,6 +729,7 @@ public partial class IslandWindow : Window
         if (!_card) return;
         _card = false;
         _cardIsMedia = false;
+        SetCardActions(null, null, null);
         _cardTimer?.Stop();
         _switchDelay?.Stop();
         Motion.To(Card, OpacityProperty, 0, 120, null, () => { if (!_card) Card.Visibility = Visibility.Collapsed; });
@@ -756,7 +800,7 @@ public partial class IslandWindow : Window
     private void OnDownloadsChanged()
     {
         if (!S.WatchDownloads) return;
-        if (_downloads.JustCompleted is { } name) Peek(Glyph.Download, "Downloaded " + name, 5);
+        if (_downloads.JustCompletedPath is { } path) ShowDownloadCard(path);
         RefreshCompact();
     }
 
@@ -771,7 +815,7 @@ public partial class IslandWindow : Window
         if (_expanded || !IsVisible) { if (keyboard && _expanded) SetInteractive(true); return; }
         _expanded = true;
         _peekTimer.Stop();
-        if (_card) { _card = false; _cardTimer?.Stop(); Card.Visibility = Visibility.Collapsed; Card.Opacity = 0; }
+        if (_card) { _card = false; _cardTimer?.Stop(); SetCardActions(null, null, null); Card.Visibility = Visibility.Collapsed; Card.Opacity = 0; }
         CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible;
         _hudTimer?.Stop(); CHud.Visibility = Visibility.Collapsed;
         SetAutoHidden(false);
@@ -900,6 +944,14 @@ public partial class IslandWindow : Window
         Native.GetCursorPos(out var p);
         double dx = p.X - _pressPoint.X, dy = p.Y - _pressPoint.Y;
         if (!_dragging && Math.Abs(dx) + Math.Abs(dy) < 7) return;
+        if (!_dragging && _card && _cardFile is { } file && File.Exists(file))
+        {
+            // Dragging a file card carries the file, not the island.
+            _pressed = false;
+            Pill.ReleaseMouseCapture();
+            DragCardFile(file);
+            return;
+        }
         _dragging = true;
         var mon = Monitors.Find(Device);
         var scale = mon.Scale;
@@ -977,6 +1029,7 @@ public partial class IslandWindow : Window
             if (Edge != _edgeAtPress) Hub.Island.Apply();   // islands on other displays follow to the new edge
             else if (Offset().X == 0 && _pressOffsetX != 0) Peek(Glyph.Check, "Centred", 1.0);
         }
+        else if (_card && _cardClick is { } click) { EndCard(); click(); }
         else Expand(false);
     }
 
@@ -1559,6 +1612,8 @@ public sealed class DownloadWatcher : IDisposable
 
     public (string Name, long Bytes)? Active { get; private set; }
     public string? JustCompleted { get; private set; }
+    /// <summary>The finished file's full path, alongside <see cref="JustCompleted"/>.</summary>
+    public string? JustCompletedPath { get; private set; }
     public event Action? Changed;
 
     public DownloadWatcher(Dispatcher ui)
@@ -1605,10 +1660,11 @@ public sealed class DownloadWatcher : IDisposable
     private void Finish(string oldPath, string? newPath)
     {
         if (!_active.Remove(oldPath)) return;
-        JustCompleted = newPath is not null && !IsTemp(newPath) ? Path.GetFileName(newPath) : null;
+        JustCompletedPath = newPath is not null && !IsTemp(newPath) ? newPath : null;
+        JustCompleted = JustCompletedPath is null ? null : Path.GetFileName(JustCompletedPath);
         if (_active.Count == 0) { Active = null; _stale.Stop(); }
         Changed?.Invoke();
-        JustCompleted = null;
+        JustCompleted = null; JustCompletedPath = null;
     }
 
     private void Sweep()
@@ -1625,11 +1681,13 @@ public sealed class IslandController
 {
     private readonly List<IslandWindow> _windows = new();
     public DownloadWatcher Downloads { get; }
+    public ScreenshotWatcher Screenshots { get; }
     public IReadOnlyList<IslandWindow> Windows => _windows;
 
     public IslandController(Dispatcher ui)
     {
         Downloads = new DownloadWatcher(ui);
+        Screenshots = new ScreenshotWatcher(ui);
         Hub.Shell.DisplayChanged += () => ui.BeginInvoke(DispatcherPriority.Background, Apply);
     }
 
@@ -1637,6 +1695,7 @@ public sealed class IslandController
     {
         var s = Hub.Settings.Island;
         Downloads.SetEnabled(s.Enabled && s.WatchDownloads);
+        Screenshots.SetEnabled(s.Enabled && s.ScreenshotCards);
         Hub.Devices?.Apply();
         var targets = !s.Enabled ? new List<string>()
             : s.Monitor == "all" ? Monitors.All().Select(m => m.Device).ToList()
