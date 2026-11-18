@@ -28,7 +28,7 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 |---|---|---|
 | Wallpaper image file / live-wallpaper layer | Colour extraction and frosted backdrops | No |
 | CPU, memory, disk, network counters (Windows PDH), GPU via NVIDIA's NVML | System widgets and island tiles — sampled **only while one is visible** | No |
-| Now-playing info from the Windows media session API | Media widget/island | No |
+| Now-playing info from the Windows media session API, including the artwork thumbnail | Media widget/island; the artwork's colours are worked out in memory for the album-colour glass, equaliser and rim | No |
 | Name of the foreground process + whether it is fullscreen | Hiding during games; opt-in automation rules | No (not logged) |
 | File names of in-progress downloads in your Downloads folder | Opt-in island download indicator, **off by default** | No |
 | `Rainmeter.ini` and skin `.ini` files | Rainmeter library (read-only) | No |

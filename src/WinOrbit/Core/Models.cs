@@ -111,6 +111,8 @@ public sealed class IslandSettings
     public string Shape { get; set; } = "Capsule";
     /// <summary>Collapsed height: "Slim", "Regular" or "Tall".</summary>
     public string Thickness { get; set; } = "Regular";
+    /// <summary>While a song plays, the glass takes on the colours of its artwork.</summary>
+    public bool AlbumTint { get; set; } = true;
     /// <summary>Pop-ups when dark/light mode, night light, airplane mode or Energy Saver are switched.</summary>
     public bool SystemAlerts { get; set; } = true;
     /// <summary>Equaliser bars follow what is actually playing (Windows' output meter) instead of a loop.</summary>

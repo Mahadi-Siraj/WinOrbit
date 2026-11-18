@@ -221,6 +221,7 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Bluetooth devices", "Your paired headphones, keyboards, mice and phones connecting and disconnecting.", S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(); }, true, Glyph.Bluetooth),
             Kit.ToggleRow("USB devices", "Drives, mice, controllers and other USB devices plugged in or removed, by name.", S.UsbAlerts, v => { S.UsbAlerts = v; Save(); }, true, Glyph.Usb),
             Kit.ToggleRow("Display and system modes", "Dark or light mode, night light and airplane mode switching on or off. Windows signals each change; nothing is checked on a timer.", S.SystemAlerts, v => { S.SystemAlerts = v; Save(); }, true, Glyph.Moon),
+            Kit.ToggleRow("Album colours", "While a song plays, the glass glows with the colours of its artwork and cross-fades when the track changes. The Album rim uses them too. Worked out on this PC from the artwork Windows already has.", S.AlbumTint, v => { S.AlbumTint = v; Save(); }, true, Glyph.Color),
             Kit.ToggleRow("Bars follow the music", "The equaliser in the capsule moves with what's actually playing, tinted by the album art. Reads Windows' output level 20 times a second, only while music plays.", S.AudioReactive, v => { S.AudioReactive = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Privacy dots", "Orange while any app uses your microphone, green for the camera, blue for your location — hover to see which app. Read locally from Windows' own privacy records.", S.PrivacyDot, v => { S.PrivacyDot = v; Save(); }, true, Glyph.Shield),
             Kit.ToggleRow("Lyrics in the capsule", Hub.Settings.Privacy.LyricsEnabled ? "Shows the line being sung instead of the song title." : "Turn on Synced lyrics in Settings › Privacy & network first.", S.LyricsInCapsule, v => { S.LyricsInCapsule = v; Save(); }, true, Glyph.Note),
@@ -232,7 +233,8 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("Bluetooth", () => Hub.Island.Demo("bluetooth")), Kit.Btn("USB", () => Hub.Island.Demo("usb")),
                 Kit.Btn("Wi-Fi off", () => Hub.Island.Demo("wifi-radio")), Kit.Btn("Bluetooth on", () => Hub.Island.Demo("bt-radio")),
                 Kit.Btn("Dark mode", () => Hub.Island.Demo("dark")), Kit.Btn("Night light", () => Hub.Island.Demo("night")),
-                Kit.Btn("Airplane mode", () => Hub.Island.Demo("airplane")), Kit.Btn("Energy saver", () => Hub.Island.Demo("saver"))))));
+                Kit.Btn("Airplane mode", () => Hub.Island.Demo("airplane")), Kit.Btn("Energy saver", () => Hub.Island.Demo("saver")),
+                Kit.Btn("New song", () => Hub.Island.Demo("song"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]

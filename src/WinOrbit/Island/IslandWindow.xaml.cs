@@ -48,6 +48,7 @@ public partial class IslandWindow : Window
     {
         var c = ShapeCorners(S.Shape, Math.Max(0, Radius));
         Pill.CornerRadius = c; PillRim.CornerRadius = c; PillGlow.CornerRadius = c;
+        ArtWashA.CornerRadius = c; ArtWashB.CornerRadius = c;
     }
     private const double MorphResponse = 0.5, MorphDamping = 0.82;
 
@@ -271,6 +272,7 @@ public partial class IslandWindow : Window
         ("Sunset", "Sunset", new[] { "#FB923C", "#F43F5E", "#C026D3" }),
         ("Ocean", "Ocean", new[] { "#22D3EE", "#3B82F6", "#1E40AF" }),
         ("Mono", "Mono", new[] { "#F4F4F5", "#71717A" }),
+        ("Album", "Album", Array.Empty<string>()),   // the playing song's artwork colours; the accent when nothing plays
     };
 
     private void ApplyRim()
@@ -278,7 +280,9 @@ public partial class IslandWindow : Window
         var rim = Rims.FirstOrDefault(r => r.Id == S.Rim);
         if (rim.Id is null or "Glass") { PillRim.Visibility = PillGlow.Visibility = Visibility.Collapsed; return; }
         Color[] colors;
-        if (rim.Id == "Accent")
+        if (rim.Id == "Album" && _artPalette is { } art)
+            colors = new[] { WinOrbit.Wallpaper.ColorMath.ForMode(art.Accent, true), WinOrbit.Wallpaper.ColorMath.ForMode(art.Secondary, true), art.Dominant };
+        else if (rim.Id is "Accent" or "Album")
         {
             var accent = (TryFindResource("T.Accent") as SolidColorBrush)?.Color ?? Color.FromRgb(0x7C, 0x5C, 0xFF);
             colors = new[] { WinOrbit.Wallpaper.ColorMath.Lerp(accent, Colors.White, 0.35), accent, WinOrbit.Wallpaper.ColorMath.Lerp(accent, Colors.Black, 0.25) };
@@ -375,6 +379,7 @@ public partial class IslandWindow : Window
         CSep.Visibility = activity && trailing ? Visibility.Visible : Visibility.Collapsed;
         if (!activity && !trailing) { CTime.Visibility = Visibility.Visible; }   // never show an empty pill
         FitCompact();
+        UpdateArtWash();
     }
 
     private bool _refitQueued;
@@ -461,11 +466,13 @@ public partial class IslandWindow : Window
     /// <param name="cap">Show this letter in a key cap instead of an icon (lock keys).</param>
     /// <param name="toggle">Show an on/off switch that flips to this state.</param>
     /// <param name="switchColor">The switch's "on" colour when it differs from the tile (e.g. a grey "off" tile).</param>
-    public void ShowCard(string glyph, string title, string subtitle, Color color, double seconds = 3, bool? toggle = null, string? cap = null, Color? switchColor = null)
+    /// <param name="art">Fill the tile with this image (album artwork) instead of an icon.</param>
+    public void ShowCard(string glyph, string title, string subtitle, Color color, double seconds = 3, bool? toggle = null, string? cap = null, Color? switchColor = null, ImageSource? art = null)
     {
         if (_expanded || !IsVisible) return;
         var fresh = !_card;
         _card = true;
+        _cardIsMedia = false;
         _hudTimer?.Stop(); _peekTimer.Stop();
         CHud.Visibility = Visibility.Collapsed; CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible;
 
@@ -482,6 +489,7 @@ public partial class IslandWindow : Window
         static double Inset(double v) => Math.Max(5, v - 10);
         var tile = new CornerRadius(Inset(outer.TopLeft), Inset(outer.TopRight), Inset(outer.BottomRight), Inset(outer.BottomLeft));
         CardTileFill.CornerRadius = tile; CardTileEdge.CornerRadius = tile;
+        if (art is not null) SetCardArt(art);
         CardTitle.Text = title;
         CardSub.Text = subtitle;
         CardSub.Visibility = string.IsNullOrWhiteSpace(subtitle) ? Visibility.Collapsed : Visibility.Visible;
@@ -527,6 +535,21 @@ public partial class IslandWindow : Window
 
     private void OnCardTimer(object? sender, EventArgs e) => EndCard();
 
+    /// <summary>Artwork fills the tile edge to edge; the icon and key cap step aside.</summary>
+    private void SetCardArt(ImageSource art)
+    {
+        var brush = new ImageBrush(art) { Stretch = Stretch.UniformToFill };
+        RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
+        brush.Freeze();
+        CardTileFill.Background = brush;
+        // Covers read as covers when square-ish: cap the corners at 12 so a capsule's circle tile becomes a rounded square.
+        var c = CardTileFill.CornerRadius;
+        var square = new CornerRadius(Math.Min(c.TopLeft, 12), Math.Min(c.TopRight, 12), Math.Min(c.BottomRight, 12), Math.Min(c.BottomLeft, 12));
+        CardTileFill.CornerRadius = square; CardTileEdge.CornerRadius = square;
+        CardGlyph.Visibility = Visibility.Collapsed;
+        CardCap.Visibility = Visibility.Collapsed;
+    }
+
     /// <summary>The switch starts in the old position and flips once the card has opened, so you see it change.</summary>
     private void FlipSwitch(bool on, Color color)
     {
@@ -550,6 +573,7 @@ public partial class IslandWindow : Window
     {
         if (!_card) return;
         _card = false;
+        _cardIsMedia = false;
         _cardTimer?.Stop();
         _switchDelay?.Stop();
         Motion.To(Card, OpacityProperty, 0, 120, null, () => { if (!_card) Card.Visibility = Visibility.Collapsed; });
@@ -611,7 +635,7 @@ public partial class IslandWindow : Window
         if (_expanded && _tab == "media") { Motion.Enter(MTitle, 8, 300); Motion.Enter(MArtist, 10, 360); Motion.Enter(MArt, 6, 320); }
         else if (CMedia.Visibility == Visibility.Visible) Motion.Enter(CMedia, 6, 280);
         if (S.PeekOnMediaChange && S.ShowMedia && !string.IsNullOrWhiteSpace(Hub.Media.Title))
-            Peek(Glyph.Music, string.IsNullOrWhiteSpace(Hub.Media.Artist) ? Hub.Media.Title : $"{Hub.Media.Title} — {Hub.Media.Artist}");
+            ShowMediaCard();
     }
     private void OnTimerChanged() { if (!_expanded) RefreshCompact(); else if (_tab == "focus") UpdateFocus(); }
     private void OnTimerCompleted(TimerMode mode) => Peek(Glyph.Check, mode switch { TimerMode.Focus => "Focus block complete — take a break", TimerMode.Break => "Break over — ready to focus", _ => "Countdown finished" }, 7);
@@ -905,6 +929,7 @@ public partial class IslandWindow : Window
             Motion.To(Pill, HeightProperty, HeightFor(id), 320, Motion.Spring);
         }
         _tab = id;
+        UpdateArtWash();
         _loadingUi = true;
         foreach (var rb in Tabs.Children.OfType<RadioButton>()) rb.IsChecked = (string)rb.Tag == id;
         _loadingUi = false;

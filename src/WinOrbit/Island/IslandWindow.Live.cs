@@ -223,6 +223,10 @@ public partial class IslandWindow
             case "mic": Peek(GlyphMic, "Teams is using your microphone", 3); break;
             case "saver": ShowCard(GlyphLeaf, "Energy saver", "On", Saver, 2.6, toggle: true); break;
             case "dark": ShowCard(Glyph.Moon, "Dark mode", "Apps and Windows", Indigo, 2.6, toggle: true); break;
+            case "song":
+                if (Hub.Media.HasTrack) ShowMediaCard();
+                else ShowSampleSong();
+                break;
             case "night": ShowCard(Glyph.Moon, "Night light", "On · warmer colours", Amber, 2.6, toggle: true); break;
             case "airplane": ShowCard(GlyphAirplane, "Airplane mode", "On · radios off", Flight, 2.6, toggle: true); break;
             case "caps": ShowCard("", "Caps Lock", "On", KeyLit, 2.4, toggle: true, cap: "A", switchColor: Connected); break;
@@ -349,6 +353,7 @@ public partial class IslandWindow
         if (key == _artKey) return;
         _artKey = key;
         Color? tint = null;
+        _artPalette = null;
         if (m.Art is BitmapSource art)
         {
             try
@@ -357,16 +362,107 @@ public partial class IslandWindow
                 var px = new byte[conv.PixelWidth * conv.PixelHeight * 4];
                 conv.CopyPixels(px, conv.PixelWidth * 4, 0);
                 var p = Palette.FromPixels(px, conv.PixelWidth, conv.PixelHeight);
-                if (!p.IsNeutral) tint = ColorMath.ForMode(p.Accent, Hub.Theme.IsDark);
+                if (!p.IsNeutral) { tint = ColorMath.ForMode(p.Accent, Hub.Theme.IsDark); _artPalette = p; }
             }
             catch { }
         }
         CEq.Tint(tint);
+        _washKey = "\0";   // new artwork: cross-fade even if the wash was already showing
+        if (S.Rim == "Album") ApplyRim();
+        if (_card && _cardIsMedia) RefreshMediaCardArt();
+    }
+
+    // ------------------------------------------------------------------ album colours in the glass
+    private Palette? _artPalette;
+    private string _washKey = "";
+    private bool _washOnA;
+
+    /// <summary>The artwork's colours as a soft diagonal light through the glass: strongest where the artwork sits.</summary>
+    private static Brush WashBrush(Palette p)
+    {
+        Color A(Color c, byte a) => Color.FromArgb(a, c.R, c.G, c.B);
+        var b = new LinearGradientBrush { StartPoint = new Point(0, 0.2), EndPoint = new Point(1, 0.8) };
+        b.GradientStops.Add(new GradientStop(A(p.Accent, 0x70), 0));
+        b.GradientStops.Add(new GradientStop(A(p.Secondary, 0x40), 0.5));
+        b.GradientStops.Add(new GradientStop(A(p.Dominant, 0x26), 1));
+        b.Freeze();
+        return b;
+    }
+
+    /// <summary>Show the album colours while a song plays where music is on screen; fade them out otherwise.</summary>
+    private void UpdateArtWash()
+    {
+        var m = Hub.Media;
+        var musicOnScreen = _expanded ? _tab == "media" : _card ? _cardIsMedia : CMedia.Visibility == Visibility.Visible && CNormal.Visibility == Visibility.Visible;
+        var want = S.AlbumTint && _artPalette is not null && m.HasTrack && m.IsPlaying && musicOnScreen;
+        var key = want ? _artKey : "";
+        if (key == _washKey) return;
+        _washKey = key;
+        if (!want)
+        {
+            Motion.To(ArtWashA, OpacityProperty, 0, 600, Motion.EaseInOut);
+            Motion.To(ArtWashB, OpacityProperty, 0, 600, Motion.EaseInOut);
+            return;
+        }
+        _washOnA = !_washOnA;
+        var (show, hide) = _washOnA ? (ArtWashA, ArtWashB) : (ArtWashB, ArtWashA);
+        show.Background = WashBrush(_artPalette!);
+        Motion.To(show, OpacityProperty, 1, 900, Motion.EaseInOut);
+        Motion.To(hide, OpacityProperty, 0, 900, Motion.EaseInOut);
+    }
+
+    // ------------------------------------------------------------------ now-playing card
+    private bool _cardIsMedia;
+
+    /// <summary>A new song: the island grows into a card with the artwork as its tile, the title and the artist.</summary>
+    private void ShowMediaCard(double seconds = 3.4)
+    {
+        var m = Hub.Media;
+        TintFromArt();
+        var color = _artPalette is { } p ? ColorMath.ForMode(p.Accent, Hub.Theme.IsDark) : AccentColor();
+        ShowCard(Glyph.Music, m.Title, string.IsNullOrWhiteSpace(m.Artist) ? (m.Album ?? "") : m.Artist, color, seconds, art: m.Art);
+        _cardIsMedia = true;
+        UpdateArtWash();
+    }
+
+    /// <summary>Preview with nothing playing: a generated sunset "cover" and its colours, exactly as a real song shows.</summary>
+    private void ShowSampleSong()
+    {
+        const int size = 64;
+        var px = new byte[size * size * 4];
+        for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var t = (x + y) / (2.0 * (size - 1));
+                var c = t < 0.5 ? ColorMath.Lerp(Color.FromRgb(0xFF, 0x8A, 0x3D), Color.FromRgb(0xE9, 0x2F, 0x6B), t * 2)
+                                : ColorMath.Lerp(Color.FromRgb(0xE9, 0x2F, 0x6B), Color.FromRgb(0x5B, 0x2A, 0xC9), (t - 0.5) * 2);
+                var i = (y * size + x) * 4;
+                px[i] = c.B; px[i + 1] = c.G; px[i + 2] = c.R; px[i + 3] = 255;
+            }
+        var art = BitmapSource.Create(size, size, 96, 96, PixelFormats.Bgra32, null, px, size * 4);
+        art.Freeze();
+        var palette = Palette.FromPixels(px, size, size);
+        ShowCard(Glyph.Music, "Golden Hour", "Sample artist · preview", ColorMath.ForMode(palette.Accent, Hub.Theme.IsDark), 3.4, art: art);
+        _cardIsMedia = true;
+        if (!S.AlbumTint) return;
+        _washKey = "preview";   // the next real update fades this out again
+        ArtWashA.Background = WashBrush(palette);
+        Motion.To(ArtWashA, OpacityProperty, 1, 900, Motion.EaseInOut);
+        Motion.To(ArtWashB, OpacityProperty, 0, 900, Motion.EaseInOut);
+        _washOnA = true;
+    }
+
+    private void RefreshMediaCardArt()
+    {
+        if (Hub.Media.Art is not { } art) return;
+        SetCardArt(art);
+        UpdateArtWash();
     }
 
     private void OnMediaForLive()
     {
         TintFromArt();
+        UpdateArtWash();
         UpdateEqualizerDrive();
         _ = LoadLyricsAsync();
         UpdateLyric();

@@ -31,6 +31,10 @@
                 </TransformGroup>
             </d:GlassSurface.RenderTransform>
             <Grid ClipToBounds="True">
+                <!-- Album colours: while a song plays, the glass picks up its artwork's colours. Two layers so one
+                     track's colours cross-fade into the next instead of switching. -->
+                <Border x:Name="ArtWashA" IsHitTestVisible="False" Opacity="0" CornerRadius="19"/>
+                <Border x:Name="ArtWashB" IsHitTestVisible="False" Opacity="0" CornerRadius="19"/>
                 <!-- Optional coloured rim (Island settings › Rim); hidden for the plain glass edge -->
                 <Border x:Name="PillRim" IsHitTestVisible="False" BorderThickness="1.6" CornerRadius="19" Visibility="Collapsed"/>
                 <!-- A soft light that follows the pointer across the glass -->
