@@ -1,10 +1,11 @@
 # Builds everything a release needs:
 #   artifacts\installer\WinOrbit-Setup-<ver>.exe        per-user installer (needs .NET 8 Desktop Runtime)
 #   artifacts\WinOrbit-Portable-<ver>-win-x64.zip        self-contained, no runtime needed, runs from any folder
-param([string]$Version = "1.1.0", [switch]$SkipTests)
+param([string]$Version = "", [switch]$SkipTests)
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
+if (-not $Version) { $Version = (Get-Content (Join-Path $root "VERSION") -Raw).Trim() }   # single source of truth
 $env:DOTNET_NOLOGO = "1"; $env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"   # keep the .NET CLI itself from sending telemetry
 
 if (-not $SkipTests) {
