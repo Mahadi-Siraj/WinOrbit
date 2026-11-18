@@ -14,7 +14,7 @@ namespace WinOrbit.Services;
 /// going, Bluetooth devices connecting and disconnecting, and USB devices being plugged in or removed.
 ///
 /// Privacy and cost:
-///   • Lock keys: WinOrbit asks Windows whether the three lock lights are on, five times a second, only while that
+///   • Lock keys: WinOrbit asks Windows whether the three lock lights are on, about eight times a second, only while that
 ///     alert is switched on. It never sees which keys you type.
 ///   • Network: the Wi-Fi service (WLAN API) pushes "connected"/"disconnected" the moment the radio associates, and
 ///     Windows' NetworkStatusChanged covers Ethernet and anything else; only the connection's name and type are read.

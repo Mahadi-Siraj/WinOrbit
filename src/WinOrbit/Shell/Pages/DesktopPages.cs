@@ -271,6 +271,7 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Volume and brightness meter", "Changing the volume — keyboard keys, the taskbar, scrolling on the island — or a laptop's brightness shows a glass meter in the capsule.", S.VolumeHud, v => { S.VolumeHud = v; Save(); }, false, Glyph.Volume),
             Kit.ToggleRow("Charging and battery", "On laptops: a moment in the capsule when you plug in or unplug, and a warning at 20 % and 10 %.", S.BatteryAlerts, v => { S.BatteryAlerts = v; Save(); }, true, Glyph.Battery),
             Kit.ToggleRow("Caps Lock, Num Lock and Scroll Lock", "A key cap with its light when you switch one. WinOrbit asks Windows whether the three lock lights are on about eight times a second; it never sees what you type.", S.LockKeyAlerts, v => { S.LockKeyAlerts = v; Save(); }, true, Glyph.Keyboard),
+            Kit.ToggleRow("Keyboard language", "A key cap with the language (EN, BN, FR…) when you switch keyboards with Win+Space, Alt+Shift or the taskbar. Only runs when you have more than one keyboard: WinOrbit then asks Windows which keyboard the app in front uses, four times a second. It never sees what you type.", S.LanguageAlerts, v => { S.LanguageAlerts = v; Save(); }, true, Glyph.Globe),
             Kit.ToggleRow("Wi-Fi and Ethernet", "Connected (with the network's name) and disconnected. Read locally from Windows; nothing is sent anywhere.", S.NetworkAlerts, v => { S.NetworkAlerts = v; Save(); }, true, Glyph.Wifi),
             Kit.ToggleRow("Bluetooth devices", "Your paired headphones, keyboards, mice and phones connecting and disconnecting.", S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(); }, true, Glyph.Bluetooth),
             Kit.ToggleRow("USB devices", "Drives, mice, controllers and other USB devices plugged in or removed, by name.", S.UsbAlerts, v => { S.UsbAlerts = v; Save(); }, true, Glyph.Usb),
@@ -296,7 +297,7 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("Airplane mode", () => Hub.Island.Demo("airplane")), Kit.Btn("Energy saver", () => Hub.Island.Demo("saver")),
                 Kit.Btn("New song", () => Hub.Island.Demo("song")), Kit.Btn("Event reminder", () => Hub.Island.Demo("event")),
                 Kit.Btn("Screenshot", () => Hub.Island.Demo("screenshot")), Kit.Btn("Download", () => Hub.Island.Demo("download")),
-                Kit.Btn("Rain soon", () => Hub.Island.Demo("rain"))))));
+                Kit.Btn("Rain soon", () => Hub.Island.Demo("rain")), Kit.Btn("Keyboard language", () => Hub.Island.Demo("language"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]

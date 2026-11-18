@@ -60,6 +60,7 @@ public partial class IslandWindow
 
         InitFiles();
         Hub.Island.Rain.RainSoon += OnRainSoon;
+        Hub.Island.Language.Changed += OnLanguage;
         Pill.AllowDrop = true;
         Pill.DragEnter += OnDragEnter;
         Pill.DragOver += OnDragOver;
@@ -89,6 +90,21 @@ public partial class IslandWindow
         Hub.Devices.ModeChanged -= OnMode;
         CleanupFiles();
         Hub.Island.Rain.RainSoon -= OnRainSoon;
+        Hub.Island.Language.Changed -= OnLanguage;
+    }
+
+    /// <summary>Preview with this PC's current keyboard.</summary>
+    private void OnLanguageDemo()
+    {
+        var (code, language, layout) = KeyboardLanguage.Describe(Interop.Native.GetKeyboardLayout(0).ToInt64());
+        ShowCard("", language, layout.Length > 0 ? layout + " keyboard" : "Keyboard", AccentColor(), 2.4, cap: code.Length <= 3 ? code : code[..3]);
+    }
+
+    /// <summary>The keyboard language switched: a key cap with its code, like the lock keys.</summary>
+    private void OnLanguage(string code, string language, string layout)
+    {
+        if (!S.LanguageAlerts) return;
+        ShowCard("", language, layout.Length > 0 ? layout + " keyboard" : "Keyboard", AccentColor(), 1.8, cap: code.Length <= 3 ? code : code[..3]);
     }
 
     // ------------------------------------------------------------------ keys and connections
@@ -244,6 +260,7 @@ public partial class IslandWindow
             case "wifi-radio": ShowCard(GlyphWifiOff, "Wi-Fi", "Off", Neutral, 2.6, toggle: false, switchColor: BtBlue); break;
             case "bt-radio": ShowCard(GlyphBluetooth, "Bluetooth", "On", BtBlue, 2.6, toggle: true); break;
             case "screenshot": DemoScreenshot(); break;
+            case "language": OnLanguageDemo(); break;
             case "rain": ShowCard(Glyph.Cloud, RainAlerts.Title(40, "Showers"), "70% chance", RainBlue, 4); break;
             case "download": ShowCard(Glyph.Download, "report.pdf", "Downloaded · click to open", Connected, 4,
                 actions: new (string, string, Action)[] { (Glyph.Folder, "Show in folder", () => { }) }); break;

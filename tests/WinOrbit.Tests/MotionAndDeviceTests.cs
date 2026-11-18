@@ -262,6 +262,25 @@ public class MotionAndDeviceTests
     public void Backups_never_carry_the_windows_tweak_originals(string path, bool included)
         => Assert.Equal(included, WinOrbit.Shell.Pages.SettingsPage.BackupIncludes(path));
 
+    [Theory]
+    [InlineData(0x04090409L, "00000409")]   // English (US), US keys
+    [InlineData(0x08090409L, "00000809")]   // English (US) language with the UK layout
+    [InlineData(0x04450445L, "00000445")]   // Bangla (India)
+    [InlineData(0xE0010411L, "E0010411")]   // Japanese IME
+    [InlineData(0xF0020409L, null)]         // a variant named by Layout Id (US-International and others)
+    public void Keyboard_layout_handles_map_to_their_registry_key(long hkl, string? klid)
+        => Assert.Equal(klid, KeyboardLanguage.Klid(hkl));
+
+    [Fact]
+    public void Keyboard_language_reads_as_a_short_code_and_a_name()
+    {
+        var (code, language, _) = KeyboardLanguage.Describe(0x04090409L);
+        Assert.Equal("EN", code);
+        Assert.False(string.IsNullOrWhiteSpace(language));
+        Assert.Equal("FR", KeyboardLanguage.Describe(0x040C040CL).Code);
+        Assert.Equal("BN", KeyboardLanguage.Describe(0x08450845L).Code);
+    }
+
     [Fact]
     public void Rain_soon_title_reads_naturally()
     {

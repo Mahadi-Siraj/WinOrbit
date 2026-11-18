@@ -103,6 +103,8 @@ public sealed class IslandSettings
     public bool BluetoothAlerts { get; set; } = true;
     /// <summary>USB devices plugged in and removed.</summary>
     public bool UsbAlerts { get; set; } = true;
+    /// <summary>A key cap with the language code when the keyboard language switches (only with two or more keyboards).</summary>
+    public bool LanguageAlerts { get; set; } = true;
     /// <summary>A card with a thumbnail when a screenshot is saved: click to open, drag it into any app.</summary>
     public bool ScreenshotCards { get; set; } = true;
     /// <summary>A card when rain is likely within two hours. Needs weather on; checks the forecast every 30 minutes. Off by default.</summary>

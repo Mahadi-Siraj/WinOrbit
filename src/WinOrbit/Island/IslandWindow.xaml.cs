@@ -1683,6 +1683,7 @@ public sealed class IslandController
     public DownloadWatcher Downloads { get; }
     public ScreenshotWatcher Screenshots { get; }
     public RainAlerts Rain { get; }
+    public KeyboardLanguage Language { get; }
     public IReadOnlyList<IslandWindow> Windows => _windows;
 
     public IslandController(Dispatcher ui)
@@ -1690,6 +1691,7 @@ public sealed class IslandController
         Downloads = new DownloadWatcher(ui);
         Screenshots = new ScreenshotWatcher(ui);
         Rain = new RainAlerts(ui);
+        Language = new KeyboardLanguage(ui);
         Hub.Shell.DisplayChanged += () => ui.BeginInvoke(DispatcherPriority.Background, Apply);
     }
 
@@ -1699,6 +1701,7 @@ public sealed class IslandController
         Downloads.SetEnabled(s.Enabled && s.WatchDownloads);
         Screenshots.SetEnabled(s.Enabled && s.ScreenshotCards);
         Rain.SetEnabled(s.Enabled && s.RainAlerts);
+        Language.SetEnabled(s.Enabled && s.LanguageAlerts);
         Hub.Devices?.Apply();
         var targets = !s.Enabled ? new List<string>()
             : s.Monitor == "all" ? Monitors.All().Select(m => m.Device).ToList()
