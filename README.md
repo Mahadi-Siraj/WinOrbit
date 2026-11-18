@@ -80,7 +80,9 @@ All changeable in Settings.
 
 ## Honest status
 
-✅ implemented and verified on a real PC · 🧪 implemented and unit-tested, not yet on that hardware · ⚠️ known limitation.
+✅ implemented and verified on one desktop PC (Windows 11, Core i5-12400F, single monitor) · 🧪 implemented and unit-tested, not yet tried on that hardware · ⚠️ known limitation.
+
+**Help test it:** if you run WinOrbit on a laptop, multiple monitors, high display scaling or Windows 10, please [open an issue](../../issues/new/choose) with what worked and what didn't.
 
 | Area | Status |
 |---|---|
@@ -112,6 +114,8 @@ Contributions are welcome — open an issue or a pull request.
 ## Made by
 
 **mssatalite** — [Instagram @mssatalite](https://www.instagram.com/mssatalite/) · [GitHub: Mahadi Siraj](https://github.com/Mahadi-Siraj)
+
+Designed, directed and tested by mssatalite, with the code written by AI ([Claude Code](https://claude.com/claude-code)).
 
 If WinOrbit earns a spot on your desktop, a ⭐ on the repo helps others find it.
 
