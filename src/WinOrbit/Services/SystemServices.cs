@@ -415,13 +415,17 @@ public sealed class ForegroundWatcher : IDisposable
     public bool DesktopForeground { get; private set; }
     public string ProcessName { get; private set; } = "";
     public string FullscreenDevice { get; private set; } = "";
+    /// <summary>The monitor the foreground window is on.</summary>
+    public string ForegroundDevice { get; private set; } = "";
 
     public event Action? FullscreenChanged;
     public event Action? ForegroundChanged;
 
-    private readonly Native.WinEventProc _proc;   // kept alive for the lifetime of the hook
-    private IntPtr _hook;
-    private readonly DispatcherTimer _timer;
+    private readonly Native.WinEventProc _proc, _moveProc;   // kept alive for the lifetime of the hooks
+    private IntPtr _hook, _moveHook;
+    private uint _movePid;
+    private IntPtr _fg;
+    private readonly DispatcherTimer _timer, _settle;
     private readonly uint _ownPid = (uint)Environment.ProcessId;
 
     public ForegroundWatcher()
@@ -429,10 +433,25 @@ public sealed class ForegroundWatcher : IDisposable
         _proc = (_, _, _, _, _, _, _) => Evaluate(true);
         // Out-of-context hook: the callback runs in OUR process. Nothing is injected anywhere.
         _hook = Native.SetWinEventHook(Native.EVENT_SYSTEM_FOREGROUND, Native.EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _proc, 0, 0, Native.WINEVENT_OUTOFCONTEXT);
-        // A window can go fullscreen without a foreground change (F11, video). One cheap check every 2.5 s covers that.
+        // A window can go fullscreen without a foreground change (F11, a video's fullscreen button). Windows reports
+        // the foreground window moving or resizing, so that is checked straight away (coalesced to one check per
+        // burst of moves); a slow timer stays as a safety net for anything that slips past.
+        _moveProc = (_, _, hwnd, idObject, _, _, _) => { if (idObject == 0 && hwnd == _fg) { _settle!.Stop(); _settle.Start(); } };
+        _settle = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(60) };
+        _settle.Tick += (_, _) => { _settle.Stop(); Evaluate(false); };
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2.5) };
         _timer.Tick += (_, _) => Evaluate(false);
         _timer.Start();
+    }
+
+    /// <summary>Listen for moves and resizes of the foreground app's windows only (re-aimed when the foreground changes).</summary>
+    private void WatchMoves(uint pid)
+    {
+        if (pid == _movePid) return;
+        if (_moveHook != IntPtr.Zero) { Native.UnhookWinEvent(_moveHook); _moveHook = IntPtr.Zero; }
+        _movePid = pid;
+        if (pid != 0 && pid != _ownPid)
+            _moveHook = Native.SetWinEventHook(Native.EVENT_OBJECT_LOCATIONCHANGE, Native.EVENT_OBJECT_LOCATIONCHANGE, IntPtr.Zero, _moveProc, pid, 0, Native.WINEVENT_OUTOFCONTEXT);
     }
 
     private void Evaluate(bool foregroundEvent)
@@ -440,13 +459,16 @@ public sealed class ForegroundWatcher : IDisposable
         try
         {
             var fg = Native.GetForegroundWindow();
+            _fg = fg;
             var cls = fg == IntPtr.Zero ? "" : Native.ClassNameOf(fg);
             var desktop = cls is "Progman" or "WorkerW";
             var shell = desktop || cls is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd" or "XamlExplorerHostIslandWindow" or "TopLevelWindowForOverflowXamlIsland";
             Native.GetWindowThreadProcessId(fg, out var pid);
+            WatchMoves(shell ? 0 : pid);
 
             var full = false;
             var device = "";
+            if (fg != IntPtr.Zero) ForegroundDevice = Monitors.FromWindow(fg).Device;
             if (fg != IntPtr.Zero && !shell && pid != _ownPid && Native.GetWindowRect(fg, out var r))
             {
                 var mon = Monitors.FromWindow(fg);
@@ -489,7 +511,9 @@ public sealed class ForegroundWatcher : IDisposable
     public void Dispose()
     {
         _timer.Stop();
+        _settle.Stop();
         if (_hook != IntPtr.Zero) { Native.UnhookWinEvent(_hook); _hook = IntPtr.Zero; }
+        WatchMoves(0);
     }
 }
 

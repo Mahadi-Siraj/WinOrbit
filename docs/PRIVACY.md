@@ -29,7 +29,8 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 | Wallpaper image file / live-wallpaper layer | Colour extraction and frosted backdrops | No |
 | CPU, memory, disk, network counters (Windows PDH), GPU via NVIDIA's NVML | System widgets and island tiles — sampled **only while one is visible** | No |
 | Now-playing info from the Windows media session API, including the artwork thumbnail | Media widget/island; the artwork's colours are worked out in memory for the album-colour glass, equaliser and rim | No |
-| Name of the foreground process + whether it is fullscreen | Hiding during games; opt-in automation rules | No (not logged) |
+| Name of the foreground process + whether it is fullscreen; Windows' "this window moved or resized" notices for that one app's windows | Hiding during games and for the apps you choose; opt-in automation rules | No (not logged) |
+| Names and file descriptions of apps with a window open | Only while the "Add app…" list is open in island settings; the app you pick is saved by process name | No |
 | File names of in-progress downloads in your Downloads folder | Opt-in island download indicator, **off by default** | No |
 | `Rainmeter.ini` and skin `.ini` files | Rainmeter library (read-only) | No |
 | Clipboard (text, links, images, file paths) | Opt-in **Clipboard history**, **off by default**. Last 40 items in memory; forgotten on quit or when switched off; only pinned text is saved. Copies flagged private by the copying app (`ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory = 0`, `Clipboard Viewer Ignore` — what password managers set) are never read into history | No |

@@ -6,22 +6,6 @@
         ShowInTaskbar="False" Topmost="True" ShowActivated="False" ResizeMode="NoResize"
         Width="560" Height="420" UseLayoutRounding="True"
         FontFamily="{DynamicResource F.Family}" Foreground="{DynamicResource T.Text}" TextOptions.TextFormattingMode="Ideal">
-    <Window.Resources>
-        <!-- Launcher tiles: the whole tile is the button; the look and motion come from the tile itself -->
-        <Style x:Key="TileButton" TargetType="Button">
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="Transparent" Padding="2,6,2,4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
     <Grid x:Name="Root">
         <Grid.LayoutTransform>
             <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1"/>
@@ -179,9 +163,6 @@
                     </Grid>
 
                     <Grid Grid.Row="1" Margin="0,10,0,0">
-
-                        <!-- Launcher: every module as an app-style tile with a live line under it -->
-                        <UniformGrid x:Name="TabHome" Columns="4" Visibility="Collapsed" VerticalAlignment="Center"/>
 
                         <!-- Media -->
                         <Grid x:Name="TabMedia" Visibility="Collapsed">

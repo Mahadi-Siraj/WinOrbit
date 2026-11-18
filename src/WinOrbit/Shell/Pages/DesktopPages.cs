@@ -170,6 +170,33 @@ public sealed class IslandPage : PageBase
     private static IslandSettings S => Hub.Settings.Island;
     private static void Save() { Hub.Store.Save(); Hub.Island.Apply(); }
 
+    /// <summary>A list of apps (process names) as removable chips, plus "Add app…" which lists the apps open right now.</summary>
+    private static WrapPanel AppPicker(List<string> list)
+    {
+        var panel = new WrapPanel();
+        void Fill()
+        {
+            panel.Children.Clear();
+            foreach (var app in list.ToList())
+                panel.Children.Add(Kit.Btn(app, () => { list.Remove(app); Save(); Fill(); }, Glyph.Cancel, tooltip: $"Remove {app}").With(b => b.Margin = new Thickness(0, 0, 8, 8)));
+            panel.Children.Add(Kit.Btn("Add app…", () =>
+            {
+                var apps = RunningApps.List().Where(a => !list.Contains(a.Process, StringComparer.OrdinalIgnoreCase)).ToList();
+                var options = apps.Select(a => a.Name.Equals(a.Process, StringComparison.OrdinalIgnoreCase) ? a.Name : $"{a.Name}  ({a.Process})").ToList();
+                options.Add("Type a program name…");
+                var i = Dialogs.Choose("Add app", "Apps open right now. Open the one you want first if it isn't here.", options);
+                if (i < 0) return;
+                var pick = i < apps.Count ? apps[i].Process : Dialogs.Prompt("Add app", "Program name, as in Task Manager's Details tab (e.g. obs64 or vlc.exe)", "", "Add")?.Trim();
+                if (string.IsNullOrEmpty(pick)) return;
+                if (pick.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) pick = pick[..^4];
+                if (!list.Contains(pick, StringComparer.OrdinalIgnoreCase)) { list.Add(pick); Save(); }
+                Fill();
+            }, Glyph.Add).With(b => b.Margin = new Thickness(0, 0, 8, 8)));
+        }
+        Fill();
+        return panel;
+    }
+
     protected override void Build()
     {
         Children.Add(Kit.Notice(Glyph.More, S.Enabled ? "The island is running" : "The island is off", S.Enabled ? "Try it now — the island will expand on your screen." : "Turn it on to get time, media, timers and quick controls at the top of your screen.", S.Enabled ? "T.Good" : "T.Warn",
@@ -254,13 +281,12 @@ public sealed class IslandPage : PageBase
                 Save();
             }, modules.Children.Count > 0, glyph));
         }
-        var openTo = new[] { "Last", "Launcher" };
-        modules.Children.Add(Kit.Row("Open to", "Last panel reopens what you used last; Launcher opens the grid of all modules first.",
-            Kit.Segmented(new[] { "Last panel", "Launcher" }, Math.Max(0, Array.IndexOf(openTo, S.OpenTo)), i => { S.OpenTo = openTo[i]; Save(); }), true));
-        Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. The grid button (or Home / 0) shows every module as a launcher; ←/→ or the number keys switch with the keyboard.", modules));
+        Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. Use ←/→ or the number keys to switch with the keyboard.", modules));
 
         Children.Add(Kit.Section("Behaviour", null,
-            Kit.ToggleRow("Hide during fullscreen apps and games", "Gets completely out of the way of games, videos and presentations.", S.HideInFullscreen, v => { S.HideInFullscreen = v; Save(); }, false),
+            Kit.ToggleRow("Hide during fullscreen apps and games", "Gets out of the way the moment a game, video or presentation goes fullscreen on the island's screen, and drops back in when it ends.", S.HideInFullscreen, v => { S.HideInFullscreen = v; Save(); }, false),
+            Kit.WideRow("Keep showing over", "Fullscreen apps the island stays visible over — say, slides you time with the focus timer.", AppPicker(S.ShowOverFullscreenApps)),
+            Kit.WideRow("Always hide for", "Apps the island hides for whenever they're in front on its screen, fullscreen or not — a game in a window, a video editor, a screen recorder.", AppPicker(S.HideForApps)),
             Kit.ToggleRow("Auto-hide", "Slides up out of view; touch the top edge of the screen to bring it back.", S.AutoHide, v => { S.AutoHide = v; Save(); }),
             Kit.ToggleRow("Expand on hover", "Opens after resting the pointer on it briefly.", S.ExpandOnHover, v => { S.ExpandOnHover = v; Save(); }),
             Kit.SliderRow("Hover delay", "How long the pointer must rest before it opens, so sweeping past the top of the screen doesn't open it.", 0, 1200, S.HoverDelayMs, v => { S.HoverDelayMs = (int)Math.Round(v / 20) * 20; Save(); }, v => $"{v:0} ms", true, 20),

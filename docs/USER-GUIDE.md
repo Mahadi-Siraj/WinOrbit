@@ -40,9 +40,8 @@ Closing the main window keeps the island and widgets running from the tray (turn
 * In the expanded panel: **←/→** or **1–9** switch tabs, **Space** plays/pauses (Media) or starts/pauses (Focus).
 * **Calendar:** click a day to see its events. To add one, type in the box under the list and press Enter. Put the time first ("9:30 Stand-up", "7pm Dinner", "14:30 Dentist"); with no time it's an all-day event. Hover an event and click × to remove it. Events with a time pop up as a card ten minutes before and when they start (Dynamic Island › Live activities › Event reminders). Events are saved on this PC only.
 * **Weather:** turn it on and choose a place in Settings › Privacy (it's the same switch as the Weather widget). The page shows now, every other hour for the next twelve, and three days; the glass takes on the sky's colours while it's open.
-* **All modules:** the first button in the panel's tab bar (or **Home** / **0**) shows every module as a coloured tile with a live line — the song playing, the focus countdown, today's date, your note, clipboard and Shelf counts. Click a tile to open it. To open the island on this grid every time, set Dynamic Island › Modules › **Open to** › Launcher.
 * The capsule shows one live activity at a time — a running timer, a download (opt-in) or what's playing — followed by the time and date.
-* It hides automatically during fullscreen games and videos.
+* It hides the moment a game, video or presentation goes fullscreen on its screen (within about a tenth of a second) and drops back in when it ends. In Dynamic Island › Behaviour you can pick apps it should **keep showing over** (e.g. slides you time with the focus timer) and apps it should **always hide for** whenever they're in front, fullscreen or not (a game in a window, a video editor, a screen recorder). "Add app…" lists the apps open right now; or type a program name as Task Manager shows it.
 * Brightness works on monitors that support DDC/CI (most external monitors; not laptop panels yet); otherwise the slider is disabled and says so. A missed reply is retried, so a busy monitor no longer disables the slider.
 
 ## Widgets

@@ -111,8 +111,6 @@ public sealed class IslandSettings
     public string Shape { get; set; } = "Capsule";
     /// <summary>Collapsed height: "Slim", "Regular" or "Tall".</summary>
     public string Thickness { get; set; } = "Regular";
-    /// <summary>What the island opens to: "Last" (the last panel used) or "Launcher" (the grid of modules).</summary>
-    public string OpenTo { get; set; } = "Last";
     /// <summary>While a song plays, the glass takes on the colours of its artwork.</summary>
     public bool AlbumTint { get; set; } = true;
     /// <summary>Pop-ups when dark/light mode, night light, airplane mode or Energy Saver are switched.</summary>
@@ -139,6 +137,10 @@ public sealed class IslandSettings
     public string Material { get; set; } = "Glass";
     public bool AutoHide { get; set; }
     public bool HideInFullscreen { get; set; } = true;
+    /// <summary>Apps (process names) the island stays visible over even when they are fullscreen.</summary>
+    public List<string> ShowOverFullscreenApps { get; set; } = new();
+    /// <summary>Apps (process names) the island hides for whenever they are in front, fullscreen or not.</summary>
+    public List<string> HideForApps { get; set; } = new();
     public bool ExpandOnHover { get; set; }
     public int AutoCollapseSeconds { get; set; } = 6;
     public bool PeekOnMediaChange { get; set; } = true;

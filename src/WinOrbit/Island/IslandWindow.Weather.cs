@@ -21,6 +21,8 @@ public partial class IslandWindow
     private Brush? _skyWash;
     private string _skyKey = "";
 
+    private static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
+
     private async void ShowWeather(bool force = false)
     {
         if (!Hub.Weather.Enabled)

@@ -96,18 +96,6 @@ public class MotionAndDeviceTests
         Assert.Equal(WinOrbit.Island.IslandWindow.ShapeCorners("Capsule", 12), WinOrbit.Island.IslandWindow.ShapeCorners("unknown", 12));
     }
 
-    [Fact]
-    public void Launcher_tiles_each_have_their_own_colours()
-    {
-        string[] modules = { "media", "system", "controls", "focus", "calendar", "weather", "notes", "clipboard", "shelf" };
-        var tops = modules.Select(m => WinOrbit.Island.IslandWindow.TileColors(m).Top).ToList();
-        Assert.Equal(modules.Length, tops.Distinct().Count());
-        // Every tile is a gradient, and an unknown module still gets a (grey) tile rather than nothing.
-        Assert.All(modules, m => { var (t, b) = WinOrbit.Island.IslandWindow.TileColors(m); Assert.NotEqual(t, b); });
-        Assert.DoesNotContain(WinOrbit.Island.IslandWindow.TileColors("unknown").Top, tops);
-        Assert.Equal("home", WinOrbit.Island.IslandWindow.HomeTab);
-    }
-
     [Theory]
     [InlineData("9:30 Stand-up", 9, 30, "Stand-up")]
     [InlineData("14:30 Dentist", 14, 30, "Dentist")]
@@ -157,6 +145,23 @@ public class MotionAndDeviceTests
         Assert.Equal("now", due(day.AddHours(19).AddMinutes(4)));         // island was busy: still shown
         Assert.Null(due(day.AddHours(19).AddMinutes(6)));                 // too late to be useful
         Assert.Null(WinOrbit.Island.IslandWindow.ReminderDue(all[1], day.AddHours(9)));   // all-day events don't pop up
+    }
+
+    [Fact]
+    public void Island_hides_for_fullscreen_and_chosen_apps_but_not_kept_ones()
+    {
+        var s = new WinOrbit.Core.IslandSettings { ShowOverFullscreenApps = { "POWERPNT.EXE" }, HideForApps = { "obs64" } };
+        bool Hide(string app, bool full, bool front = true) => WinOrbit.Island.IslandWindow.ShouldHide(s, app, full, front);
+
+        Assert.True(Hide("chrome", full: true));                 // any fullscreen app
+        Assert.False(Hide("chrome", full: false));               // a normal window: stays
+        Assert.False(Hide("powerpnt", full: true));              // kept over fullscreen (case and .exe don't matter)
+        Assert.True(Hide("OBS64", full: false));                 // always hidden for, even windowed
+        Assert.False(Hide("obs64", full: false, front: false));  // …but only while it's in front on the island's screen
+        s.HideInFullscreen = false;
+        Assert.False(Hide("chrome", full: true));                // fullscreen hiding off
+        Assert.True(Hide("obs64", full: true));                  // the always-hide list still applies
+        Assert.False(Hide("", full: false));
     }
 
     [Fact]

@@ -180,6 +180,7 @@ public partial class IslandWindow : Window
         Hub.Timers.Changed += OnTimerChanged;
         Hub.Timers.Completed += OnTimerCompleted;
         Hub.Foreground.FullscreenChanged += ApplyVisibility;
+        Hub.Foreground.ForegroundChanged += ApplyVisibility;
         Hub.Theme.Applied += OnThemeApplied;
         _downloads.Changed += OnDownloadsChanged;
         InitLive();
@@ -211,6 +212,7 @@ public partial class IslandWindow : Window
         Hub.Timers.Changed -= OnTimerChanged;
         Hub.Timers.Completed -= OnTimerCompleted;
         Hub.Foreground.FullscreenChanged -= ApplyVisibility;
+        Hub.Foreground.ForegroundChanged -= ApplyVisibility;
         Hub.Theme.Applied -= OnThemeApplied;
         _downloads.Changed -= OnDownloadsChanged;
         CleanupLive();
@@ -326,9 +328,37 @@ public partial class IslandWindow : Window
 
     private void ApplyVisibility()
     {
-        var hide = S.HideInFullscreen && Hub.Foreground.IsFullscreen && (Hub.Foreground.FullscreenDevice == Device || Monitors.All().Count == 1);
+        var fg = Hub.Foreground;
+        var single = Monitors.All().Count == 1;
+        var hide = ShouldHide(S, fg.ProcessName,
+            fullscreenHere: fg.IsFullscreen && (fg.FullscreenDevice == Device || single),
+            inFrontHere: !fg.DesktopForeground && (fg.ForegroundDevice == Device || single));
         if (hide && IsVisible) { if (_expanded) Collapse(true); Hide(); }
-        else if (!hide && !IsVisible && !_closing) { Show(); Place(); }
+        else if (!hide && !IsVisible && !_closing)
+        {
+            Show();
+            Place();
+            if (Motion.Intensity > 0.01)
+            {
+                // Comes back the way it first arrived: dropping in from the top edge with a little bounce.
+                Pill.Opacity = 0;
+                PillShift.Y = -24;
+                Motion.To(Pill, OpacityProperty, S.Opacity, 260);
+                Springs.To(PillShift, TranslateTransform.YProperty, 0, 0.42, 0.66);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the island steps aside. Apps on the "keep showing" list win over fullscreen hiding; apps on the
+    /// "always hide" list hide it whenever they're in front on its screen, fullscreen or not.
+    /// </summary>
+    internal static bool ShouldHide(IslandSettings s, string process, bool fullscreenHere, bool inFrontHere)
+    {
+        static string Norm(string p) => (p.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? p[..^4] : p).Trim();
+        bool On(List<string> list) => process.Length > 0 && list.Any(a => string.Equals(Norm(a), Norm(process), StringComparison.OrdinalIgnoreCase));
+        if (inFrontHere && On(s.HideForApps)) return true;
+        return s.HideInFullscreen && fullscreenHere && !On(s.ShowOverFullscreenApps);
     }
 
     // ------------------------------------------------------------------ collapsed content
@@ -668,7 +698,6 @@ public partial class IslandWindow : Window
         Compact.IsHitTestVisible = false;
         // Fill and lay out the panel BEFORE anything moves. Doing this mid-motion is what made the first frames
         // of opening late (25–50 ms); now the motion starts only once the heavy work is done.
-        if (S.OpenTo == "Launcher") _tab = HomeTab;
         Expanded.Opacity = 0;
         Expanded.Visibility = Visibility.Visible;
         Expanded.Height = HeightFor(_tab) - 24;
@@ -753,9 +782,7 @@ public partial class IslandWindow : Window
         if (e.Key == Key.Escape) { Collapse(); e.Handled = true; return; }
         if (typing) return;
         var tabs = ActiveTabs();
-        tabs.Insert(0, HomeTab);   // the launcher is the first stop when stepping through with the arrows
         var i = Math.Max(0, tabs.IndexOf(_tab));
-        if (e.Key is Key.Home or Key.D0 or Key.NumPad0 && Keyboard.Modifiers == ModifierKeys.None) { ShowHome(); e.Handled = true; return; }
         if (e.Key is Key.Right or Key.Left && Keyboard.FocusedElement is not Slider)
         {
             var next = tabs[(i + (e.Key == Key.Right ? 1 : tabs.Count - 1)) % tabs.Count];
@@ -766,7 +793,7 @@ public partial class IslandWindow : Window
         else if (e.Key == Key.Space && _tab == "focus" && Keyboard.FocusedElement is not Button) { Hub.Timers.Toggle(); e.Handled = true; }
         else if (e.Key is >= Key.D1 and <= Key.D9 && Keyboard.Modifiers == ModifierKeys.None)
         {
-            var n = e.Key - Key.D1 + 1;   // 1–9 are the modules; 0 and Home open the launcher
+            var n = e.Key - Key.D1;   // 1–9 pick a module
             if (n < tabs.Count) { ShowTab(tabs[n]); e.Handled = true; }
         }
     }
@@ -919,13 +946,11 @@ public partial class IslandWindow : Window
     {
         Tabs.Children.Clear();
         var active = ActiveTabs();
-        if (!active.Contains(_tab) && _tab != HomeTab) _tab = active[0];
-        BuildHome(active);
+        if (!active.Contains(_tab)) _tab = active[0];
         // Each button narrows as modules are added so the bar always clears the pin, settings and collapse buttons
         // (about 326 px are free beside them; each button is its ~16 px glyph, its padding and a 2 px margin each side).
-        var pad = Math.Clamp((326.0 / (active.Count + 1) - 20) / 2, 5, 11);
-        // The launcher's own button leads the bar; the modules follow.
-        foreach (var t in new[] { (Id: HomeTab, Glyph: Glyph.Tiles, Name: "All modules") }.Concat(AllTabs.Where(t => active.Contains(t.Id))))
+        var pad = Math.Clamp((326.0 / active.Count - 20) / 2, 5, 11);
+        foreach (var t in AllTabs.Where(t => active.Contains(t.Id)))
         {
             var rb = new RadioButton { GroupName = "IslandTabs" + GetHashCode(), ToolTip = t.Name, Tag = t.Id, Padding = new Thickness(pad, 6, pad, 6), IsChecked = t.Id == _tab };
             rb.SetResourceReference(StyleProperty, "Segment");
@@ -949,7 +974,6 @@ public partial class IslandWindow : Window
         _loadingUi = true;
         foreach (var rb in Tabs.Children.OfType<RadioButton>()) rb.IsChecked = (string)rb.Tag == id;
         _loadingUi = false;
-        TabHome.Visibility = id == HomeTab ? Visibility.Visible : Visibility.Collapsed;
         TabMedia.Visibility = id == "media" ? Visibility.Visible : Visibility.Collapsed;
         TabSystem.Visibility = id == "system" ? Visibility.Visible : Visibility.Collapsed;
         TabControls.Visibility = id == "controls" ? Visibility.Visible : Visibility.Collapsed;
@@ -959,13 +983,12 @@ public partial class IslandWindow : Window
         TabNotes.Visibility = id == "notes" ? Visibility.Visible : Visibility.Collapsed;
         TabClipboard.Visibility = id == "clipboard" ? Visibility.Visible : Visibility.Collapsed;
         TabShelf.Visibility = id == "shelf" ? Visibility.Visible : Visibility.Collapsed;
-        var view = id switch { HomeTab => (FrameworkElement)TabHome, "media" => TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "weather" => TabWeather, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
+        var view = id switch { "media" => (FrameworkElement)TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "weather" => TabWeather, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
         Motion.Enter(view, 8, 220);
         _mediaTick.Stop();
         UpdateMonitorSubscription();
         switch (id)
         {
-            case HomeTab: RefreshHome(); PopTiles(); break;
             case "media": UpdateMedia(); LoadVolume(); break;
             case "controls": LoadVolume(); LoadBrightness(); RefreshQuick(); break;
             case "focus": UpdateFocus(); break;
