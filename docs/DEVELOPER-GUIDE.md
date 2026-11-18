@@ -10,7 +10,7 @@ Requirements: Windows 10 2004+ or 11, the .NET 8 SDK. Optional: Inno Setup 6 for
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 241 unit tests, under a second
+dotnet test tests\WinOrbit.Tests                  # 260 unit tests, under a second
 src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
@@ -112,7 +112,7 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 241 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 260 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.
 * Never toggle someone's real Wi-Fi, Bluetooth, dark mode or night light in a test without asking; use the `Demo()` previews instead.

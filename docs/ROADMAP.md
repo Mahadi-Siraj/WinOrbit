@@ -65,6 +65,7 @@ Wave 5 — **built after 1.2, not released yet** (18–19 Nov 2026; committed, w
 * ✅ **Check for updates** button — only when clicked, through the network gate.
 * ✅ **Timers from the launcher** — `timer 5 min`, `focus 50`, `stopwatch`; a "Timer done" card when a countdown ends.
 * ✅ **Reminders from the launcher** — `remind me in 20 min to stretch`, `remind me at 6pm to call mom`; one card on that minute, kept in the island's calendar.
+* ✅ **World time in the launcher** — `time in Tokyo`, `dhaka time`; offline, from Windows' time-zone data.
 * ✅ Copy a setup summary for bug reports; backups leave out Windows-tweak originals; accessibility fixes; island code split into smaller files; render check no longer misfires while the monitor is off.
 * 📦 winget manifest prepared in `packaging/winget/` (not submitted).
 
