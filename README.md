@@ -114,7 +114,7 @@ dotnet test tests\WinOrbit.Tests          # 128 unit tests
 ```
 
 Releases are automatic: change the number in `VERSION` on `main` (or push a `v*` tag) and GitHub Actions tests, builds and publishes the installer, portable zip and checksums (`.github/workflows/release.yml`).
-Docs: [developer guide](docs/DEVELOPER-GUIDE.md) · [architecture](docs/ARCHITECTURE.md) · [user guide](docs/USER-GUIDE.md) · [privacy audit](docs/PRIVACY.md).
+Docs: [developer guide](docs/DEVELOPER-GUIDE.md) · [notes for AI coding agents](AGENTS.md) · [architecture](docs/ARCHITECTURE.md) · [user guide](docs/USER-GUIDE.md) · [privacy audit](docs/PRIVACY.md).
 
 Contributions are welcome — open an issue or a pull request.
 
