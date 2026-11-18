@@ -250,6 +250,18 @@ public class MotionAndDeviceTests
         Assert.Null(RainAlerts.Soon(Forecast(0), 0));                                // no hourly data
     }
 
+    [Theory]
+    [InlineData("settings.json", true)]
+    [InlineData("data.json", true)]
+    [InlineData(@"themes\Midnight.json", true)]
+    [InlineData("profiles/Study.json", true)]
+    [InlineData(@"backups\tweaks.json", false)]
+    [InlineData("backups/nightlight.json", false)]
+    [InlineData(@"logs\winorbit.json", false)]
+    [InlineData("readme.txt", false)]
+    public void Backups_never_carry_the_windows_tweak_originals(string path, bool included)
+        => Assert.Equal(included, WinOrbit.Shell.Pages.SettingsPage.BackupIncludes(path));
+
     [Fact]
     public void Rain_soon_title_reads_naturally()
     {

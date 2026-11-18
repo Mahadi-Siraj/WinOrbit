@@ -247,6 +247,18 @@ public sealed class SettingsPage : PageBase
         return Kit.Row(label, null, box, divider);
     }
 
+    /// <summary>
+    /// What a backup carries: the JSON files (settings, data, themes, profiles), never the logs or the
+    /// <c>backups</c> folder. That folder holds this PC's original Windows values for Revert all; restoring an
+    /// older copy (or another PC's) over it would make Revert all put back the wrong values.
+    /// </summary>
+    internal static bool BackupIncludes(string relativePath)
+    {
+        var p = relativePath.Replace('\\', '/').TrimStart('/');
+        if (!p.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return false;
+        return !p.StartsWith("backups/", StringComparison.OrdinalIgnoreCase) && !p.StartsWith("logs/", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void ExportBackup()
     {
         var dlg = new SaveFileDialog { FileName = $"WinOrbit backup {DateTime.Now:yyyy-MM-dd}.zip", Filter = "Zip archive|*.zip" };
@@ -257,7 +269,8 @@ public sealed class SettingsPage : PageBase
             if (File.Exists(dlg.FileName)) File.Delete(dlg.FileName);
             using var zip = ZipFile.Open(dlg.FileName, ZipArchiveMode.Create);
             foreach (var f in Directory.EnumerateFiles(Paths.Root, "*.json", SearchOption.AllDirectories))
-                zip.CreateEntryFromFile(f, Path.GetRelativePath(Paths.Root, f));
+                if (BackupIncludes(Path.GetRelativePath(Paths.Root, f)))
+                    zip.CreateEntryFromFile(f, Path.GetRelativePath(Paths.Root, f));
             Dialogs.Message("Backup saved", "Your WinOrbit data was saved to " + dlg.FileName);
         }
         catch (Exception ex) { Dialogs.Message("Backup failed", ex.Message); }
@@ -276,7 +289,7 @@ public sealed class SettingsPage : PageBase
                 foreach (var f in Directory.EnumerateFiles(Paths.Root, "*.json", SearchOption.AllDirectories).Where(f => !f.StartsWith(Paths.Backups)))
                     z.CreateEntryFromFile(f, Path.GetRelativePath(Paths.Root, f));
             using (var zip = ZipFile.OpenRead(dlg.FileName))
-                foreach (var e in zip.Entries.Where(e => e.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+                foreach (var e in zip.Entries.Where(e => BackupIncludes(e.FullName)))
                 {
                     var target = Path.GetFullPath(Path.Combine(Paths.Root, e.FullName));
                     if (!target.StartsWith(Path.GetFullPath(Paths.Root), StringComparison.OrdinalIgnoreCase)) continue;   // zip-slip guard

@@ -93,7 +93,7 @@ Closing the main window keeps the island and widgets running from the tray (turn
 
 ## Configuration files
 
-All in `%APPDATA%\WinOrbit` (portable: `Data\` next to the exe). They are plain JSON and safe to back up. Use **Settings › Your data** to export/restore a `.zip` backup. If a file is damaged, WinOrbit keeps a `.corrupt` copy and starts with defaults rather than failing.
+All in `%APPDATA%\WinOrbit` (portable: `Data\` next to the exe). They are plain JSON and safe to back up. Use **Settings › Your data** to export/restore a `.zip` backup — handy for moving WinOrbit to another PC. A backup holds your settings, notes, tasks, events, themes and profiles; it leaves out the logs and the `backups` folder (this PC's original Windows values for **Revert all**), so restoring an old backup never changes what Revert all puts back. If a file is damaged, WinOrbit keeps a `.corrupt` copy and starts with defaults rather than failing.
 
 ## Troubleshooting
 
