@@ -82,6 +82,10 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Installer | silent install, per-user | ✅ no UAC; files, Start-menu shortcut, start-up entry, Apps & Features entry created; app launches (start-up 0.75 s) |
 | Uninstaller | silent uninstall | ✅ program folder, shortcut, start-up value and uninstall entry removed; user data kept (default answer); Rainmeter untouched |
 | Reinstall over existing data | | ✅ settings picked up |
+| Render check with the monitor switched off (19 Nov) | settings window opened while the DisplayPort monitor was off (Windows listed no monitor, only a 1920×1080 desktop) | **Found and fixed:** every window reads back blank then, so the check switched the settings window to software rendering for the rest of the session. It now waits for a screen, display or lock change; the log shows "checking again when that changes" instead of the switch |
+| Bluetooth battery card (19 Nov) | Preview › Bluetooth | ✅ "Headphones · Connected", then "Connected · 80% battery" in place 1.5 s later. The device query with the battery property is accepted by Windows (live test); no Bluetooth headset here to show a real level |
+| Lyrics for video titles (19 Nov) | unit tests + `LiveLyricsTests` | ✅ "(Official Video)", "[4K]", "- 2011 Remaster", "feat." removed; "Artist - Song" split when the channel isn't the artist; live LRCLIB lookup still returns synced lines |
+| Check for updates (19 Nov) | Settings › Updates › Check now, network switch on | ✅ one request to raw.githubusercontent.com, "You have the latest version (1.2.0)" |
 
 ## 4. Not verified here (and why)
 
