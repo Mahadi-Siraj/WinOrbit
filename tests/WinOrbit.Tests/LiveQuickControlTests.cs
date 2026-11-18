@@ -53,6 +53,23 @@ public class LiveQuickControlTests
         Assert.True(devices[0].IsDefault);
     }
 
+    /// <summary>Read-only: Windows accepts the battery property in a device query (paired Bluetooth devices, if any).</summary>
+    [Fact]
+    public async Task Live_bluetooth_battery_query_is_accepted()
+    {
+        var aqs = "System.Devices.Aep.ProtocolId:=\"{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}\" AND System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True";
+        var paired = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(aqs, new[] { "System.Devices.Aep.ContainerId" }, Windows.Devices.Enumeration.DeviceInformationKind.AssociationEndpoint);
+        foreach (var d in paired)
+        {
+            if (!d.Properties.TryGetValue("System.Devices.Aep.ContainerId", out var c) || c is not Guid g) continue;
+            var nodes = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync($"System.Devices.ContainerId:=\"{{{g}}}\"", new[] { WinOrbit.Services.DeviceEvents.BatteryKey }, Windows.Devices.Enumeration.DeviceInformationKind.Device);
+            var level = WinOrbit.Services.DeviceEvents.Battery(nodes.Select(n => n.Properties.TryGetValue(WinOrbit.Services.DeviceEvents.BatteryKey, out var v) ? v : null));
+            Assert.True(level is null or (>= 0 and <= 100));
+        }
+        // With nothing paired this still checks the property key's format against Windows.
+        await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync("System.Devices.ContainerId:=\"{00000000-0000-0000-ffff-ffffffffffff}\"", new[] { WinOrbit.Services.DeviceEvents.BatteryKey }, Windows.Devices.Enumeration.DeviceInformationKind.Device);
+    }
+
     [Fact]
     public void LivePowerMode_cycles_and_restores()
     {

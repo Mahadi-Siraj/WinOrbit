@@ -37,7 +37,7 @@ People stack half a dozen tools to make Windows feel modern — a Dynamic Island
 A liquid-glass capsule at the top of your screen that comes alive:
 * **Now playing** with album art, an equaliser that moves with the real audio (tinted by the cover), a **seek bar** and ±10 s — Spotify, YouTube in Chrome/Brave/Edge, Apple Music, Media Player, and classic players like **VLC, foobar2000, Winamp, PotPlayer, MPC and mpv**.
 * **Synced lyrics** (opt-in) — the line being sung, right in the capsule.
-* **Live activities** — volume and brightness meter, a green **charging** animation, low-battery warnings, Energy Saver, focus timer, downloads, **screenshots** (a thumbnail card you can click to open or drag straight into a chat), **Caps / Num / Scroll Lock**, the **keyboard language** switching, **Wi-Fi and Ethernet** connecting and dropping, the **Wi-Fi and Bluetooth radios** switching on or off, **dark / light mode**, **night light**, **airplane mode**, **Energy Saver**, **Bluetooth** devices and **USB** devices coming and going. Connections and radios open as a larger card (icon tile, name, state, and a switch that flips while you watch), and they arrive within a moment of the change.
+* **Live activities** — volume and brightness meter, a green **charging** animation, low-battery warnings, Energy Saver, focus timer, downloads, **screenshots** (a thumbnail card you can click to open or drag straight into a chat), **Caps / Num / Scroll Lock**, the **keyboard language** switching, **Wi-Fi and Ethernet** connecting and dropping, the **Wi-Fi and Bluetooth radios** switching on or off, **dark / light mode**, **night light**, **airplane mode**, **Energy Saver**, **Bluetooth** devices (with their battery level, when the device reports it) and **USB** devices coming and going. Connections and radios open as a larger card (icon tile, name, state, and a switch that flips while you watch), and they arrive within a moment of the change.
 * **Liquid motion** — the island moves on real spring physics: it bounces open, squashes when pressed, bulges like a droplet when something new arrives, and can be redirected mid-motion without a jolt. Optional coloured rims (Prism, Aurora, Sunset, Ocean, Mono, Accent) with a soft glow. Reduced Motion turns all of it off.
 * **Shapes** — Capsule, Rounded, Square, Notch (flush with the top of the screen, like a camera notch) or Drop, in Slim, Regular or Tall; every shape morphs on the same springs.
 * **Album colours** — while a song plays, the glass glows with its artwork's colours and cross-fades when the track changes; a new song opens a card with the cover, title and artist. An "Album" rim uses the same colours.
@@ -94,7 +94,7 @@ All changeable in Settings.
 | Area | Status |
 |---|---|
 | Island, live activities, media (incl. VLC detection), seek, lyrics, launcher, Control Centre, widgets, themes, profiles, privacy gate, installer | ✅ |
-| Multiple monitors, display scaling above 100 %, laptops (battery/brightness), Windows 10 | 🧪 |
+| Multiple monitors, display scaling above 100 %, laptops (battery/brightness), Windows 10, Bluetooth headphone battery (no Bluetooth headset on the test PC; checked with the preview) | 🧪 |
 | VLC can only be *controlled* (not just shown) after switching on its global media keys — see the [user guide](docs/USER-GUIDE.md) | ⚠️ |
 | Night light uses an undocumented Windows setting (format-checked, falls back to Settings) | ⚠️ |
 | Switching the output device uses an undocumented Windows interface (`IPolicyConfig`, the one Sound settings uses; falls back to Settings) | ⚠️ |
@@ -110,7 +110,7 @@ Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 f
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build
-dotnet test tests\WinOrbit.Tests          # 188 unit tests
+dotnet test tests\WinOrbit.Tests          # 190 unit tests
 .\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 

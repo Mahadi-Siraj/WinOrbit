@@ -372,6 +372,17 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Headphone_battery_takes_the_highest_valid_level()
+    {
+        Assert.Equal(80, WinOrbit.Services.DeviceEvents.Battery(new object?[] { null, (byte)80, (byte)60 }));
+        Assert.Equal(55, WinOrbit.Services.DeviceEvents.Battery(new object?[] { 55u, "x", (byte)255 }));
+        Assert.Null(WinOrbit.Services.DeviceEvents.Battery(new object?[] { null, (byte)200 }));
+        Assert.Null(WinOrbit.Services.DeviceEvents.Battery(Array.Empty<object?>()));
+        Assert.Equal("Connected · 80% battery", WinOrbit.Island.IslandWindow.BatteryLine(80));
+        Assert.Equal("Connected · battery low, 15%", WinOrbit.Island.IslandWindow.BatteryLine(15));
+    }
+
+    [Fact]
     public void Render_check_waits_while_the_screen_is_off_or_locked()
     {
         int[] one = { 0x3 }, none = Array.Empty<int>(), inactive = { 0x2 };

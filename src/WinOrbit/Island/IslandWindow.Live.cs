@@ -54,6 +54,7 @@ public partial class IslandWindow
         Hub.Devices.LockChanged += OnLockKey;
         Hub.Devices.NetworkChanged += OnNetwork;
         Hub.Devices.BluetoothChanged += OnBluetooth;
+        Hub.Devices.BluetoothBattery += OnBluetoothBattery;
         Hub.Devices.UsbChanged += OnUsb;
         Hub.Devices.RadioChanged += OnRadio;
         Hub.Devices.ModeChanged += OnMode;
@@ -85,6 +86,7 @@ public partial class IslandWindow
         Hub.Devices.LockChanged -= OnLockKey;
         Hub.Devices.NetworkChanged -= OnNetwork;
         Hub.Devices.BluetoothChanged -= OnBluetooth;
+        Hub.Devices.BluetoothBattery -= OnBluetoothBattery;
         Hub.Devices.UsbChanged -= OnUsb;
         Hub.Devices.RadioChanged -= OnRadio;
         Hub.Devices.ModeChanged -= OnMode;
@@ -170,12 +172,27 @@ public partial class IslandWindow
         }
     }
 
-    private void OnBluetooth(string name, string kind, bool connected)
+    private (string Name, string Kind)? _btCard;
+
+    private void OnBluetooth(string name, string kind, bool connected) => OnBluetooth(name, kind, connected, false);
+
+    private void OnBluetooth(string name, string kind, bool connected, bool force)
     {
-        if (!S.BluetoothAlerts) return;
-        var glyph = kind switch { "audio" => GlyphHeadphones, "input" => GlyphKeyboard, "phone" => GlyphPhone, _ => GlyphBluetooth };
-        ShowCard(glyph, name, connected ? "Connected" : "Disconnected", connected ? BtBlue : Dropped, 3);
+        if (!S.BluetoothAlerts && !force) return;
+        ShowCard(BtGlyph(kind), name, connected ? "Connected" : "Disconnected", connected ? BtBlue : Dropped, 3);
+        _btCard = connected && _card ? (name, kind) : null;
     }
+
+    private static string BtGlyph(string kind) => kind switch { "audio" => GlyphHeadphones, "input" => GlyphKeyboard, "phone" => GlyphPhone, _ => GlyphBluetooth };
+
+    /// <summary>The battery arrives a moment after "Connected": add it to that card while it is still showing.</summary>
+    private void OnBluetoothBattery(string name, int percent)
+    {
+        if (_btCard is not { } c || c.Name != name || !_card || CardTitle.Text != name) return;
+        ShowCard(BtGlyph(c.Kind), name, BatteryLine(percent), percent <= 20 ? Low : BtBlue, 3.2);
+    }
+
+    internal static string BatteryLine(int percent) => percent <= 20 ? $"Connected · battery low, {percent}%" : $"Connected · {percent}% battery";
 
     private void OnUsb(string name, bool pluggedIn)
     {
@@ -255,7 +272,10 @@ public partial class IslandWindow
             case "airplane": ShowCard(GlyphAirplane, "Airplane mode", "On · radios off", Flight, 2.6, toggle: true); break;
             case "caps": ShowCard("", "Caps Lock", "On", KeyLit, 2.4, toggle: true, cap: "A", switchColor: Connected); break;
             case "wifi": ShowCard(GlyphWifi, "Home Wi-Fi", "Wi-Fi connected", Connected, 3); break;
-            case "bluetooth": ShowCard(GlyphHeadphones, "Headphones", "Connected", BtBlue, 3); break;
+            case "bluetooth":
+                OnBluetooth("Headphones", "audio", true, force: true);
+                _ = Dispatcher.InvokeAsync(async () => { await Task.Delay(1500); OnBluetoothBattery("Headphones", 80); });
+                break;
             case "usb": ShowCard(GlyphUsb, "USB drive", "Connected", AccentColor(), 2.6); break;
             case "wifi-radio": ShowCard(GlyphWifiOff, "Wi-Fi", "Off", Neutral, 2.6, toggle: false, switchColor: BtBlue); break;
             case "bt-radio": ShowCard(GlyphBluetooth, "Bluetooth", "On", BtBlue, 2.6, toggle: true); break;

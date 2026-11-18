@@ -34,6 +34,8 @@ public sealed class DeviceEvents : IDisposable
     public event Action<NetKind, string, bool>? NetworkChanged;
     /// <summary>(name, kind hint, connected).</summary>
     public event Action<string, string, bool>? BluetoothChanged;
+    /// <summary>(name, battery percent) — shortly after a device connects, if Windows reports its battery.</summary>
+    public event Action<string, int>? BluetoothBattery;
     /// <summary>(name, plugged in).</summary>
     public event Action<string, bool>? UsbChanged;
     /// <summary>(Wi-Fi or Bluetooth, switched on).</summary>
@@ -50,6 +52,7 @@ public sealed class DeviceEvents : IDisposable
     private bool _netKnown;
     private DeviceWatcher? _bt, _ble, _usb;
     private readonly Dictionary<string, (string Name, bool Connected, string Kind)> _btDevices = new();
+    private readonly Dictionary<string, Guid> _btContainers = new();
     private readonly Dictionary<string, string> _usbDevices = new();
     private readonly Dictionary<string, DateTime> _recent = new();
     private bool _btReady, _bleReady, _usbReady;
@@ -321,7 +324,13 @@ public sealed class DeviceEvents : IDisposable
 
     // ------------------------------------------------------------------ Bluetooth
     private const string ClassicBt = "{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}", LowEnergyBt = "{bb7bb05e-5972-42b5-94fc-76eaa7084d49}";
-    private static readonly string[] BtProps = { "System.Devices.Aep.IsConnected", "System.Devices.Aep.Category", "System.Devices.Aep.Bluetooth.Cod.Major" };
+    private static readonly string[] BtProps = { "System.Devices.Aep.IsConnected", "System.Devices.Aep.Category", "System.Devices.Aep.Bluetooth.Cod.Major", "System.Devices.Aep.ContainerId" };
+
+    /// <summary>
+    /// DEVPKEY_Bluetooth_Battery: the battery level Windows shows in Settings › Bluetooth, set by the Bluetooth
+    /// stack on the device's own nodes for headsets that report it (hands-free battery, or the LE battery service).
+    /// </summary>
+    internal const string BatteryKey = "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2";
 
     private void SetBluetooth(bool on)
     {
@@ -330,7 +339,7 @@ public sealed class DeviceEvents : IDisposable
         {
             foreach (var w in new[] { _bt, _ble }) StopWatcher(w);
             _bt = _ble = null; _btReady = _bleReady = false;
-            lock (_btDevices) _btDevices.Clear();
+            lock (_btDevices) { _btDevices.Clear(); _btContainers.Clear(); }
             lock (_btLinks) { foreach (var d in _btLinks.Values) try { d.Dispose(); } catch { } _btLinks.Clear(); }
             return;
         }
@@ -345,13 +354,17 @@ public sealed class DeviceEvents : IDisposable
         var w = DeviceInformation.CreateWatcher(aqs, BtProps, DeviceInformationKind.AssociationEndpoint);
         w.Added += (sender, d) =>
         {
-            lock (_btDevices) _btDevices[d.Id] = (d.Name, IsConnected(d.Properties), BtKind(d.Name, d.Properties));
+            lock (_btDevices)
+            {
+                _btDevices[d.Id] = (d.Name, IsConnected(d.Properties), BtKind(d.Name, d.Properties));
+                if (d.Properties.TryGetValue("System.Devices.Aep.ContainerId", out var c) && c is Guid g) _btContainers[d.Id] = g;
+            }
             _ = Link(d.Id, lowEnergy);
         };
         w.Updated += (_, u) => { if (u.Properties.TryGetValue("System.Devices.Aep.IsConnected", out var v) && v is bool c) BtSet(u.Id, c); };
         w.Removed += (_, u) =>
         {
-            lock (_btDevices) _btDevices.Remove(u.Id);
+            lock (_btDevices) { _btDevices.Remove(u.Id); _btContainers.Remove(u.Id); }
             lock (_btLinks) if (_btLinks.Remove(u.Id, out var l)) try { l.Dispose(); } catch { }
         };
         w.EnumerationCompleted += (_, _) => ready();
@@ -398,11 +411,13 @@ public sealed class DeviceEvents : IDisposable
     {
         string name, kind;
         bool was;
+        Guid container;
         lock (_btDevices)
         {
             if (!_btDevices.TryGetValue(id, out var known)) return;
             (name, was, kind) = known;
             _btDevices[id] = (name, connected, kind);
+            _btContainers.TryGetValue(id, out container);
         }
         if (was == connected || !(_btReady && _bleReady) || string.IsNullOrWhiteSpace(name)) return;
         // Some devices drop and reconnect within a second (headsets switching profiles): announce once.
@@ -417,6 +432,39 @@ public sealed class DeviceEvents : IDisposable
             }
             BluetoothChanged?.Invoke(name, kind, connected);
         });
+        if (connected && container != Guid.Empty) _ = ReportBattery(name, container);
+    }
+
+    /// <summary>
+    /// The headset's battery, read once or twice in the seconds after it connects (Windows fills it in when the
+    /// device first reports it). Only the Bluetooth stack's own property is read; nothing is sent to the device.
+    /// </summary>
+    private async Task ReportBattery(string name, Guid container)
+    {
+        foreach (var wait in new[] { 1500, 3000 })
+        {
+            await Task.Delay(wait);
+            if (!_btOn) return;
+            try
+            {
+                var nodes = await DeviceInformation.FindAllAsync($"System.Devices.ContainerId:=\"{{{container}}}\"", new[] { BatteryKey }, DeviceInformationKind.Device);
+                var level = Battery(nodes.Select(n => n.Properties.TryGetValue(BatteryKey, out var v) ? v : null));
+                if (level is { } percent) { _ = _ui.BeginInvoke(() => BluetoothBattery?.Invoke(name, percent)); return; }
+            }
+            catch (Exception ex) { Log.Warn("Bluetooth battery unavailable: " + ex.GetType().Name); return; }
+        }
+    }
+
+    /// <summary>The level to show from the values on a device's nodes: the highest valid one (0–100), or null.</summary>
+    internal static int? Battery(IEnumerable<object?> values)
+    {
+        int? best = null;
+        foreach (var v in values)
+        {
+            int? p = v switch { byte b => b, sbyte sb => sb, int i => i, uint u => (int)Math.Min(u, int.MaxValue), short s => s, ushort us => us, _ => null };
+            if (p is >= 0 and <= 100 && (best is null || p > best)) best = p;
+        }
+        return best;
     }
 
     /// <summary>"audio", "input", "phone" or "" — from the Bluetooth class of device, or the name as a fallback.</summary>
