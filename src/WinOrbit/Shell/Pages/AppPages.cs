@@ -212,7 +212,8 @@ public sealed class SettingsPage : PageBase
                 weatherBody.IsEnabled = v; weatherBody.Opacity = v ? 1 : 0.5;
             }, false, Glyph.Globe),
             weatherBody,
-            Kit.Row("Updates", "WinOrbit never checks for updates by itself. New versions are installed by running a newer installer.", Kit.Chip("Manual", "T.Accent"))));
+            Kit.Row("Updates", "WinOrbit never checks for updates by itself. Check now asks GitHub once for the latest version number (needs the switch above); it downloads and installs nothing.",
+                Kit.Btn("Check now", CheckForUpdate, Glyph.Refresh))));
 
         // ---- data ----
         Children.Add(Kit.Section("Your data", $"Everything is stored in {Paths.Root}" + (Paths.Portable ? " (portable mode)." : "."),
@@ -220,6 +221,25 @@ public sealed class SettingsPage : PageBase
             Kit.Row("Back up everything", "One .zip with your settings, themes, profiles, notes and tasks.", Kit.Btn("Export backup…", ExportBackup, Glyph.Export)),
             Kit.Row("Restore a backup", "Replaces current settings with a backup (your current files are saved first).", Kit.Btn("Restore…", RestoreBackup, Glyph.Import)),
             Kit.Row("Reset WinOrbit", "Back to first-run defaults. Notes, tasks and Windows settings are kept.", Kit.Btn("Reset…", Reset, Glyph.Refresh))));
+    }
+
+    private static async void CheckForUpdate()
+    {
+        if (!Hub.Net.Allowed)
+        {
+            Dialogs.Message("Check for updates", "Turn on \"Allow optional internet features\" first. WinOrbit can't reach the internet while it's off.");
+            return;
+        }
+        Version? latest;
+        try { latest = await Updates.LatestAsync(Hub.Net); }
+        catch (Exception ex) { Dialogs.Message("Check for updates", "Couldn't reach GitHub.", ex.Message); return; }
+        var message = Updates.Message(latest, Updates.Current);
+        if (latest is not null && Updates.IsNewer(latest, Updates.Current))
+        {
+            if (Dialogs.Confirm("Update available", message, "Open download page", "Not now", "The release page opens in your browser. Run the new installer there; your settings are kept."))
+                Process.Start(new ProcessStartInfo(Updates.ReleasesUrl) { UseShellExecute = true });
+        }
+        else Dialogs.Message("Check for updates", message);
     }
 
     private Grid HotkeyRow(string label, string value, Action<string> set, bool divider = true)

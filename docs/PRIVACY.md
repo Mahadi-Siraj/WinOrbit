@@ -74,7 +74,7 @@ Your IP address is inevitably visible to those services when you enable a featur
 
 Links such as "Open rainmeter.net", and the launcher's "Search the web for …", open in **your own browser**; WinOrbit itself makes no request.
 
-There is **no** update checker. New versions are installed by running a newer installer.
+There is **no** automatic update checker. **Settings › Privacy & network › Updates › Check now** makes one request when you click it, and only while the network switch is on: `raw.githubusercontent.com/Mahadi-Siraj/WinOrbit/main/VERSION`, the one-line version file releases are published from. Nothing is sent but the request itself (GitHub sees your IP address), it shows in the request ledger, and nothing is downloaded or installed; if a newer version exists, WinOrbit offers to open the release page in your browser.
 
 ## 4. Live wallpaper snapshots
 

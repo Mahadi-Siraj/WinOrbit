@@ -27,7 +27,7 @@
 People stack half a dozen tools to make Windows feel modern — a Dynamic Island app, Rainmeter, a volume-flyout replacement, a clipboard manager, a launcher, a night-light toggle. WinOrbit replaces them with **one** native app:
 
 * **Featherweight.** About 80 MB of RAM in use and under 0.1 % CPU at idle, measured over five minutes ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The small exceptions: the lock-key alert checks three key lights about eight times a second, and — only if you have more than one keyboard — the keyboard-language card checks which keyboard is in use four times a second.
-* **Private by design.** No telemetry, analytics, accounts or update checks. **Zero network connections by default**; the two optional online features (weather, synced lyrics) have their own switches and every request is shown in a ledger.
+* **Private by design.** No telemetry, analytics, accounts or automatic update checks. **Zero network connections by default**; the two optional online features (weather, synced lyrics) have their own switches, "Check for updates" only runs when you click it, and every request is shown in a ledger.
 * **Free forever.** Open source under GPL-3.0 — every copy and fork has to stay free and open.
 * **No admin rights, no hacks.** Per-user install. No DLL injection, no system-file patching, nothing that weakens Windows security.
 
@@ -110,7 +110,7 @@ Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 f
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build
-dotnet test tests\WinOrbit.Tests          # 190 unit tests
+dotnet test tests\WinOrbit.Tests          # 191 unit tests
 .\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 

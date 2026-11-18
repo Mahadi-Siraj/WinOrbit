@@ -372,6 +372,23 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Update_check_compares_versions_from_the_version_file()
+    {
+        Assert.Equal(new Version(1, 3, 0), WinOrbit.Services.Updates.Parse("1.3.0\n"));
+        Assert.Equal(new Version(1, 3), WinOrbit.Services.Updates.Parse(" v1.3 "));
+        Assert.Null(WinOrbit.Services.Updates.Parse("<html>404</html>"));
+        Assert.Null(WinOrbit.Services.Updates.Parse(""));
+        var current = new Version(1, 2, 0, 0);
+        Assert.True(WinOrbit.Services.Updates.IsNewer(new Version(1, 3), current));
+        Assert.True(WinOrbit.Services.Updates.IsNewer(new Version(1, 2, 1), current));
+        Assert.False(WinOrbit.Services.Updates.IsNewer(new Version(1, 2, 0), current));
+        Assert.False(WinOrbit.Services.Updates.IsNewer(new Version(1, 1, 9), current));
+        Assert.Equal("WinOrbit 1.3.0 is available (you have 1.2.0).", WinOrbit.Services.Updates.Message(new Version(1, 3), current));
+        Assert.Equal("You have the latest version (1.2.0).", WinOrbit.Services.Updates.Message(new Version(1, 2, 0), current));
+        Assert.Equal("Couldn't read the latest version.", WinOrbit.Services.Updates.Message(null, current));
+    }
+
+    [Fact]
     public void Headphone_battery_takes_the_highest_valid_level()
     {
         Assert.Equal(80, WinOrbit.Services.DeviceEvents.Battery(new object?[] { null, (byte)80, (byte)60 }));

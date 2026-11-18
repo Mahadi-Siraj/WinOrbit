@@ -116,6 +116,10 @@ All in `%APPDATA%\WinOrbit` (portable: `Data\` next to the exe). They are plain 
 | The settings window is blank | A graphics-driver state (e.g. after a display mode change) can stop GPU-rendered windows from appearing. WinOrbit detects this within a second and switches that window to software rendering automatically (About & Diagnostics › Rendering says so). It doesn't check while the screen is off, the monitor is switched off or unplugged, or the PC is locked, since every window looks blank then; it checks once the screen is back. To make it permanent: **Settings › Software rendering for this window**. Restarting the PC or updating the GPU driver normally restores hardware rendering; on the test PC, closing Wallpaper Engine was also followed by hardware rendering working again. |
 | Anything else | **About & Diagnostics** shows the log and resource use. **Copy for a bug report** puts your WinOrbit and Windows versions, displays, rendering mode and island setup on the clipboard — no names of networks, devices, files or places, and no log lines — ready to paste into a GitHub issue. |
 
+## Updating
+
+WinOrbit never checks for updates by itself. To check, turn on **Settings › Privacy & network › Allow optional internet features** and press **Updates › Check now**: it asks GitHub for the latest version number (one request, shown in the request ledger). If there is a newer one, **Open download page** opens the release in your browser; run the new installer and your settings are kept. Nothing is downloaded or installed by WinOrbit itself.
+
 ## Uninstall and rollback
 
 1. *(Optional)* **Windows Tweaks › Revert all** to restore Windows appearance settings now.
