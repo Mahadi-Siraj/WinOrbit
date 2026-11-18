@@ -32,6 +32,16 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // ---- helper that links to classic Windows Media Player (started by the running WinOrbit) ----
+        var link = Array.FindIndex(e.Args, a => a.Equals("--wmp-link", StringComparison.OrdinalIgnoreCase));
+        if (link >= 0)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            if (link + 1 < e.Args.Length && int.TryParse(e.Args[link + 1], out var playerPid)) ClassicMediaPlayer.RunHelper(playerPid, () => Shutdown());
+            else Shutdown();
+            return;
+        }
+
         // ---- headless commands used by the installer/uninstaller ----
         if (e.Args.Contains("--revert-tweaks", StringComparer.OrdinalIgnoreCase))
         {

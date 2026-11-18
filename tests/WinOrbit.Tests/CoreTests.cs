@@ -477,6 +477,32 @@ public class WindowPlayerTests
         => Assert.Equal(expected, WinOrbit.Services.WindowPlayers.NameMatches(file, title, ""));
 
     [Fact]
+    public void Classic_player_link_messages_round_trip()
+    {
+        var t = new WinOrbit.Services.ClassicTrack("Wedding Nasheed", "Artist, feat. X", "Album", @"C:\Music\a b.mp3", true, TimeSpan.FromSeconds(12.5), TimeSpan.FromSeconds(201));
+        Assert.Equal(t, WinOrbit.Services.ClassicMediaPlayer.Decode(WinOrbit.Services.ClassicMediaPlayer.Encode(t)));
+        var noFile = t with { File = null, Title = "Line\nbreak" };
+        var back = WinOrbit.Services.ClassicMediaPlayer.Decode(WinOrbit.Services.ClassicMediaPlayer.Encode(noFile));
+        Assert.Null(back!.File);
+        Assert.Equal("Line break", back.Title);
+        Assert.Null(WinOrbit.Services.ClassicMediaPlayer.Decode(WinOrbit.Services.ClassicMediaPlayer.Encode(null)));
+        Assert.Null(WinOrbit.Services.ClassicMediaPlayer.Decode("garbage"));
+    }
+
+    [Fact]
+    public void Classic_player_ticking_on_is_not_a_change_but_a_seek_or_pause_is()
+    {
+        var a = new WinOrbit.Services.WindowPlayer(IntPtr.Zero, 1, "Windows Media Player", "Song", "Artist", true)
+        { Position = TimeSpan.FromSeconds(10), Duration = TimeSpan.FromSeconds(200), CanSeek = true };
+        Assert.True(WinOrbit.Services.WindowPlayers.Same(a, a with { Position = TimeSpan.FromSeconds(11) }));
+        Assert.False(WinOrbit.Services.WindowPlayers.Same(a, a with { Position = TimeSpan.FromSeconds(60) }));
+        Assert.False(WinOrbit.Services.WindowPlayers.Same(a, a with { Playing = false }));
+        Assert.False(WinOrbit.Services.WindowPlayers.Same(a, a with { Title = "Next song" }));
+        Assert.False(WinOrbit.Services.WindowPlayers.Same(a, null));
+        Assert.True(WinOrbit.Services.WindowPlayers.Same(null, null));
+    }
+
+    [Fact]
     public void Low_battery_warnings_fire_once_per_threshold()
     {
         Assert.Equal(20, WinOrbit.Services.PowerEvents.LowBatteryWarning(21, 20));

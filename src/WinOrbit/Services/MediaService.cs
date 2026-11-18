@@ -142,10 +142,15 @@ public sealed class MediaService
                 var wasWindow = _usingWindow;
                 _usingWindow = true;
                 var sameTrack = Title == wp.Title && Artist == wp.Artist && wasWindow;
-                Title = wp.Title; Artist = wp.Artist; Album = ""; Source = wp.App; IsPlaying = wp.Playing;
-                // VLC doesn't share artwork; take the embedded cover from the file it's playing (what Explorer shows).
-                if (!sameTrack || Art is null) Art = wp.App == "VLC" && WindowPlayers.VlcFile(wp.Title, wp.Artist) is { } file ? Launcher.AppIcons.Thumbnail(file) : null;
-                Duration = TimeSpan.Zero; _position = TimeSpan.Zero; _positionAt = default;
+                Title = wp.Title; Artist = wp.Artist; Album = wp.Album; Source = wp.App; IsPlaying = wp.Playing;
+                // These players don't share artwork; take the embedded cover from the file being played (what Explorer shows).
+                if (!sameTrack || Art is null)
+                {
+                    var file = wp.File ?? (wp.App == "VLC" ? WindowPlayers.VlcFile(wp.Title, wp.Artist) : null);
+                    Art = file is not null ? Launcher.AppIcons.Thumbnail(file) : null;
+                }
+                Duration = wp.Duration; _position = wp.Position; _rate = 1;
+                _positionAt = wp.Playing && wp.Duration > TimeSpan.Zero ? DateTimeOffset.UtcNow : default;
                 HasSession = true;
                 var wkey = Title + "|" + Artist;
                 var wNew = wkey != _trackKey;
@@ -257,7 +262,8 @@ public sealed class MediaService
     {
         get
         {
-            if (_usingWindow || _session is null || Duration <= TimeSpan.Zero) return false;
+            if (_usingWindow) return _players?.Current?.CanSeek == true && Duration > TimeSpan.Zero;
+            if (_session is null || Duration <= TimeSpan.Zero) return false;
             try { return _session.GetPlaybackInfo()?.Controls?.IsPlaybackPositionEnabled == true; }
             catch { return false; }
         }
@@ -267,9 +273,16 @@ public sealed class MediaService
     public async Task<bool> SeekAsync(TimeSpan position)
     {
         var s = _session;
-        if (s is null || _usingWindow) return false;
         if (position < TimeSpan.Zero) position = TimeSpan.Zero;
         if (Duration > TimeSpan.Zero && position > Duration) position = Duration - TimeSpan.FromSeconds(1);
+        if (_usingWindow)
+        {
+            if (_players?.Seek(position) != true) return false;
+            _position = position; _positionAt = IsPlaying ? DateTimeOffset.UtcNow : default;
+            Changed?.Invoke();
+            return true;
+        }
+        if (s is null) return false;
         try
         {
             var start = s.GetTimelineProperties()?.StartTime ?? TimeSpan.Zero;

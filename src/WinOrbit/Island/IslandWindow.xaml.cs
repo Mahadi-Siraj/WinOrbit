@@ -350,7 +350,7 @@ public partial class IslandWindow : Window
         Compact.IsHitTestVisible = false;
         ShowTab(_tab);
         if (keyboard) SetInteractive(true);
-        ArmCollapse(!Pill.IsMouseOver);
+        ArmCollapse();   // the short count applies only once the pointer has been inside and left
     }
 
     public void Collapse(bool immediate = false)
@@ -389,7 +389,7 @@ public partial class IslandWindow : Window
         _collapseTimer.Start();
     }
 
-    private void Poke() { if (_expanded) ArmCollapse(!Pill.IsMouseOver); }
+    private void Poke() { if (_expanded) ArmCollapse(); }
 
     private bool BusyInside => _pinned || _seekDragging || NotesBox.IsKeyboardFocusWithin || Mouse.LeftButton == MouseButtonState.Pressed && Pill.IsMouseOver;
 
@@ -774,7 +774,7 @@ public partial class IslandWindow : Window
         // Windows offers apps no way to switch these; the tile shows what it can and opens the right place.
         Add("airplane", LineIcons.Airplane, "Airplane mode", () => { OpenUri("ms-settings:network-airplanemode"); Collapse(); }, () => OpenUri("ms-settings:network-airplanemode"));
         Add("dnd", LineIcons.Moon, "Do not disturb", () => { OpenUri("ms-actioncenter:"); Collapse(); }, () => OpenUri("ms-settings:notifications"));
-        Add("night", LineIcons.Sun, "Night light", () =>
+        Add("night", LineIcons.Sunset, "Night light", () =>
         {
             var on = !(_quick["night"].IsOn);
             if (QuickControls.SetNightLight(on)) SetTile("night", on, on ? "On" : "Off");

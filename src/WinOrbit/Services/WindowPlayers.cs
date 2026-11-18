@@ -9,7 +9,15 @@ using WinOrbit.Interop;
 namespace WinOrbit.Services;
 
 /// <summary>A player found by its window rather than through the Windows media session.</summary>
-public sealed record WindowPlayer(IntPtr Hwnd, int Pid, string App, string Title, string Artist, bool Playing);
+public sealed record WindowPlayer(IntPtr Hwnd, int Pid, string App, string Title, string Artist, bool Playing)
+{
+    /// <summary>The file being played, when the player tells (classic Media Player) — used for album art.</summary>
+    public string? File { get; init; }
+    public string Album { get; init; } = "";
+    public TimeSpan Position { get; init; }
+    public TimeSpan Duration { get; init; }
+    public bool CanSeek { get; init; }
+}
 
 /// <summary>
 /// Some popular players don't report to the Windows media session (classic VLC 3 is the big one), so the island
@@ -31,7 +39,10 @@ public sealed class WindowPlayers : IDisposable
         new("PotPlayerMini64", "PotPlayer", " - PotPlayer", null), new("PotPlayerMini", "PotPlayer", " - PotPlayer", null),
         new("mpc-hc64", "MPC-HC", null, null), new("mpc-hc", "MPC-HC", null, null), new("mpc-be64", "MPC-BE", null, null), new("mpc-be", "MPC-BE", null, null),
         new("mpv", "mpv", " - mpv", null),
+        new("wmplayer", ClassicName, null, null),   // read through its remoting interface, not its title
     };
+
+    public const string ClassicName = "Windows Media Player";
 
     public WindowPlayer? Current { get; private set; }
     /// <summary>Raised on the UI thread when the detected track or play state changes.</summary>
@@ -40,7 +51,7 @@ public sealed class WindowPlayers : IDisposable
     private readonly Dispatcher _ui;
     private readonly Func<int, double> _peak;
     private readonly Native.WinEventProc _proc;
-    private IntPtr _hookName, _hookDestroy;
+    private IntPtr _hookName, _hookDestroy, _hookShow;
     private readonly Dictionary<int, Known?> _byPid = new();
     private readonly DispatcherTimer _levelTimer;
     private DateTime _lastSound = DateTime.MinValue;
@@ -59,6 +70,7 @@ public sealed class WindowPlayers : IDisposable
         const uint OutOfContext = 0x0000 | 0x0002;   // WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
         _hookName = Native.SetWinEventHook(0x800C, 0x800C, IntPtr.Zero, _proc, 0, 0, OutOfContext);    // EVENT_OBJECT_NAMECHANGE
         _hookDestroy = Native.SetWinEventHook(0x8001, 0x8001, IntPtr.Zero, _proc, 0, 0, OutOfContext); // EVENT_OBJECT_DESTROY
+        _hookShow = Native.SetWinEventHook(0x8002, 0x8002, IntPtr.Zero, _proc, 0, 0, OutOfContext);    // EVENT_OBJECT_SHOW (classic Media Player opening)
         ScanAll();
     }
 
@@ -82,7 +94,7 @@ public sealed class WindowPlayers : IDisposable
     private void OnEvent(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
     {
         if (idObject != 0 || idChild != 0 || hwnd == IntPtr.Zero) return;   // window objects only
-        if (evt == 0x8001) { if (Current is not null && hwnd == Current.Hwnd) ScanAll(); return; }
+        if (evt == 0x8001) { if (Current is not null && hwnd == Current.Hwnd) { if (Current.App == ClassicName) _wmpHwnd = IntPtr.Zero; ScanAll(); } return; }
         if (GetAncestor(hwnd, 2) != hwnd) return;                           // top-level windows only (GA_ROOT)
         if (Current is not null && hwnd == Current.Hwnd) { Set(Read(hwnd)); return; }
         if (Read(hwnd) is { } p) Set(p);
@@ -109,6 +121,7 @@ public sealed class WindowPlayers : IDisposable
     {
         var known = PlayerFor(hwnd, out var pid);
         if (known is null) return null;
+        if (known.App == ClassicName) return ReadClassic(hwnd, pid);
         var sb = new StringBuilder(512);
         GetWindowText(hwnd, sb, sb.Capacity);
         var parsed = ParseTitle(sb.ToString(), known.Suffix, known.App);
@@ -143,10 +156,103 @@ public sealed class WindowPlayers : IDisposable
     {
         var old = Current;
         if (p is not null && (old is null || old.Hwnd != p.Hwnd || old.Title != p.Title)) _lastSound = DateTime.MinValue;
-        Current = p is null ? null : p with { Playing = Playing(p) };
-        if (Current is null) _levelTimer.Stop(); else if (!_levelTimer.IsEnabled) _levelTimer.Start();
-        if (!Equals(old, Current)) Changed?.Invoke();
+        Current = p is null ? null : p.App == ClassicName ? p : p with { Playing = Playing(p) };
+        if (Current is null && _wmpPid == 0) _levelTimer.Stop(); else if (!_levelTimer.IsEnabled) _levelTimer.Start();
+        if (!Same(old, Current)) Changed?.Invoke();
     }
+
+    /// <summary>Equal apart from the playhead moving on as expected (a jump — a seek — counts as a change).</summary>
+    internal static bool Same(WindowPlayer? a, WindowPlayer? b)
+    {
+        if (a is null || b is null) return a is null && b is null;
+        if (a with { Position = default } != b with { Position = default }) return false;
+        if (a.Duration <= TimeSpan.Zero) return true;
+        var expected = a.Playing ? a.Position + TimeSpan.FromSeconds(1) : a.Position;
+        return Math.Abs((b.Position - expected).TotalSeconds) < 2.5;
+    }
+
+    // ------------------------------------------------------------------ classic Windows Media Player
+    private ClassicMediaPlayer? _wmp;
+    private int _wmpPid;
+    private IntPtr _wmpHwnd;
+    private bool _wmpShown;
+    private DateTime _wmpSince;
+    private DateTime _wmpRetryAt;
+
+    private WindowPlayer? ReadClassic(IntPtr hwnd, int pid)
+    {
+        if (_wmpPid != pid)
+        {
+            _wmp?.Dispose(); _wmp = new ClassicMediaPlayer(); _wmpPid = pid; _wmpRetryAt = default;
+            _wmpShown = false; _wmpSince = DateTime.UtcNow;
+        }
+        if (!_levelTimer.IsEnabled) _levelTimer.Start();   // keeps checking while it starts up and while it's open
+        if (IsWindowVisible(hwnd) && GetWindowTextLength(hwnd) > 0) _wmpHwnd = hwnd;
+        if (!HasVisibleWindow(pid)) return null;            // still starting (or closing): never link to a windowless player
+        _wmpShown = true;
+        if (_wmp is null) return null;
+        if (!_wmp.Connected)
+        {
+            if (DateTime.UtcNow < _wmpRetryAt) return null;
+            _wmpRetryAt = DateTime.UtcNow.AddSeconds(30);   // if the link helper fails, don't keep restarting it
+            if (!_wmp.Connect(pid)) return null;
+            Log.Info("Linking to classic Windows Media Player");
+        }
+        if (_wmp.Read() is not { } t) return null;
+        return new WindowPlayer(_wmpHwnd != IntPtr.Zero ? _wmpHwnd : hwnd, pid, ClassicName, t.Title, t.Artist, t.Playing)
+        {
+            File = t.File, Album = t.Album, Position = t.Position, Duration = t.Duration, CanSeek = t.Duration > TimeSpan.Zero,
+        };
+    }
+
+    /// <summary>
+    /// The player counts as open while it shows a window. Once the user closes it, the link is released at
+    /// once — otherwise our connection would keep wmplayer.exe running invisibly in the background.
+    /// </summary>
+    private bool ClassicStillOpen()
+    {
+        if (_wmpPid == 0) return false;
+        var alive = false;
+        try { using var p = Process.GetProcessById(_wmpPid); alive = !p.HasExited; } catch { }
+        if (alive && HasVisibleWindow(_wmpPid)) return true;
+        if (alive && !_wmpShown && DateTime.UtcNow - _wmpSince < TimeSpan.FromSeconds(20)) return true;   // window not up yet
+        _wmp?.Dispose(); _wmp = null; _wmpPid = 0; _wmpHwnd = IntPtr.Zero;
+        return false;
+    }
+
+    internal static bool HasVisibleWindow(int pid)
+    {
+        var found = false;
+        EnumWindows((h, _) =>
+        {
+            if (!IsWindowVisible(h)) return true;
+            Native.GetWindowThreadProcessId(h, out var p);
+            if ((int)p != pid || GetWindowTextLength(h) == 0) return true;
+            found = true;
+            return false;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    [DllImport("user32.dll")] private static extern int GetWindowTextLength(IntPtr h);
+
+    public bool Seek(TimeSpan position)
+    {
+        if (Current?.App != ClassicName || _wmp is null) return false;
+        var ok = _wmp.Seek(position);
+        Soon();
+        return ok;
+    }
+
+    private DispatcherTimer? _soon;
+    /// <summary>Re-read shortly after a control so the island reflects it without waiting for the next tick.</summary>
+    private void Soon()
+    {
+        _soon ??= new DispatcherTimer(DispatcherPriority.Background, _ui) { Interval = TimeSpan.FromMilliseconds(350) };
+        _soon.Tick -= SoonTick; _soon.Tick += SoonTick;
+        _soon.Stop(); _soon.Start();
+    }
+    private void SoonTick(object? s, EventArgs e) { _soon?.Stop(); CheckLevel(); }
 
     private bool Playing(WindowPlayer p)
     {
@@ -156,6 +262,12 @@ public sealed class WindowPlayers : IDisposable
 
     private void CheckLevel()
     {
+        if (_wmpPid != 0)
+        {
+            if (!ClassicStillOpen()) { if (Current?.App == ClassicName) ScanAll(); else if (Current is null) _levelTimer.Stop(); return; }
+            // Classic Media Player has no change events we can receive here: read it once a second while open.
+            if (Current is null || Current.App == ClassicName) { Set(ReadClassic(_wmpHwnd, _wmpPid)); return; }
+        }
         if (Current is null) { _levelTimer.Stop(); return; }
         var playing = Playing(Current);
         if (playing != Current.Playing) { Current = Current with { Playing = playing }; Changed?.Invoke(); }
@@ -204,6 +316,14 @@ public sealed class WindowPlayers : IDisposable
     public string? Control(byte mediaKey, bool otherSessionExists)
     {
         if (Current is null) return null;
+        if (Current.App == ClassicName && _wmp is not null)
+        {
+            if (mediaKey == Native.VK_MEDIA_PLAY_PAUSE) _wmp.PlayPause();
+            else if (mediaKey == Native.VK_MEDIA_NEXT_TRACK) _wmp.Next();
+            else if (mediaKey == Native.VK_MEDIA_PREV_TRACK) _wmp.Previous();
+            Soon();
+            return null;
+        }
         if (Current.App == "VLC")
         {
             if (!VlcHasGlobalMediaKeys()) return "Turn on VLC's global media keys to control it from here: in VLC, Tools › Preferences › Hotkeys, set the Global column for Play/Pause, Next and Previous to your media keys, then Save";
@@ -240,6 +360,8 @@ public sealed class WindowPlayers : IDisposable
     {
         if (_hookName != IntPtr.Zero) Native.UnhookWinEvent(_hookName);
         if (_hookDestroy != IntPtr.Zero) Native.UnhookWinEvent(_hookDestroy);
+        if (_hookShow != IntPtr.Zero) Native.UnhookWinEvent(_hookShow);
+        _wmp?.Dispose();
         _levelTimer.Stop();
     }
 }

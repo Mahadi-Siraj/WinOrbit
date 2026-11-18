@@ -5,6 +5,9 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
+    <!-- Only for hosting classic Windows Media Player's control in remote mode (Services\ClassicMediaPlayer.cs);
+         its assemblies load only while that player is open. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
@@ -25,6 +28,9 @@
   <ItemGroup>
     <Resource Include="Assets\winorbit.ico" />
     <InternalsVisibleTo Include="WinOrbit.Tests" />
+    <!-- Keep WPF names unambiguous: Windows Forms is used in one file only, fully qualified. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
 </Project>
