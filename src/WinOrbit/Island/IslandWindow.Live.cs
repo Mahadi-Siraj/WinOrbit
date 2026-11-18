@@ -56,6 +56,7 @@ public partial class IslandWindow
         Hub.Devices.BluetoothChanged += OnBluetooth;
         Hub.Devices.UsbChanged += OnUsb;
         Hub.Devices.RadioChanged += OnRadio;
+        Hub.Devices.ModeChanged += OnMode;
 
         Pill.AllowDrop = true;
         Pill.DragEnter += OnDragEnter;
@@ -83,6 +84,7 @@ public partial class IslandWindow
         Hub.Devices.BluetoothChanged -= OnBluetooth;
         Hub.Devices.UsbChanged -= OnUsb;
         Hub.Devices.RadioChanged -= OnRadio;
+        Hub.Devices.ModeChanged -= OnMode;
     }
 
     // ------------------------------------------------------------------ keys and connections
@@ -124,6 +126,28 @@ public partial class IslandWindow
         if (wifi ? !S.NetworkAlerts : !S.BluetoothAlerts) return;
         var glyph = wifi ? (on ? GlyphWifi : GlyphWifiOff) : GlyphBluetooth;
         ShowCard(glyph, wifi ? "Wi-Fi" : "Bluetooth", on ? "On" : "Off", on ? BtBlue : Neutral, 2.2, toggle: on, switchColor: BtBlue);
+    }
+
+    private static readonly Color Indigo = Color.FromRgb(0x8E, 0x8C, 0xFF), Sunny = Color.FromRgb(0xFF, 0xC9, 0x4A),
+        Amber = Color.FromRgb(0xFF, 0x9F, 0x43), Flight = Color.FromRgb(0xFF, 0x9F, 0x0A);
+    private const string GlyphAirplane = "";
+
+    private void OnMode(string mode, bool on)
+    {
+        if (!S.SystemAlerts) return;
+        switch (mode)
+        {
+            case "dark":
+                if (on) ShowCard(Glyph.Moon, "Dark mode", "Apps and Windows", Indigo, 2.4, toggle: true);
+                else ShowCard(Glyph.Brightness, "Light mode", "Apps and Windows", Sunny, 2.4, toggle: true);
+                break;
+            case "night":
+                ShowCard(Glyph.Moon, "Night light", on ? "On · warmer colours" : "Off", on ? Amber : Neutral, 2.4, toggle: on, switchColor: Amber);
+                break;
+            case "airplane":
+                ShowCard(GlyphAirplane, "Airplane mode", on ? "On · radios off" : "Off", on ? Flight : Neutral, 2.6, toggle: on, switchColor: Flight);
+                break;
+        }
     }
 
     private void OnBluetooth(string name, string kind, bool connected)
@@ -182,8 +206,8 @@ public partial class IslandWindow
     private void OnEnergySaver(int state)
     {
         if (!S.BatteryAlerts || _expanded || !IsVisible) return;
-        if (state > 0) Peek(GlyphLeaf, state == 2 ? "Energy saver on · extra savings" : "Energy saver on", 2.5);
-        else Peek(GlyphLeaf, "Energy saver off", 2);
+        var on = state > 0;
+        ShowCard(GlyphLeaf, "Energy saver", on ? (state == 2 ? "On · extra savings" : "On") : "Off", on ? Saver : Neutral, 2.4, toggle: on, switchColor: Saver);
         if (_expanded && _tab == "controls") RefreshQuick();
     }
 
@@ -197,7 +221,10 @@ public partial class IslandWindow
             case "low": ShowHud(Glyph.Warning, 0.18, "Battery low · 18%", Low, 4); break;
             case "volume": ShowHud(Glyph.Volume, 0.42, "42"); break;
             case "mic": Peek(GlyphMic, "Teams is using your microphone", 3); break;
-            case "saver": Peek(GlyphLeaf, "Energy saver on", 2.5); break;
+            case "saver": ShowCard(GlyphLeaf, "Energy saver", "On", Saver, 2.6, toggle: true); break;
+            case "dark": ShowCard(Glyph.Moon, "Dark mode", "Apps and Windows", Indigo, 2.6, toggle: true); break;
+            case "night": ShowCard(Glyph.Moon, "Night light", "On · warmer colours", Amber, 2.6, toggle: true); break;
+            case "airplane": ShowCard(GlyphAirplane, "Airplane mode", "On · radios off", Flight, 2.6, toggle: true); break;
             case "caps": ShowCard("", "Caps Lock", "On", KeyLit, 2.4, toggle: true, cap: "A", switchColor: Connected); break;
             case "wifi": ShowCard(GlyphWifi, "Home Wi-Fi", "Wi-Fi connected", Connected, 3); break;
             case "bluetooth": ShowCard(GlyphHeadphones, "Headphones", "Connected", BtBlue, 3); break;

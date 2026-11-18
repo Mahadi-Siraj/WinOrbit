@@ -12,7 +12,7 @@
         </Grid.LayoutTransform>
 
         <!-- Optional halo in the rim's colours, behind the glass; follows the pill's size and motion -->
-        <Border x:Name="PillGlow" IsHitTestVisible="False" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,1,0,0"
+        <Border x:Name="PillGlow" UseLayoutRounding="False" IsHitTestVisible="False" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,1,0,0"
                 BorderThickness="3" CornerRadius="19" Opacity="0.85" RenderTransformOrigin="0.5,0"
                 Width="{Binding ActualWidth, ElementName=Pill}" Height="{Binding ActualHeight, ElementName=Pill}"
                 RenderTransform="{Binding RenderTransform, ElementName=Pill}">
@@ -21,7 +21,7 @@
             </Border.Effect>
         </Border>
 
-        <d:GlassSurface x:Name="Pill" HorizontalAlignment="Center" VerticalAlignment="Top" Width="220" Height="38" Margin="0,1,0,0"
+        <d:GlassSurface x:Name="Pill" UseLayoutRounding="False" HorizontalAlignment="Center" VerticalAlignment="Top" Width="220" Height="38" Margin="0,1,0,0"
                         SampleWallpaper="True" ShadowSize="24" Cursor="Hand" AutomationProperties.Name="Dynamic Island" RenderTransformOrigin="0.5,0">
             <d:GlassSurface.RenderTransform>
                 <!-- Scale hangs from the top edge: presses squash it, new activities make it bulge like a droplet -->
@@ -45,7 +45,7 @@
                 </Border>
 
                 <!-- ============ Collapsed ============ -->
-                <StackPanel x:Name="Compact" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,0,14,0" Height="38">
+                <StackPanel x:Name="Compact" UseLayoutRounding="True" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,0,14,0" Height="38">
                     <!-- Volume HUD: replaces the capsule content for a moment when the volume changes -->
                     <StackPanel x:Name="CHud" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                         <TextBlock x:Name="CHudGlyph" Text="&#xE767;" Style="{StaticResource Icon}" FontSize="14" Width="18" Foreground="{DynamicResource T.Accent}" Margin="0,0,10,0"/>
@@ -100,7 +100,7 @@
                 <!-- ============ Card: connections, radios, lock keys ============
                      The capsule grows taller and the content nests concentrically inside it: the icon tile's corners
                      are the pill's radius minus the margin, so the gap around it is even all the way round. -->
-                <Grid x:Name="Card" Visibility="Collapsed" Opacity="0" Margin="10" IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid x:Name="Card" UseLayoutRounding="True" Visibility="Collapsed" Opacity="0" Margin="10" IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -110,7 +110,7 @@
                         <Grid.RenderTransform><ScaleTransform x:Name="CardTileScale"/></Grid.RenderTransform>
                         <Border x:Name="CardTileFill" CornerRadius="22"/>
                         <!-- a lit upper edge, like light catching the rim of a glass bead -->
-                        <Border CornerRadius="22" BorderThickness="1">
+                        <Border x:Name="CardTileEdge" CornerRadius="22" BorderThickness="1">
                             <Border.BorderBrush>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                     <GradientStop Color="#55FFFFFF" Offset="0"/>
@@ -141,7 +141,7 @@
                 </Grid>
 
                 <!-- ============ Expanded ============ -->
-                <Grid x:Name="Expanded" Opacity="0" Visibility="Hidden" Margin="14,10,14,14" Cursor="Arrow" Width="432" Height="266" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="Expanded" UseLayoutRounding="True" Opacity="0" Visibility="Hidden" Margin="14,10,14,14" Cursor="Arrow" Width="432" Height="266" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="38"/>
                         <RowDefinition Height="*"/>

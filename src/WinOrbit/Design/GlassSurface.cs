@@ -100,15 +100,44 @@ public class GlassSurface : ContentControl
     }
 
     /// <summary>Keep only the part of the shadow that falls outside the glass, so the pane itself stays clear.</summary>
+    public void RefreshShadowClip() => UpdateShadowClip();
+
     private void UpdateShadowClip()
     {
         if (_shadow is null || ActualWidth < 1 || ActualHeight < 1) return;
-        var r = Math.Min(CornerRadius.TopLeft, Math.Min(ActualWidth, ActualHeight) / 2);
         var outer = new RectangleGeometry(new Rect(-120, -120, ActualWidth + 240, ActualHeight + 240));
-        var inner = new RectangleGeometry(new Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1)), r, r);
+        var rect = new Rect(0.5, 0.5, Math.Max(0, ActualWidth - 1), Math.Max(0, ActualHeight - 1));
+        var c = CornerRadius;
+        // Uniform corners (every surface but the island's notch/drop shapes) keep the simple, fast rounded rectangle.
+        Geometry inner = c.TopLeft == c.TopRight && c.TopLeft == c.BottomLeft && c.TopLeft == c.BottomRight
+            ? new RectangleGeometry(rect, Math.Min(c.TopLeft, Math.Min(ActualWidth, ActualHeight) / 2), Math.Min(c.TopLeft, Math.Min(ActualWidth, ActualHeight) / 2))
+            : RoundedRect(rect, c);
         var clip = new CombinedGeometry(GeometryCombineMode.Exclude, outer, inner);
         clip.Freeze();
         _shadow.Clip = clip;
+    }
+
+    /// <summary>A rectangle with its own radius on each corner (shapes such as the notch: square top, round bottom).</summary>
+    internal static Geometry RoundedRect(Rect rect, CornerRadius c)
+    {
+        var max = Math.Min(rect.Width, rect.Height) / 2;
+        double tl = Math.Clamp(c.TopLeft, 0, max), tr = Math.Clamp(c.TopRight, 0, max), br = Math.Clamp(c.BottomRight, 0, max), bl = Math.Clamp(c.BottomLeft, 0, max);
+        double l = rect.Left, t = rect.Top, r = rect.Right, b = rect.Bottom;
+        var g = new StreamGeometry();
+        using (var ctx = g.Open())
+        {
+            ctx.BeginFigure(new Point(l + tl, t), true, true);
+            ctx.LineTo(new Point(r - tr, t), true, false);
+            if (tr > 0) ctx.ArcTo(new Point(r, t + tr), new Size(tr, tr), 0, false, SweepDirection.Clockwise, true, false);
+            ctx.LineTo(new Point(r, b - br), true, false);
+            if (br > 0) ctx.ArcTo(new Point(r - br, b), new Size(br, br), 0, false, SweepDirection.Clockwise, true, false);
+            ctx.LineTo(new Point(l + bl, b), true, false);
+            if (bl > 0) ctx.ArcTo(new Point(l, b - bl), new Size(bl, bl), 0, false, SweepDirection.Clockwise, true, false);
+            ctx.LineTo(new Point(l, t + tl), true, false);
+            if (tl > 0) ctx.ArcTo(new Point(l + tl, t), new Size(tl, tl), 0, false, SweepDirection.Clockwise, true, false);
+        }
+        g.Freeze();
+        return g;
     }
 
     /// <summary>Point the backdrop brush at the slice of blurred wallpaper that lies under this surface.</summary>

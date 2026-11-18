@@ -163,6 +163,40 @@ public static class Kit
         return c;
     }
 
+    /// <summary>
+    /// A row whose control sits under the label at full width — for groups (many buttons, wide pickers) that would
+    /// not fit beside it. Beside the label they would squeeze the label's column to nothing.
+    /// </summary>
+    public static Grid WideRow(string label, string? description, UIElement content, bool divider = true)
+    {
+        var g = new Grid { MinHeight = 52, Tag = new SearchTag(label, description ?? "") };
+        var sp = new StackPanel { Margin = new Thickness(0, 12, 0, 10) };
+        sp.Children.Add(Ui.Text(label, "Text.Body", 14));
+        if (!string.IsNullOrEmpty(description)) sp.Children.Add(Ui.Text(description, "Text.Caption", 12).With(t => t.Margin = new Thickness(0, 2, 0, 0)));
+        if (content is FrameworkElement fe) fe.Margin = new Thickness(0, 10, 0, 0);
+        sp.Children.Add(content);
+        g.Children.Add(sp);
+        if (divider)
+        {
+            var line = new Border { Height = 1, VerticalAlignment = VerticalAlignment.Top };
+            line.SetResourceReference(Border.BackgroundProperty, "T.Divider");
+            g.Children.Add(line);
+        }
+        return g;
+    }
+
+    /// <summary>Buttons that wrap onto further lines instead of running off the edge.</summary>
+    public static WrapPanel WrapButtons(params UIElement[] buttons)
+    {
+        var wp = new WrapPanel();
+        foreach (var b in buttons)
+        {
+            if (b is FrameworkElement fe) fe.Margin = new Thickness(0, 0, 8, 8);
+            wp.Children.Add(b);
+        }
+        return wp;
+    }
+
     public static StackPanel Buttons(params UIElement[] buttons)
     {
         var sp = new StackPanel { Orientation = Orientation.Horizontal };

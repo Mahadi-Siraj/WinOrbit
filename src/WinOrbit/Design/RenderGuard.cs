@@ -35,16 +35,23 @@ public static class RenderGuard
         root.Children.Add(dot);
         window.ContentRendered += (_, _) =>
         {
+            // A window that is still painting (busy start-up) can miss the sentinel once. Only a window that stays
+            // blank across three looks, ~0.7 s apart, is treated as not presented — falling back costs smoothness.
+            var misses = 0;
             var timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle) { Interval = TimeSpan.FromMilliseconds(600) };
             timer.Tick += (_, _) =>
             {
-                timer.Stop();
+                timer.Interval = TimeSpan.FromMilliseconds(700);
                 try
                 {
-                    var ok = Check(window, dot);
-                    if (ok == false) UseSoftware(window, onSoftware, "the GPU did not present the window");
+                    var (ok, blank) = Check(window, dot);
+                    if (ok != false) { timer.Stop(); return; }
+                    if (!blank) { timer.Stop(); Log.Info("Render check: window has content; keeping hardware rendering"); return; }
+                    if (++misses < 3) return;
+                    timer.Stop();
+                    UseSoftware(window, onSoftware, "the GPU did not present the window");
                 }
-                catch (Exception ex) { Log.Warn("Render check skipped: " + ex.Message); }
+                catch (Exception ex) { timer.Stop(); Log.Warn("Render check skipped: " + ex.Message); }
             };
             timer.Start();
         };
@@ -61,25 +68,47 @@ public static class RenderGuard
         window.InvalidateVisual();
     }
 
-    /// <summary>True if the sentinel is on screen, false if the window is blank, null if it couldn't be judged.</summary>
-    private static bool? Check(Window window, FrameworkElement dot)
+    /// <summary>
+    /// Ok: true if the sentinel is on screen, false if not, null if it couldn't be judged.
+    /// Blank: the snapshot is (almost) one flat colour — what a window the GPU never presented looks like.
+    /// </summary>
+    private static (bool? Ok, bool Blank) Check(Window window, FrameworkElement dot)
     {
         var hwnd = new WindowInteropHelper(window).Handle;
-        if (hwnd == IntPtr.Zero || !window.IsVisible || window.WindowState == WindowState.Minimized) return null;
-        if (!Native.GetWindowRect(hwnd, out var wr) || wr.Width < 50 || wr.Height < 50) return null;
+        if (hwnd == IntPtr.Zero || !window.IsVisible || window.WindowState == WindowState.Minimized) return (null, false);
+        if (!Native.GetWindowRect(hwnd, out var wr) || wr.Width < 50 || wr.Height < 50) return (null, false);
 
         // Where the sentinel is, in window pixels.
         var screen = dot.PointToScreen(new Point(0.5, 0.5));
         int sx = (int)Math.Round(screen.X) - wr.Left, sy = (int)Math.Round(screen.Y) - wr.Top;
-        if (sx < 0 || sy < 0 || sx >= wr.Width || sy >= wr.Height) return null;
+        if (sx < 0 || sy < 0 || sx >= wr.Width || sy >= wr.Height) return (null, false);
 
         var px = Snap(hwnd, wr.Width, wr.Height);
-        if (px is null) return null;
+        if (px is null) return (null, false);
         var i = (sy * wr.Width + sx) * 4;
         int b = px[i], g = px[i + 1], r = px[i + 2];
         var match = Math.Abs(r - Sentinel.R) <= 3 && Math.Abs(g - Sentinel.G) <= 3 && Math.Abs(b - Sentinel.B) <= 3;
-        if (!match) Log.Warn($"Render check: expected sentinel, found #{r:X2}{g:X2}{b:X2}");
-        return match;
+        if (match) return (true, false);
+        var blank = IsFlat(px, wr.Width, wr.Height);
+        Log.Warn($"Render check: expected sentinel, found #{r:X2}{g:X2}{b:X2}{(blank ? " (window blank)" : "")}");
+        return (false, blank);
+    }
+
+    /// <summary>True when 97 % of a 16 × 16 grid of samples share the first sample's colour.</summary>
+    internal static bool IsFlat(byte[] px, int width, int height)
+    {
+        int same = 0, total = 0;
+        var first = -1;
+        for (var gy = 1; gy <= 16; gy++)
+            for (var gx = 1; gx <= 16; gx++)
+            {
+                var i = ((height * gy / 17) * width + width * gx / 17) * 4;
+                var c = px[i] | px[i + 1] << 8 | px[i + 2] << 16;
+                if (first < 0) first = c;
+                total++;
+                if (c == first) same++;
+            }
+        return same >= total * 0.97;
     }
 
     private static byte[]? Snap(IntPtr hwnd, int width, int height)

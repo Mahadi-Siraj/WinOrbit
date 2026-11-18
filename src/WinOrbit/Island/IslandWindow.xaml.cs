@@ -23,20 +23,39 @@ namespace WinOrbit.Island;
 /// </summary>
 public partial class IslandWindow : Window
 {
-    private const double ExpandedWidth = 460, ExpandedHeight = 290, ControlsHeight = 366, CollapsedHeight = 38;
+    private const double ExpandedWidth = 460, ExpandedHeight = 290, ControlsHeight = 366;
+    /// <summary>Capsule thickness (Island › Shape).</summary>
+    private static double CollapsedHeight => S.Thickness switch { "Slim" => 32, "Tall" => 46, _ => 38 };
+    private static double CollapsedRadius => CollapsedHeight / 2;
+
+    public static readonly string[] Shapes = { "Capsule", "Rounded", "Square", "Notch", "Drop" };
+    public static readonly string[] Thicknesses = { "Slim", "Regular", "Tall" };
+
+    /// <summary>
+    /// The island's corners for a given "roundness" r (half the height for a capsule). Every shape keeps one
+    /// number moving on the spring, so morphing between collapsed, card and panel works the same for all of them.
+    /// </summary>
+    internal static CornerRadius ShapeCorners(string shape, double r) => shape switch
+    {
+        "Rounded" => new CornerRadius(Math.Min(r, Math.Max(8, r * 0.5))),
+        "Square" => new CornerRadius(Math.Min(r, Math.Max(5, r * 0.26))),
+        "Notch" => new CornerRadius(0, 0, r * 0.8, r * 0.8),      // flush with the screen's top edge, like a camera notch
+        "Drop" => new CornerRadius(r * 0.36, r * 0.36, r, r),     // hangs like a drop: tighter top, full round bottom
+        _ => new CornerRadius(r),
+    };
+
+    private void ApplyCorners()
+    {
+        var c = ShapeCorners(S.Shape, Math.Max(0, Radius));
+        Pill.CornerRadius = c; PillRim.CornerRadius = c; PillGlow.CornerRadius = c;
+    }
+    private const double MorphResponse = 0.5, MorphDamping = 0.82;
 
     /// <summary>The Control Centre tab is taller (three rows of tiles); the others share one height.</summary>
     private double HeightFor(string tab) => tab == "controls" ? ControlsHeight : ExpandedHeight;
 
     public static readonly DependencyProperty RadiusProperty = DependencyProperty.Register(nameof(Radius), typeof(double), typeof(IslandWindow),
-        new PropertyMetadata(19.0, (d, e) =>
-        {
-            var w = (IslandWindow)d;
-            var r = Math.Max(0, (double)e.NewValue);
-            w.Pill.CornerRadius = new CornerRadius(r);
-            w.PillRim.CornerRadius = new CornerRadius(r);
-            w.PillGlow.CornerRadius = new CornerRadius(r);
-        }));
+        new PropertyMetadata(19.0, (d, _) => ((IslandWindow)d).ApplyCorners()));
     public double Radius { get => (double)GetValue(RadiusProperty); set => SetValue(RadiusProperty, value); }
 
     public string Device { get; }
@@ -59,7 +78,10 @@ public partial class IslandWindow : Window
         Device = device;
         _downloads = downloads;
         InitializeComponent();
-        Pill.CornerRadius = new CornerRadius(19);
+        Pill.Height = CollapsedHeight;
+        Compact.Height = CollapsedHeight;
+        Radius = CollapsedRadius;
+        ApplyCorners();
 
         _clock = new DispatcherTimer(DispatcherPriority.Background);
         _clock.Tick += (_, _) => { UpdateClock(); AlignClock(); };
@@ -201,6 +223,7 @@ public partial class IslandWindow : Window
         RootScale.ScaleX = RootScale.ScaleY = scale;
         Width = 560 * scale;
         Height = 420 * scale;
+        ApplyShape();
         ApplyMaterial();
         BuildTabs();
         RefreshCompact();
@@ -210,6 +233,20 @@ public partial class IslandWindow : Window
         UpdateMonitorSubscription();
         ApplyVisibility();
         UpdatePrivacyDot();
+    }
+
+    /// <summary>Shape and thickness changes morph live on the same springs, so you see the new shape take form.</summary>
+    private void ApplyShape()
+    {
+        var notch = S.Shape == "Notch";
+        Pill.Margin = new Thickness(0, notch ? 0 : 1, 0, 0);
+        PillGlow.Margin = Pill.Margin;
+        Compact.Height = CollapsedHeight;
+        ApplyCorners();
+        Pill.RefreshShadowClip();
+        if (_expanded || _card) return;
+        Springs.To(Pill, HeightProperty, CollapsedHeight, 0.45, 0.8);
+        Springs.To(this, RadiusProperty, CollapsedRadius, 0.45, 0.8);
     }
 
     private void ApplyMaterial()
@@ -265,7 +302,8 @@ public partial class IslandWindow : Window
         var (ox, oy) = Offset();
         var half = (mon.Bounds.Width - 120 * mon.Scale) / 2;
         var dx = Math.Clamp(ox * mon.Scale, -half, half);
-        var dy = Math.Clamp(oy * mon.Scale, 0, mon.Bounds.Height - 60 * mon.Scale);
+        // Notch sits flush against the top edge of the screen; the other shapes float at the chosen offset.
+        var dy = S.Shape == "Notch" ? 0 : Math.Clamp(oy * mon.Scale, 0, mon.Bounds.Height - 60 * mon.Scale);
         var x = mon.Bounds.Left + (mon.Bounds.Width - r.Width) / 2 + (int)dx;
         var y = mon.Bounds.Top + (int)dy;
         Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, x, y, 0, 0, Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
@@ -358,7 +396,7 @@ public partial class IslandWindow : Window
     {
         if (_card) return;   // a card owns the capsule's size until it ends
         Compact.Measure(new Size(double.PositiveInfinity, CollapsedHeight));
-        var target = Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500);
+        var target = EvenWidth(Compact.DesiredSize.Width + 4, 96, 500);
         // Morph the width on a lively spring; retargeting mid-flight keeps the motion continuous.
         var heading = Springs.TargetOf(Pill, WidthProperty) ?? Pill.Width;
         if (Math.Abs(target - heading) > 1.5) Springs.To(Pill, WidthProperty, target, 0.4, 0.72);
@@ -439,6 +477,11 @@ public partial class IslandWindow : Window
         var fill = new LinearGradientBrush(Color.FromArgb(0x50, color.R, color.G, color.B), Color.FromArgb(0x24, color.R, color.G, color.B), 90);
         fill.Freeze();
         CardTileFill.Background = fill;
+        // Concentric with the card whatever the island's shape: each tile corner is the card's corner minus the margin.
+        var outer = ShapeCorners(S.Shape, CardHeight / 2);
+        static double Inset(double v) => Math.Max(5, v - 10);
+        var tile = new CornerRadius(Inset(outer.TopLeft), Inset(outer.TopRight), Inset(outer.BottomRight), Inset(outer.BottomLeft));
+        CardTileFill.CornerRadius = tile; CardTileEdge.CornerRadius = tile;
         CardTitle.Text = title;
         CardSub.Text = subtitle;
         CardSub.Visibility = string.IsNullOrWhiteSpace(subtitle) ? Visibility.Collapsed : Visibility.Visible;
@@ -447,7 +490,7 @@ public partial class IslandWindow : Window
         Card.Visibility = Visibility.Visible;
         Card.Width = double.NaN;
         Card.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var width = Math.Clamp(Card.DesiredSize.Width + 20 + 10, 240, 460);
+        var width = EvenWidth(Card.DesiredSize.Width + 20 + 10, 240, 460);
         // Fixed at its final width and centred: the growing glass reveals it from the middle outwards, and the
         // text never reflows (or truncates) mid-motion.
         Card.Width = width - 20;
@@ -513,7 +556,7 @@ public partial class IslandWindow : Window
         if (_expanded) return;   // opening the panel takes over the size
         Motion.To(Compact, OpacityProperty, 1, 240);
         Springs.To(Pill, HeightProperty, CollapsedHeight, 0.42, 0.8);
-        Springs.To(this, RadiusProperty, 19, 0.42, 0.8);
+        Springs.To(this, RadiusProperty, CollapsedRadius, 0.42, 0.8);
         Pop(CNormal, 0.92);
         RefreshCompact();   // springs the width back to the capsule's content
     }
@@ -542,7 +585,7 @@ public partial class IslandWindow : Window
 
     /// <summary>Content materialises: grows from slightly small with a soft bounce while fading in.</summary>
     /// <param name="cache">Render the content once as a bitmap while it scales (big panels), then go back to crisp live rendering.</param>
-    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5, bool cache = false)
+    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5, bool cache = false, double response = 0.38, double damping = 0.6)
     {
         if (Motion.Intensity <= 0.01) { el.Opacity = 1; return; }
         var st = new ScaleTransform(from, from);
@@ -550,10 +593,16 @@ public partial class IslandWindow : Window
         el.RenderTransform = st;
         el.Opacity = 0;
         if (cache) el.CacheMode = new BitmapCache { RenderAtScale = VisualTreeHelper.GetDpi(el).DpiScaleX, SnapsToDevicePixels = true };
-        Springs.To(st, ScaleTransform.ScaleXProperty, 1, 0.38, 0.6, () => { if (cache) el.CacheMode = null; });
-        Springs.To(st, ScaleTransform.ScaleYProperty, 1, 0.38, 0.6);
+        Springs.To(st, ScaleTransform.ScaleXProperty, 1, response, damping, () => { if (cache) el.CacheMode = null; });
+        Springs.To(st, ScaleTransform.ScaleYProperty, 1, response, damping);
         Motion.To(el, OpacityProperty, 1, 170);
     }
+
+    /// <summary>
+    /// The glass moves in sub-pixel steps (no snapping, so slow motion stays smooth), but it must come to rest on
+    /// whole pixels or centred text would sit half a pixel off and look soft. An even width centres exactly.
+    /// </summary>
+    private static double EvenWidth(double width, double min, double max) => Math.Round(Math.Clamp(width, min, max) / 2) * 2;
 
     private void OnMediaChanged() { RefreshCompact(); if (_expanded && _tab == "media") UpdateMedia(); }
     private void OnTrackChanged()
@@ -601,11 +650,14 @@ public partial class IslandWindow : Window
         Motion.To(Compact, OpacityProperty, 0, 110);
         // The capsule swells into the panel on one shared spring, so width, height and corners move as one body
         // and overshoot together a few pixels before settling, like a bubble popping open.
-        SetPillScale(1, 0.4, 0.62);
-        Springs.To(Pill, WidthProperty, ExpandedWidth, 0.52, 0.7);
-        Springs.To(Pill, HeightProperty, HeightFor(_tab), 0.52, 0.7);
-        Springs.To(this, RadiusProperty, 30, 0.52, 0.7);
-        Pop(Expanded, 0.94, 0, cache: true);   // the content grows out of the capsule as it opens
+        // Damping 0.82: a ~1.5 % overshoot that reads as weight, without the visible reverse at the end that a
+        // bouncier spring gives a panel this large. The content scales on the same response and damping, so glass
+        // and content arrive together instead of wobbling out of step.
+        SetPillScale(1, 0.4, 0.7);
+        Springs.To(Pill, WidthProperty, ExpandedWidth, MorphResponse, MorphDamping);
+        Springs.To(Pill, HeightProperty, HeightFor(_tab), MorphResponse, MorphDamping);
+        Springs.To(this, RadiusProperty, 30, MorphResponse, MorphDamping);
+        Pop(Expanded, 0.94, 0, cache: true, response: MorphResponse, damping: MorphDamping);   // the content grows out of the capsule as it opens
         if (keyboard) SetInteractive(true);
         ArmCollapse();   // the short count applies only once the pointer has been inside and left
     }
@@ -622,15 +674,16 @@ public partial class IslandWindow : Window
         SetInteractive(false);
         Pill.Cursor = Cursors.Hand;
         Compact.IsHitTestVisible = true;
-        // Drawing back in: a firmer spring with just a hint of give at the end.
-        var response = immediate ? 0 : 0.44;
+        // Drawing back in: critically damped height and corners, so the capsule lands exactly on its size and
+        // never dips below it (a dip squeezed the clock for a few frames at the very end). Width keeps a hint of give.
+        var response = immediate ? 0 : 0.4;
         Motion.To(Expanded, OpacityProperty, 0, immediate ? 0 : 120, null, () => { if (!_expanded) Expanded.Visibility = Visibility.Hidden; });   // Hidden keeps it laid out for the next open
-        Springs.To(Pill, HeightProperty, CollapsedHeight, response, 0.8);
-        Springs.To(this, RadiusProperty, 19, response, 0.8);
+        Springs.To(Pill, HeightProperty, CollapsedHeight, response, 1.0);
+        Springs.To(this, RadiusProperty, CollapsedRadius, response, 1.0);
         Motion.To(Compact, OpacityProperty, 1, immediate ? 0 : 260);
         RefreshCompact();
         Compact.Measure(new Size(double.PositiveInfinity, CollapsedHeight));
-        Springs.To(Pill, WidthProperty, Math.Clamp(Compact.DesiredSize.Width + 4, 96, 500), response, 0.8);
+        Springs.To(Pill, WidthProperty, EvenWidth(Compact.DesiredSize.Width + 4, 96, 500), response, 0.9);
         if (!immediate && !Pill.IsMouseOver) SetPillScale(1);
     }
 

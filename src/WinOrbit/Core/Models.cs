@@ -107,6 +107,12 @@ public sealed class IslandSettings
     public string Rim { get; set; } = "Glass";
     /// <summary>A soft coloured glow around the island in the rim's colours.</summary>
     public bool RimGlow { get; set; }
+    /// <summary>"Capsule", "Rounded", "Square", "Notch" (flush with the top edge) or "Drop" (rounder at the bottom).</summary>
+    public string Shape { get; set; } = "Capsule";
+    /// <summary>Collapsed height: "Slim", "Regular" or "Tall".</summary>
+    public string Thickness { get; set; } = "Regular";
+    /// <summary>Pop-ups when dark/light mode, night light, airplane mode or Energy Saver are switched.</summary>
+    public bool SystemAlerts { get; set; } = true;
     /// <summary>Equaliser bars follow what is actually playing (Windows' output meter) instead of a loop.</summary>
     public bool AudioReactive { get; set; } = true;
     /// <summary>Show a dot while an app uses the microphone or camera, like phones do.</summary>

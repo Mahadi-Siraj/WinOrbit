@@ -38,6 +38,8 @@ public sealed class DeviceEvents : IDisposable
     public event Action<string, bool>? UsbChanged;
     /// <summary>(Wi-Fi or Bluetooth, switched on).</summary>
     public event Action<RadioKind, bool>? RadioChanged;
+    /// <summary>("dark", "night" or "airplane", now on). "dark" off means light mode.</summary>
+    public event Action<string, bool>? ModeChanged;
 
     private readonly Dispatcher _ui;
     private readonly Func<IslandSettings> _settings;
@@ -67,6 +69,7 @@ public sealed class DeviceEvents : IDisposable
         try { SetWlan(on && s.NetworkAlerts); } catch (Exception ex) { Log.Warn("Wi-Fi notifications unavailable: " + ex.Message); }
         try { SetBluetooth(on && s.BluetoothAlerts); } catch (Exception ex) { Log.Warn("Bluetooth alerts unavailable: " + ex.Message); }
         try { SetRadios(on && s.NetworkAlerts, on && s.BluetoothAlerts); } catch (Exception ex) { Log.Warn("Radio alerts unavailable: " + ex.Message); }
+        try { SetModes(on && s.SystemAlerts); } catch (Exception ex) { Log.Warn("Mode alerts unavailable: " + ex.Message); }
         try { SetUsb(on && s.UsbAlerts); } catch (Exception ex) { Log.Warn("USB alerts unavailable: " + ex.Message); }
     }
 
@@ -226,7 +229,80 @@ public sealed class DeviceEvents : IDisposable
             _radioOn[r.Kind] = on;
         }
         if (r.Kind == RadioKind.WiFi ? !_wifiRadioWanted : !_btRadioWanted) return;
-        _ui.BeginInvoke(() => RadioChanged?.Invoke(r.Kind, on));
+        _ui.BeginInvoke(async () =>
+        {
+            // Airplane mode switches every radio at once; its own card says it, so the radios stay quiet.
+            await Task.Delay(600);
+            if ((DateTime.UtcNow - _airplaneAt).TotalSeconds < 3) return;
+            RadioChanged?.Invoke(r.Kind, on);
+        });
+    }
+
+    // ------------------------------------------------------------------ dark/light, night light, airplane mode
+    // Each is a registry value Windows writes when you flip it. RegNotifyChangeKeyValue lets Windows wake us on a
+    // write to that one key — no polling. Values are compared, so unrelated writes to the same key stay silent.
+    private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+    private const string NightKey = @"Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\default$windows.data.bluelightreduction.bluelightreductionstate\windows.data.bluelightreduction.bluelightreductionstate";
+    private const string AirplaneKey = @"SYSTEM\CurrentControlSet\Control\RadioManagement\SystemRadioState";
+    private readonly List<RegistryWatcher> _modeWatchers = new();
+    private readonly Dictionary<string, bool?> _modes = new();
+    private readonly Dictionary<string, DispatcherTimer> _modeSettle = new();
+    private DateTime _airplaneAt = DateTime.MinValue;
+
+    internal static bool? ReadDark() => QuickControls.WindowsDark;
+    internal static bool? ReadAirplane()
+    {
+        try { using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(AirplaneKey); return k?.GetValue("") is int v ? v == 1 : null; }
+        catch { return null; }
+    }
+
+    private void SetModes(bool on)
+    {
+        if (on == (_modeWatchers.Count > 0)) return;
+        if (!on) { foreach (var w in _modeWatchers) w.Dispose(); _modeWatchers.Clear(); return; }
+        Watch("dark", Microsoft.Win32.Registry.CurrentUser, PersonalizeKey, ReadDark);
+        Watch("night", Microsoft.Win32.Registry.CurrentUser, NightKey, () => QuickControls.NightLightOn);
+        Watch("airplane", Microsoft.Win32.Registry.LocalMachine, AirplaneKey, ReadAirplane);
+    }
+
+    private void Watch(string mode, Microsoft.Win32.RegistryKey root, string path, Func<bool?> read)
+    {
+        try
+        {
+            var key = root.OpenSubKey(path);
+            if (key is null) return;   // e.g. night light never used on this PC
+            _modes[mode] = read();
+            _modeWatchers.Add(new RegistryWatcher(key, () =>
+            {
+                if (mode == "airplane") _airplaneAt = DateTime.UtcNow;
+                _ui.BeginInvoke(() => Settle(mode, read));
+            }));
+        }
+        catch (Exception ex) { Log.Warn($"Watching {mode} failed: {ex.Message}"); }
+    }
+
+    // Windows often writes a key two or three times for one flip (apps theme, then system theme): wait 200 ms
+    // for the writes to finish, then compare with what we saw last.
+    private void Settle(string mode, Func<bool?> read)
+    {
+        if (!_modeSettle.TryGetValue(mode, out var t))
+        {
+            t = new DispatcherTimer(DispatcherPriority.Normal, _ui) { Interval = TimeSpan.FromMilliseconds(200) };
+            t.Tick += (_, _) =>
+            {
+                t.Stop();
+                var now = read();
+                _modes.TryGetValue(mode, out var before);
+                _modes[mode] = now;
+                if (now is { } v && before is { } b && v != b)
+                {
+                    if (mode == "airplane") _airplaneAt = DateTime.UtcNow;
+                    ModeChanged?.Invoke(mode, v);
+                }
+            };
+            _modeSettle[mode] = t;
+        }
+        t.Stop(); t.Start();
     }
 
     internal static NetKind KindOf(uint ianaType) => ianaType switch { 71 => NetKind.WiFi, 6 => NetKind.Ethernet, _ => NetKind.Other };
@@ -443,6 +519,7 @@ public sealed class DeviceEvents : IDisposable
         _keys?.Stop();
         if (_netOn) NetworkInformation.NetworkStatusChanged -= OnNetworkStatus;
         try { SetWlan(false); } catch { }
+        try { SetModes(false); } catch { }
         foreach (var r in new[] { _wifiRadio, _btRadio }) if (r is not null) r.StateChanged -= OnRadioState;
         foreach (var w in new[] { _bt, _ble, _usb }) StopWatcher(w);
         lock (_btLinks) { foreach (var d in _btLinks.Values) try { d.Dispose(); } catch { } _btLinks.Clear(); }

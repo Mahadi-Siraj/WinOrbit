@@ -43,6 +43,7 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 | Whether Caps Lock, Num Lock and Scroll Lock are on (`GetKeyState`, three on/off bits) | Lock-key alert. Checked about eight times a second **only while that alert is on**. WinOrbit never receives keystrokes — no keyboard hook, no raw input | No |
 | Current network connection's type and name (Windows `NetworkStatusChanged` event, and the Wi-Fi service's own connected/disconnected notifications via the WLAN API) | Wi-Fi / Ethernet connected and disconnected alerts. Only the name of the network you joined is read — no scanning of nearby networks | No (not logged) |
 | Whether the Wi-Fi and Bluetooth radios are on (`Windows.Devices.Radios` state-change events) | "Wi-Fi on/off" and "Bluetooth on/off" alerts | No (not logged) |
+| Three on/off values Windows stores when you flip them: dark/light mode (`HKCU\…\Themes\Personalize`), night light (its CloudStore state), airplane mode (`HKLM\SYSTEM\…\RadioManagement\SystemRadioState`, read-only) | Mode alerts. Windows wakes WinOrbit when one of those keys is written (`RegNotifyChangeKeyValue`); nothing is polled and nothing is written | No (not logged) |
 | Names and connection state of **paired** Bluetooth devices (device watchers plus each paired device's `ConnectionStatusChanged` event); names of plugged-in USB devices | Bluetooth and USB alerts. Windows pushes the changes; nothing scans for nearby devices, and listening for a device's status does not connect to it | No (not logged) |
 
 ## 3. Network access

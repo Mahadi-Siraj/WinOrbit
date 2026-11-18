@@ -199,6 +199,10 @@ public sealed class IslandPage : PageBase
             Kit.Row("Rim", "A coloured edge around the island. Glass keeps the material's own light rim.",
                 Kit.Segmented(WinOrbit.Island.IslandWindow.Rims.Select(r => r.Name).ToArray(), Math.Max(0, Array.FindIndex(WinOrbit.Island.IslandWindow.Rims, r => r.Id == S.Rim)), i => { S.Rim = WinOrbit.Island.IslandWindow.Rims[i].Id; Save(); }), false),
             Kit.ToggleRow("Rim glow", "A soft halo in the rim's colours around the island.", S.RimGlow, v => { S.RimGlow = v; Save(); }, true),
+            Kit.WideRow("Shape", "Capsule is fully round; Rounded and Square are soft and crisp rectangles; Notch sits flush with the top of the screen like a camera notch; Drop is tighter on top and round underneath.",
+                Kit.Segmented(WinOrbit.Island.IslandWindow.Shapes, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Shapes, S.Shape)), i => { S.Shape = WinOrbit.Island.IslandWindow.Shapes[i]; Save(); })),
+            Kit.Row("Thickness", "How tall the collapsed island is.",
+                Kit.Segmented(WinOrbit.Island.IslandWindow.Thicknesses, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Thicknesses, S.Thickness)), i => { S.Thickness = WinOrbit.Island.IslandWindow.Thicknesses[i]; Save(); })),
             Kit.Row("Colours", "The island uses the active theme's glass, accent and wallpaper gradient.", Kit.Btn("Edit glass", () => Owner?.Navigate("studio"), Glyph.Drop))));
 
         Children.Add(Kit.Section("Collapsed capsule", "What the compact pill shows. Live activity (a timer, a download, or media) takes the left side.",
@@ -212,20 +216,23 @@ public sealed class IslandPage : PageBase
         Children.Add(Kit.Section("Live activities", "Things the island shows on its own, the moment they happen. Windows pushes these events; the lock-key check is the one exception, noted below.",
             Kit.ToggleRow("Volume and brightness meter", "Changing the volume — keyboard keys, the taskbar, scrolling on the island — or a laptop's brightness shows a glass meter in the capsule.", S.VolumeHud, v => { S.VolumeHud = v; Save(); }, false, Glyph.Volume),
             Kit.ToggleRow("Charging and battery", "On laptops: a moment in the capsule when you plug in or unplug, and a warning at 20 % and 10 %.", S.BatteryAlerts, v => { S.BatteryAlerts = v; Save(); }, true, Glyph.Battery),
-            Kit.ToggleRow("Caps Lock, Num Lock and Scroll Lock", "A key cap with its light when you switch one. WinOrbit asks Windows whether the three lock lights are on five times a second; it never sees what you type.", S.LockKeyAlerts, v => { S.LockKeyAlerts = v; Save(); }, true, Glyph.Keyboard),
+            Kit.ToggleRow("Caps Lock, Num Lock and Scroll Lock", "A key cap with its light when you switch one. WinOrbit asks Windows whether the three lock lights are on about eight times a second; it never sees what you type.", S.LockKeyAlerts, v => { S.LockKeyAlerts = v; Save(); }, true, Glyph.Keyboard),
             Kit.ToggleRow("Wi-Fi and Ethernet", "Connected (with the network's name) and disconnected. Read locally from Windows; nothing is sent anywhere.", S.NetworkAlerts, v => { S.NetworkAlerts = v; Save(); }, true, Glyph.Wifi),
             Kit.ToggleRow("Bluetooth devices", "Your paired headphones, keyboards, mice and phones connecting and disconnecting.", S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(); }, true, Glyph.Bluetooth),
             Kit.ToggleRow("USB devices", "Drives, mice, controllers and other USB devices plugged in or removed, by name.", S.UsbAlerts, v => { S.UsbAlerts = v; Save(); }, true, Glyph.Usb),
+            Kit.ToggleRow("Display and system modes", "Dark or light mode, night light and airplane mode switching on or off. Windows signals each change; nothing is checked on a timer.", S.SystemAlerts, v => { S.SystemAlerts = v; Save(); }, true, Glyph.Moon),
             Kit.ToggleRow("Bars follow the music", "The equaliser in the capsule moves with what's actually playing, tinted by the album art. Reads Windows' output level 20 times a second, only while music plays.", S.AudioReactive, v => { S.AudioReactive = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Privacy dots", "Orange while any app uses your microphone, green for the camera, blue for your location — hover to see which app. Read locally from Windows' own privacy records.", S.PrivacyDot, v => { S.PrivacyDot = v; Save(); }, true, Glyph.Shield),
             Kit.ToggleRow("Lyrics in the capsule", Hub.Settings.Privacy.LyricsEnabled ? "Shows the line being sung instead of the song title." : "Turn on Synced lyrics in Settings › Privacy & network first.", S.LyricsInCapsule, v => { S.LyricsInCapsule = v; Save(); }, true, Glyph.Note),
             Kit.ToggleRow("Clipboard history", "Keeps the last 40 copied items in memory for the Clipboard tab. Pinned text is saved; everything else is forgotten when WinOrbit quits. Private copies (password managers) are skipped.", S.ClipboardHistory, v => { S.ClipboardHistory = v; Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy),
-            Kit.Row("Preview", "See what each live activity looks like on your island.", Kit.Buttons(
+            Kit.WideRow("Preview", "See what each live activity looks like on your island.", Kit.WrapButtons(
                 Kit.Btn("Charging", () => Hub.Island.Demo("charging")), Kit.Btn("Low battery", () => Hub.Island.Demo("low")),
                 Kit.Btn("Volume", () => Hub.Island.Demo("volume")), Kit.Btn("Microphone", () => Hub.Island.Demo("mic")),
                 Kit.Btn("Caps Lock", () => Hub.Island.Demo("caps")), Kit.Btn("Wi-Fi", () => Hub.Island.Demo("wifi")),
                 Kit.Btn("Bluetooth", () => Hub.Island.Demo("bluetooth")), Kit.Btn("USB", () => Hub.Island.Demo("usb")),
-                Kit.Btn("Wi-Fi off", () => Hub.Island.Demo("wifi-radio")), Kit.Btn("Bluetooth on", () => Hub.Island.Demo("bt-radio"))))));
+                Kit.Btn("Wi-Fi off", () => Hub.Island.Demo("wifi-radio")), Kit.Btn("Bluetooth on", () => Hub.Island.Demo("bt-radio")),
+                Kit.Btn("Dark mode", () => Hub.Island.Demo("dark")), Kit.Btn("Night light", () => Hub.Island.Demo("night")),
+                Kit.Btn("Airplane mode", () => Hub.Island.Demo("airplane")), Kit.Btn("Energy saver", () => Hub.Island.Demo("saver"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]
