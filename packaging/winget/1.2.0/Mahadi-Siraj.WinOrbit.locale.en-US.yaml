@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: Mahadi-Siraj.WinOrbit
+PackageVersion: 1.2.0
+PackageLocale: en-US
+Publisher: mssatalite
+PublisherUrl: https://github.com/Mahadi-Siraj
+PublisherSupportUrl: https://github.com/Mahadi-Siraj/WinOrbit/issues
+Author: mssatalite
+PackageName: WinOrbit
+PackageUrl: https://github.com/Mahadi-Siraj/WinOrbit
+License: GPL-3.0
+LicenseUrl: https://github.com/Mahadi-Siraj/WinOrbit/blob/main/LICENSE
+ShortDescription: A Dynamic Island, Control Centre, widgets, launcher and liquid-glass theming for Windows 10 and 11.
+Description: |-
+  WinOrbit adds a Dynamic Island with live activities (media, volume, charging, connections, screenshots, reminders),
+  a Control Centre, desktop widgets, an Alt+Space launcher and wallpaper-aware glass theming in one native app.
+  No telemetry and no network connections by default. Installs per user without admin rights.
+Moniker: winorbit
+Tags:
+  - dynamic-island
+  - widgets
+  - launcher
+  - customization
+  - desktop
+  - privacy
+ReleaseNotesUrl: https://github.com/Mahadi-Siraj/WinOrbit/releases/tag/v1.2.0
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

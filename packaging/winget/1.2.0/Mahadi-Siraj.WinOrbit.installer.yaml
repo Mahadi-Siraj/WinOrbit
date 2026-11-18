@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: Mahadi-Siraj.WinOrbit
+PackageVersion: 1.2.0
+MinimumOSVersion: 10.0.19041.0
+InstallerType: inno
+Scope: user
+InstallModes:
+  - interactive
+  - silent
+  - silentWithProgress
+UpgradeBehavior: install
+ReleaseDate: 2026-11-18
+Dependencies:
+  PackageDependencies:
+    - PackageIdentifier: Microsoft.DotNet.DesktopRuntime.8
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/Mahadi-Siraj/WinOrbit/releases/download/v1.2.0/WinOrbit-Setup-1.2.0.exe
+    InstallerSha256: 11A7121453C627778C12CEA5E16FEEA2171614E3BE3085EA9BF74C2CF3F1B0A2
+    ProductCode: '{7E1C2A9B-5D4F-4C3B-9A61-2F0E8B6D4C10}_is1'
+ManifestType: installer
+ManifestVersion: 1.6.0
