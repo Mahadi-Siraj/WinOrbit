@@ -294,6 +294,20 @@ public static class Startup
         if (on) k.SetValue(Name, $"\"{Environment.ProcessPath}\" --startup");
         else if (k.GetValue(Name) is not null) k.DeleteValue(Name);
     }
+
+    /// <summary>The app used to be called Glasswave: replace its start-up entry with ours, keeping the user's choice.</summary>
+    public static void MigrateLegacy()
+    {
+        try
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(Key, true);
+            const string legacy = "Glass" + "wave";
+            if (k?.GetValue(legacy) is null) return;
+            k.DeleteValue(legacy);
+            if (!Environment.ProcessPath!.Contains("\\bin\\", StringComparison.OrdinalIgnoreCase)) Set(true);
+        }
+        catch { }
+    }
 }
 
 /// <summary>Reputable third-party tools for the parts of Windows no supported setting can restyle. Information only.</summary>

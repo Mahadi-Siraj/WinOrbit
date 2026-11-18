@@ -3,7 +3,7 @@
 
 #define AppName "WinOrbit"
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.1.0"
 #endif
 #define AppExe "WinOrbit.exe"
 #ifndef PublishDir
@@ -15,9 +15,13 @@ AppId={{7E1C2A9B-5D4F-4C3B-9A61-2F0E8B6D4C10}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
-AppPublisher=WinOrbit (local build)
-AppComments=Liquid Glass desktop customisation for Windows. No telemetry.
+AppPublisher=Mahadi Siraj
+AppPublisherURL=https://github.com/Mahadi-Siraj
+AppSupportURL=https://github.com/Mahadi-Siraj/Windows-Cuatomization-App-I-need/issues
+AppComments=Dynamic Island, widgets and liquid-glass desktop for Windows. Free, open source, no telemetry.
+; Same AppId as the earlier "Glasswave" builds, so this upgrades them in place.
 DefaultDirName={localappdata}\Programs\{#AppName}
+UsePreviousAppDir=no
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 DisableDirPage=auto
@@ -47,6 +51,12 @@ Name: "startup"; Description: "Start WinOrbit when I sign in"; GroupDescription:
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+; Remove the program files and shortcuts of the app's previous name (settings are moved by the app itself).
+Type: filesandordirs; Name: "{localappdata}\Programs\Glasswave"
+Type: files; Name: "{autoprograms}\Glasswave.lnk"
+Type: files; Name: "{autodesktop}\Glasswave.lnk"
+
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
@@ -55,6 +65,7 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 ; Same value WinOrbit's own "Start with Windows" switch reads and writes.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "WinOrbit"; ValueData: """{app}\{#AppExe}"" --startup"; Tasks: startup; Flags: uninsdeletevalue
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "WinOrbit"; Flags: uninsdeletevalue dontcreatekey
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "Glasswave"; Flags: deletevalue dontcreatekey
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "Launch WinOrbit"; Flags: nowait postinstall skipifsilent
@@ -100,8 +111,13 @@ var
 begin
   // Close a running copy before files are replaced (upgrade in place keeps all settings).
   if CurStep = ssInstall then
+  begin
     if FileExists(ExpandConstant('{app}\WinOrbit.exe')) then
       Exec(ExpandConstant('{app}\WinOrbit.exe'), '--quit', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    // The same app under its previous name.
+    if FileExists(ExpandConstant('{localappdata}\Programs\Glasswave\Glasswave.exe')) then
+      Exec(ExpandConstant('{localappdata}\Programs\Glasswave\Glasswave.exe'), '--quit', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

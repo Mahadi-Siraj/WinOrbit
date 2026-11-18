@@ -13,3 +13,6 @@ docs/screenshots/
 *.log
 Data/
 portable.flag
+
+# Personal notes for the owner, not part of the public repo
+docs/STATUS-REPORT.md

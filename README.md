@@ -1,66 +1,120 @@
-# WinOrbit
+<p align="center">
+  <img src="docs/assets/banner.png" alt="WinOrbit — the Dynamic Island and desktop suite Windows deserves" width="100%">
+</p>
 
-**A Liquid Glass desktop for Windows 11.** Wallpaper-aware glass, a Dynamic Island, premium desktop widgets, Rainmeter management and coordinated Windows appearance — in one native, private, lightweight app.
+<p align="center">
+  <b>A Dynamic Island, a Control Centre, widgets, a launcher and liquid-glass theming — in one free, private, featherweight app for Windows 10 &amp; 11.</b>
+</p>
 
-* Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**.
-* **No telemetry, analytics, accounts or update checks.** Zero network connections by default ([privacy audit](docs/PRIVACY.md)).
-* Per-user install, **no administrator rights** for anything.
+<p align="center">
+  <a href="../../releases/latest"><b>⬇ Download the latest release</b></a> ·
+  <a href="docs/USER-GUIDE.md">User guide</a> ·
+  <a href="docs/PRIVACY.md">Privacy audit</a> ·
+  <a href="docs/ROADMAP.md">Roadmap</a>
+</p>
 
-## Features
+<p align="center">
+  <img alt="License GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-black">
+  <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-black">
+  <img alt=".NET 8 WPF" src="https://img.shields.io/badge/.NET%208-WPF-black">
+  <img alt="Zero telemetry" src="https://img.shields.io/badge/telemetry-none-black">
+</p>
 
-Status key: ✅ implemented and verified on the development PC · 🧪 implemented, verified by automated tests but not on real hardware/software here · ➖ intentionally not included.
+---
 
-| Area | What you get | Status |
-|---|---|---|
-| **Liquid Glass design system** | Wallpaper-sampled frosted glass with tint, refraction, specular highlight, lit rim, accent glow and soft shadow; consistent controls, typography, motion | ✅ |
-| **Themes** | 10 hand-tuned built-ins (Pure Liquid Glass, Wallpaper Adaptive, Frosted Glass, Minimal Dark, Soft Light, Midnight, AMOLED Black, Productivity, Gaming, Study); separate dark & light glass; Auto / Dark / Light / Scheduled | ✅ |
-| **Liquid Glass Editor** | Live preview on your real wallpaper; tint, blur, saturation, refraction, rim, highlight, glow, shadow, radius; undo/redo; save, duplicate, rename, reset, import/export | ✅ |
-| **Wallpaper engine** | Detects the wallpaper per monitor (all Windows fit modes), extracts a palette, builds gradients, updates instantly on change; **Wallpaper Engine / Lively live-wallpaper matching** | ✅ |
-| **Gradients** | Wallpaper-generated or custom, 2–6 stops, linear/radial, angle, strength, saturation, presets, "apply as wallpaper" | ✅ |
-| **Dynamic Island** | Floating capsule (time, date, now-playing, timer, CPU/RAM, downloads); expands into Media, System, Quick controls, Focus timer, Calendar, Notes; drag with magnetic centre snap, Centre / Keep centred, scroll-for-volume, auto-hide, hover-expand, auto-collapse, fullscreen hide, keyboard control, never steals focus | ✅ |
-| Live activities | Volume meter (any volume change), mic/camera privacy dot with app name, equaliser that follows the music tinted by album art, synced lyrics in the capsule and media tab (opt-in, LRCLIB) | ✅ volume meter and lyrics verified live; ⚠️ privacy dot not yet seen with a real mic/camera session |
-| Clipboard & shelf | Clipboard history tab (opt-in, memory-only, skips password-manager copies, pin to keep) and a file shelf (drop files on the island, drag them out later) | ✅ UI verified; ⚠️ copy/paste and drag-drop need a hands-on check |
-| Launcher (Alt+Space) | Search apps (desktop + Store, with icons), Windows and WinOrbit settings, quick actions, profiles and recent files; calculator and unit conversion; web search in your own browser; learns your favourites (locally) | ✅ verified live |
-| Settings search | Search box in the main window (Ctrl+F): jumps to the setting and highlights it; built from the real pages, so it never goes stale | ✅ |
-| Welcome | First-run card: pick a starting style, opt into clipboard history and lyrics | ✅ |
-| Media from more players | VLC (classic 3.x), foobar2000, Winamp, PotPlayer, MPC-HC/BE and mpv, read from their window titles with play/pause detected from their audio; seek bar and ±10 s for players that allow it (YouTube in Chrome/Brave/Edge, Spotify …) | ✅ VLC detection verified live; ⚠️ VLC can only be *controlled* with its global media keys switched on (see User guide) |
-| Charging & battery | Green filling meter when you plug in, warnings at 20 % and 10 %, Energy Saver on/off, laptop brightness meter | ✅ visuals verified with Preview; ⚠️ untested on a real laptop (this PC is a desktop) |
-| Quick toggles | Liquid-glass tiles that switch the real setting: Wi-Fi, Bluetooth, Night light, Dark mode, Power mode, Keep awake, Focus, Widgets | ✅ Wi-Fi, Bluetooth and power mode verified live; ⚠️ Night light is experimental (no public API); Night light, Dark mode and Keep awake still need checking by eye on a real screen |
-| Island on several monitors | Per-display placement and offsets | 🧪 (single 1080p display here) |
-| **Widgets** (13) | Clock (3 styles), Calendar, World clock, System monitor (3 styles), Now playing, Focus timer, Notes, Tasks/Objectives, Launcher, Recycle Bin, Text, Ambient card, Weather (optional, online) | ✅ |
-| Widget interaction | Drag, snap-to-grid + margin magnets, resize, opacity, always-on-top, lock, hide, remove, auto-arrange, persistence, multi-monitor follow | ✅ (multi-monitor 🧪) |
-| **Rainmeter** | Detection (installed/portable/custom path), read-only skin library with previews, metadata, search, filters, favourites, recents, third-party-plugin and launches-programs warnings; activate, deactivate, refresh, variants, move, z-order, transparency, Manage, refresh-all, start; safe `.rmskin` inspection → Rainmeter's own installer. The page appears only when Rainmeter is installed or running (Settings can force it on or off) | ✅ verified against a real portable Rainmeter 4.5.28 (detect, list, activate/deactivate, variant switch, refresh, move, layering, transparency, `.rmskin` import through the UI). Transparency is Rainmeter's temporary kind; a standard (non-portable) install wasn't tried live |
-| **Windows tweaks** | App/Windows mode, transparency, accent on taskbar/title bars, animations, taskbar alignment/auto-hide/search/Task view, system accent colour, gradient wallpaper — all backed up with **Revert all** | ✅ |
-| **Profiles** | Study, Gaming, Productivity, Minimal, Night + your own; restore previous; import/export | ✅ |
-| **Automation** (opt-in) | By time of day, fullscreen app, or foreground app | ✅ (logic unit-tested; fullscreen rule tested manually) |
-| Privacy & network gate | Master switch (off), HTTPS-only gate, request ledger, static test that no other code can open sockets | ✅ |
-| Diagnostics | Live RAM/CPU of WinOrbit and of Rainmeter separately, start-up time, network ledger, log viewer | ✅ |
-| Render self-check | Detects when the GPU driver fails to present the window and falls back to software rendering automatically | ✅ (triggered for real on this PC) |
-| Installer & portable | Inno Setup per-user installer with clean uninstall (keeps/removes data on request, offers Windows-settings rollback); self-contained portable zip | ✅ |
-| Explorer/DWM injection, system file patching | | ➖ by design |
+## Why WinOrbit
 
-Measured results are in [docs/TEST-REPORT.md](docs/TEST-REPORT.md). Screenshots of every page are in `docs/screenshots/` on the development PC (kept out of Git because they show the owner's wallpaper and desktop).
+People stack half a dozen tools to make Windows feel modern — a Dynamic Island app, Rainmeter, a volume-flyout replacement, a clipboard manager, a launcher, a night-light toggle. WinOrbit replaces them with **one** native app:
+
+* **Featherweight.** ~60 MB of RAM and ~0.1 % CPU at idle, measured ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**. Everything is event-driven: nothing polls while you're not looking.
+* **Private by design.** No telemetry, analytics, accounts or update checks. **Zero network connections by default**; the two optional online features (weather, synced lyrics) have their own switches and every request is shown in a ledger.
+* **Free forever.** Open source under GPL-3.0 — every copy and fork has to stay free and open.
+* **No admin rights, no hacks.** Per-user install. No DLL injection, no system-file patching, nothing that weakens Windows security.
+
+## What you get
+
+### 🏝️ Dynamic Island
+A liquid-glass capsule at the top of your screen that comes alive:
+* **Now playing** with album art, an equaliser that moves with the real audio (tinted by the cover), a **seek bar** and ±10 s — Spotify, YouTube in Chrome/Brave/Edge, Apple Music, Media Player, and classic players like **VLC, foobar2000, Winamp, PotPlayer, MPC and mpv**.
+* **Synced lyrics** (opt-in) — the line being sung, right in the capsule.
+* **Live activities** — volume and brightness meter, a green **charging** animation, low-battery warnings, Energy Saver, focus timer, downloads.
+* **Privacy dots** — 🟠 microphone, 🟢 camera, 🔵 location in use, with the app's name. Your security, at a glance.
+* **Control Centre** — 12 liquid-glass tiles that switch the real setting: Wi-Fi, Bluetooth, Night light, Dark mode, Power mode, Microphone, Keep awake, Focus, Widgets, plus Airplane mode, Do not disturb and Energy saver shortcuts; volume and monitor brightness sliders.
+* **Clipboard history** (opt-in, memory-only, skips password-manager copies) and a **file shelf** — drop files on the island, drag them out later.
+* Calendar, quick notes, system monitor. Drag it anywhere — it clicks into the exact centre; hides itself for fullscreen games and videos.
+
+### 🔎 Launcher — <kbd>Alt</kbd>+<kbd>Space</kbd>
+Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (dark mode, lock, focus, profiles…), recent files, a calculator (`12*7`, `200*15%`) and unit conversion (`10 km to mi`). Learns your favourites — on your PC only.
+
+### 🧊 Liquid-glass desktop
+* **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers.
+* **13 widgets** — clocks, calendar, world clock, system monitor, now playing, focus, notes, tasks, launcher, recycle bin, weather and more; drag, snap, resize.
+* **10 themes**, a live **Liquid Glass Editor**, dark / light / auto / scheduled modes, wallpaper-generated gradients.
+* **Profiles** (Study, Gaming, Productivity, Minimal, Night) with optional automation.
+* **Windows tweaks** with full backup and one-click **Revert all**.
+* **Rainmeter manager** — appears only if you use Rainmeter.
 
 ## Install
 
-* **Installer:** run `WinOrbit-Setup-1.0.0.exe`. Needs the .NET 8 Desktop Runtime (x64), which setup checks for. Not code-signed: SmartScreen will show *More info → Run anyway*.
-* **Portable:** unzip `WinOrbit-Portable-1.0.0-win-x64.zip` anywhere and run `WinOrbit.exe`. Everything (runtime included) is inside; settings stay in `Data\` next to it.
+Grab the files from the **[latest release](../../releases/latest)**:
+
+| File | For |
+|---|---|
+| `WinOrbit-Setup-<version>.exe` | Recommended. Installs for your user only — **no admin prompt**. Needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (setup checks and links it). |
+| `WinOrbit-Portable-<version>-win-x64.zip` | No install, no runtime needed. Unzip anywhere and run `WinOrbit.exe`; settings stay next to it. |
+
+> **SmartScreen:** WinOrbit isn't code-signed (certificates cost money), so Windows may say *"Windows protected your PC"*. Click **More info → Run anyway**. Every release lists SHA-256 checksums, and the source is right here.
+
+Upgrading from an earlier build called *Glasswave* keeps all your settings.
+
+## Shortcuts
+
+| Keys | Does |
+|---|---|
+| <kbd>Alt</kbd>+<kbd>Space</kbd> | Launcher (falls back to <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd> if another app owns it) |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd> | Open the island with the keyboard (falls back to <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>I</kbd>) |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>W</kbd> / <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>G</kbd> | Show/hide widgets · open WinOrbit |
+| <kbd>Ctrl</kbd>+<kbd>F</kbd> (in WinOrbit) | Search settings |
+
+All changeable in Settings.
+
+## Honest status
+
+✅ implemented and verified on a real PC · 🧪 implemented and unit-tested, not yet on that hardware · ⚠️ known limitation.
+
+| Area | Status |
+|---|---|
+| Island, live activities, media (incl. VLC detection), seek, lyrics, launcher, Control Centre, widgets, themes, profiles, privacy gate, installer | ✅ |
+| Multiple monitors, display scaling above 100 %, laptops (battery/brightness), Windows 10 | 🧪 |
+| VLC can only be *controlled* (not just shown) after switching on its global media keys — see the [user guide](docs/USER-GUIDE.md) | ⚠️ |
+| Night light uses an undocumented Windows setting (format-checked, falls back to Settings) | ⚠️ |
+| Do not disturb, airplane mode and Energy Saver can't be switched by apps (Windows offers no API) — their tiles open the right panel | ⚠️ |
+| Reading other apps' notifications needs a packaged (MSIX) build — planned | ⚠️ |
+| See-through taskbar: impossible on Windows 11 without injecting into Explorer, which WinOrbit refuses to do | ➖ |
+
+Details and measurements: [test report](docs/TEST-REPORT.md) · what's next: [roadmap](docs/ROADMAP.md).
 
 ## Build from source
 
-Requirements: Windows 10 2004+ / 11, .NET 8 SDK. Optional: Inno Setup 6 for the installer (`winget install JRSoftware.InnoSetup --scope user`).
+Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 for the installer (`winget install JRSoftware.InnoSetup --scope user`).
 
 ```powershell
-dotnet build WinOrbit.sln                       # debug build
-dotnet test tests\WinOrbit.Tests                # unit tests
-.\tools\build-release.ps1                        # tests + installer + portable zip into .\artifacts
+dotnet build WinOrbit.sln                 # debug build
+dotnet test tests\WinOrbit.Tests          # 85 unit tests
+.\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 
-Developer tools in `tools/`: `capture.ps1` and `qa-pages.ps1` (screenshots for visual QA), `bench.ps1` (idle resource benchmark), `input.ps1` (scripted clicks for UI tests).
+Pushing a tag like `v1.1.0` builds and publishes a release automatically (`.github/workflows/release.yml`).
+Docs: [architecture](docs/ARCHITECTURE.md) · [user guide](docs/USER-GUIDE.md) · [privacy audit](docs/PRIVACY.md).
 
-## Documentation
+Contributions are welcome — open an issue or a pull request.
 
-* [User guide](docs/USER-GUIDE.md) — usage, configuration, troubleshooting, uninstall/rollback, known limitations
-* [Architecture](docs/ARCHITECTURE.md) — technology decision, modules, how the glass works
-* [Privacy audit](docs/PRIVACY.md)
-* [Test & performance report](docs/TEST-REPORT.md)
+## Made by
+
+**Mahadi Siraj** — [Instagram @mssatalite](https://www.instagram.com/mssatalite/) · [GitHub @Mahadi-Siraj](https://github.com/Mahadi-Siraj)
+
+If WinOrbit earns a spot on your desktop, a ⭐ on the repo helps others find it.
+
+## License
+
+[GPL-3.0](LICENSE) © Mahadi Siraj. You can use, study, share and change WinOrbit; any version you share must stay free and open under the same licence and keep the credit.

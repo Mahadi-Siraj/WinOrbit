@@ -80,6 +80,7 @@ public partial class App : Application
         store.Load();
         Hub.Store = store;
         Log.Info($"WinOrbit {typeof(App).Assembly.GetName().Version} starting (portable={Paths.Portable})");
+        if (!Paths.Portable) WindowsIntegration.Startup.MigrateLegacy();
 
         Hub.Shell = new ShellHost();
         Hub.Wallpaper = new WallpaperEngine(Dispatcher);

@@ -9,7 +9,8 @@ public static class AppInfo
     public const string Author = "Mahadi Siraj";
     public const string Instagram = "mssatalite";
     public const string GitHub = "Mahadi-Siraj";
-    public const string Repository = "https://github.com/Mahadi-Siraj/WinOrbit";
+    // GitHub keeps redirecting this address if the repository is renamed later.
+    public const string Repository = "https://github.com/Mahadi-Siraj/Windows-Cuatomization-App-I-need";
 
     public static string? InstagramUrl => Instagram.Length > 0 ? "https://www.instagram.com/" + Instagram.TrimStart('@') + "/" : null;
     public static string? GitHubUrl => GitHub.Length > 0 ? "https://github.com/" + GitHub : null;
