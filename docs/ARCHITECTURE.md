@@ -31,7 +31,9 @@ src/WinOrbit
 ├─ Design/                Design system: ThemeEngine (+10 presets, undo/redo), GlassSurface, Controls.xaml styles,
 │                         Motion (reduced-motion aware), Visuals (sparkline, ring, equaliser, month view), Dialogs
 ├─ Wallpaper/             WallpaperEngine, Palette extraction & colour maths, LiveWallpaper (Wallpaper Engine / Lively)
-├─ Island/                Dynamic Island window, controller (multi-monitor), download watcher
+├─ Island/                Dynamic Island window (split into partials: live activities, calendar, weather),
+│                         controller (multi-monitor), Control Centre tiles, download watcher
+├─ Launcher/              Alt+Space launcher: app index, icons, calculator, unit conversion
 ├─ Widgets/               Widget host window (drag/snap/resize/z-order), manager, 13 widget kinds
 ├─ Rainmeter/             Detection, read-only INI/skin scanning, documented bangs, .rmskin inspection
 ├─ WindowsIntegration/    Per-user appearance tweaks with backup/revert, accent colour, start-up entry, third-party info

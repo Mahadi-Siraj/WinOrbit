@@ -109,12 +109,12 @@ Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 f
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build
-dotnet test tests\WinOrbit.Tests          # 125 unit tests
+dotnet test tests\WinOrbit.Tests          # 128 unit tests
 .\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 
 Releases are automatic: change the number in `VERSION` on `main` (or push a `v*` tag) and GitHub Actions tests, builds and publishes the installer, portable zip and checksums (`.github/workflows/release.yml`).
-Docs: [architecture](docs/ARCHITECTURE.md) · [user guide](docs/USER-GUIDE.md) · [privacy audit](docs/PRIVACY.md).
+Docs: [developer guide](docs/DEVELOPER-GUIDE.md) · [architecture](docs/ARCHITECTURE.md) · [user guide](docs/USER-GUIDE.md) · [privacy audit](docs/PRIVACY.md).
 
 Contributions are welcome — open an issue or a pull request.
 
