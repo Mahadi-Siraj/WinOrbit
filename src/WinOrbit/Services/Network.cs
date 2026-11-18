@@ -76,16 +76,25 @@ public sealed class LyricsService
     public bool Enabled => _privacy().NetworkAllowed && _privacy().LyricsEnabled;
 
     /// <summary>Synced lines for a track, or null when lyrics are off, unknown or not time-synced.</summary>
+    /// <remarks>
+    /// Players often publish messy names — "Artist - Song (Official Video) [4K]" from a YouTube channel called
+    /// "ArtistVEVO". The name is cleaned first (<see cref="Queries"/>); at most three requests are made per track:
+    /// one exact lookup and up to two searches.
+    /// </remarks>
     public async Task<List<LyricLine>?> GetAsync(string title, string artist, string album, TimeSpan duration)
     {
-        if (!Enabled || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(artist)) return null;
+        if (!Enabled || string.IsNullOrWhiteSpace(title)) return null;
+        var queries = Queries(title, artist);
+        if (queries.Count == 0) return null;
         var key = $"{title}|{artist}|{(int)duration.TotalSeconds}".ToLowerInvariant();
         if (_cache.TryGetValue(key, out var cached)) return cached;
         List<LyricLine>? result = null;
         try
         {
-            var q = $"track_name={Uri.EscapeDataString(title)}&artist_name={Uri.EscapeDataString(artist)}";
-            if (!string.IsNullOrWhiteSpace(album)) q += "&album_name=" + Uri.EscapeDataString(album);
+            var (t0, a0) = queries[0];
+            var q = $"track_name={Uri.EscapeDataString(t0)}&artist_name={Uri.EscapeDataString(a0)}";
+            // The album only helps when the name came through untouched (a music app, not a video page).
+            if (!string.IsNullOrWhiteSpace(album) && t0 == title.Trim()) q += "&album_name=" + Uri.EscapeDataString(album);
             if (duration > TimeSpan.Zero) q += "&duration=" + (int)Math.Round(duration.TotalSeconds);
             try
             {
@@ -93,22 +102,119 @@ public sealed class LyricsService
                 result = FromRecord(doc.RootElement);
             }
             catch (HttpRequestException) { }      // 404: no exact match — try a search below
-            if (result is null)
+            foreach (var (t, a) in queries.Take(2))
             {
-                var s = $"track_name={Uri.EscapeDataString(title)}&artist_name={Uri.EscapeDataString(artist)}";
+                if (result is not null) break;
+                var s = $"track_name={Uri.EscapeDataString(t)}&artist_name={Uri.EscapeDataString(a)}";
                 using var doc = JsonDocument.Parse(await _net.GetStringAsync("https://lrclib.net/api/search?" + s, "Lyrics: search track"));
+                var found = new List<(double Duration, List<LyricLine> Lines)>();
                 foreach (var r in doc.RootElement.EnumerateArray())
                 {
                     var d = r.TryGetProperty("duration", out var dv) && dv.ValueKind == JsonValueKind.Number ? dv.GetDouble() : 0;
-                    if (duration > TimeSpan.Zero && d > 0 && Math.Abs(d - duration.TotalSeconds) > 4) continue;
-                    if ((result = FromRecord(r)) is not null) break;
+                    if (FromRecord(r) is { } lines) found.Add((d, lines));
                 }
+                var pick = Pick(found.Select(f => f.Duration).ToList(), duration.TotalSeconds);
+                if (pick >= 0) result = found[pick].Lines;
             }
         }
         catch (Exception ex) { Log.Warn("Lyrics lookup failed: " + ex.GetType().Name); }
         _cache[key] = result;
         if (_cache.Count > 200) _cache.Remove(_cache.Keys.First());
         return result;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex Noise = new(
+        @"\s*[\(\[【]([^\)\]】]*\b(official|video|audio|lyrics?|visuali[sz]er|hd|hq|4k|8k|1080p|720p|mv|m/v|remaster(ed)?|explicit|clean|colou?r coded|full song|music video|performance video)\b[^\)\]】]*)[\)\]】]",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly System.Text.RegularExpressions.Regex Featuring = new(
+        @"\s*(?:[\(\[]\s*(?:feat\.?|ft\.?|featuring)\s[^\)\]]*[\)\]]|\s(?:feat\.?|ft\.?|featuring)\s.*$)",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly System.Text.RegularExpressions.Regex RemasterTail = new(
+        @"\s+[-–—]\s+(?:\d{4}\s+)?remaster(?:ed)?(?:\s+\d{4})?(?:\s+version)?\s*$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// A track name without the video-page noise: "(Official Video)", "[4K]", "(Lyrics)", "- 2011 Remaster",
+    /// "feat. Someone", and anything after " | ". "(Live)", "(Acoustic)" and "(Remix)" stay — they are different recordings.
+    /// </summary>
+    internal static string CleanTitle(string title)
+    {
+        var t = title.Trim();
+        var bar = t.IndexOf(" | ", StringComparison.Ordinal);
+        if (bar > 0) t = t[..bar];
+        for (var i = 0; i < 3; i++) t = Noise.Replace(t, "");
+        t = Featuring.Replace(t, "");
+        t = RemasterTail.Replace(t, "");
+        t = System.Text.RegularExpressions.Regex.Replace(t, @"\s{2,}", " ").Trim().TrimEnd('-', '–', '—', ' ');
+        return t.Length > 0 ? t : title.Trim();
+    }
+
+    /// <summary>An artist name without YouTube channel decorations ("ArtistVEVO", "Artist - Topic") or featured artists.</summary>
+    internal static string CleanArtist(string artist)
+    {
+        var a = artist.Trim();
+        if (a.EndsWith(" - Topic", StringComparison.OrdinalIgnoreCase)) a = a[..^8];
+        if (a.Length > 4 && a.EndsWith("VEVO", StringComparison.Ordinal)) a = a[..^4];
+        if (a.EndsWith(" Official", StringComparison.OrdinalIgnoreCase)) a = a[..^9];
+        a = Featuring.Replace(a, "");
+        return a.Trim();
+    }
+
+    private static bool LooksLikeChannel(string artist) =>
+        artist.EndsWith("VEVO", StringComparison.Ordinal) || artist.EndsWith(" - Topic", StringComparison.OrdinalIgnoreCase) ||
+        artist.EndsWith("Official", StringComparison.OrdinalIgnoreCase) || artist.Contains("Records", StringComparison.OrdinalIgnoreCase) ||
+        artist.Contains("Music", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The (title, artist) pairs worth asking for, best first, at most three. A video titled "Artist - Song" on a
+    /// channel that isn't the artist's own name is split into its parts.
+    /// </summary>
+    internal static List<(string Title, string Artist)> Queries(string title, string artist)
+    {
+        var list = new List<(string, string)>();
+        void Add(string t, string a)
+        {
+            t = t.Trim(); a = a.Trim();
+            if (t.Length == 0 || a.Length == 0 || list.Count >= 3) return;
+            if (list.Any(x => string.Equals(x.Item1, t, StringComparison.OrdinalIgnoreCase) && string.Equals(x.Item2, a, StringComparison.OrdinalIgnoreCase))) return;
+            list.Add((t, a));
+        }
+        var cleanTitle = CleanTitle(title);
+        var cleanArtist = CleanArtist(artist);
+
+        // "Artist - Song": split on the first spaced dash.
+        (string Left, string Right)? split = null;
+        var m = System.Text.RegularExpressions.Regex.Match(cleanTitle, @"^(.+?)\s+[-–—]\s+(.+)$");
+        if (m.Success) split = (CleanArtist(m.Groups[1].Value), CleanTitle(m.Groups[2].Value));
+
+        var splitFirst = split is { } s && (cleanArtist.Length == 0 || LooksLikeChannel(artist.Trim())
+            || s.Left.Contains(cleanArtist, StringComparison.OrdinalIgnoreCase) || cleanArtist.Contains(s.Left, StringComparison.OrdinalIgnoreCase));
+        if (splitFirst) Add(split!.Value.Right, split.Value.Left);
+        Add(cleanTitle, cleanArtist);
+        if (split is { } later) Add(later.Right, later.Left);
+        Add(title, artist);
+        return list;
+    }
+
+    /// <summary>
+    /// Which search result to use: the synced one whose length is closest to the track's, within 4 s.
+    /// Results without a length are a last resort. -1 when nothing fits.
+    /// </summary>
+    internal static int Pick(IReadOnlyList<double> durations, double trackSeconds)
+    {
+        int best = -1;
+        var bestScore = double.MaxValue;
+        for (var i = 0; i < durations.Count; i++)
+        {
+            var d = durations[i];
+            double score;
+            if (trackSeconds <= 0) score = i;                                  // nothing to compare: keep the server's order
+            else if (d <= 0) score = 100 + i;                                  // unknown length
+            else if (Math.Abs(d - trackSeconds) <= 4) score = Math.Abs(d - trackSeconds);
+            else continue;
+            if (score < bestScore) { bestScore = score; best = i; }
+        }
+        return best;
     }
 
     private static List<LyricLine>? FromRecord(JsonElement r)

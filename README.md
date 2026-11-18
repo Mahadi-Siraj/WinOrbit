@@ -110,7 +110,7 @@ Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 f
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build
-dotnet test tests\WinOrbit.Tests          # 174 unit tests
+dotnet test tests\WinOrbit.Tests          # 188 unit tests
 .\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 

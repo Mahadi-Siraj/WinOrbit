@@ -415,6 +415,53 @@ public class LiveActivityTests
         Assert.Equal(2, LyricsService.IndexAt(lines, TimeSpan.FromMinutes(9)));
     }
 
+    [Theory]
+    [InlineData("Blinding Lights (Official Video)", "Blinding Lights")]
+    [InlineData("Blinding Lights [Official Music Video] (4K)", "Blinding Lights")]
+    [InlineData("Shape of You (Lyrics)", "Shape of You")]
+    [InlineData("Bohemian Rhapsody - Remastered 2011", "Bohemian Rhapsody")]
+    [InlineData("Heroes - 2017 Remaster", "Heroes")]
+    [InlineData("Stay (feat. Justin Bieber)", "Stay")]
+    [InlineData("Stay ft. Justin Bieber", "Stay")]
+    [InlineData("Song Name | Official Lyric Video", "Song Name")]
+    [InlineData("Hurt (Live)", "Hurt (Live)")]
+    [InlineData("Titanium (David Guetta Remix)", "Titanium (David Guetta Remix)")]
+    [InlineData("Left Behind", "Left Behind")]
+    [InlineData("(Official Video)", "(Official Video)")]
+    public void Lyrics_titles_lose_video_page_noise(string raw, string clean) =>
+        Assert.Equal(clean, LyricsService.CleanTitle(raw));
+
+    [Fact]
+    public void Lyrics_queries_split_artist_and_song_from_video_titles()
+    {
+        // A VEVO / Topic channel: the artist comes from the channel, the song from the title.
+        Assert.Equal(("Blinding Lights", "TheWeeknd"), LyricsService.Queries("Blinding Lights (Official Video)", "TheWeekndVEVO")[0]);
+        Assert.Equal(("Shape of You", "Ed Sheeran"), LyricsService.Queries("Shape of You", "Ed Sheeran - Topic")[0]);
+
+        // "Artist - Song" on a channel that isn't the artist: the split goes first.
+        var q2 = LyricsService.Queries("Daft Punk - Get Lucky (Official Audio) ft. Pharrell Williams", "Some Music Channel");
+        Assert.Equal(("Get Lucky", "Daft Punk"), q2[0]);
+
+        // A music app with a dash inside the real title: the name as given goes first.
+        var q3 = LyricsService.Queries("Lose Yourself - From 8 Mile", "Eminem");
+        Assert.Equal(("Lose Yourself - From 8 Mile", "Eminem"), q3[0]);
+        Assert.True(q3.Count <= 3);
+
+        // No artist at all, but the title carries one.
+        Assert.Equal(("Halo", "Beyoncé"), LyricsService.Queries("Beyoncé - Halo", "")[0]);
+        Assert.Empty(LyricsService.Queries("Just a title", ""));
+    }
+
+    [Fact]
+    public void Lyrics_search_picks_the_closest_length()
+    {
+        Assert.Equal(1, LyricsService.Pick(new[] { 250.0, 201.0, 199.5 }, 200.8));
+        Assert.Equal(-1, LyricsService.Pick(new[] { 250.0, 230.0 }, 200));       // nothing within 4 s
+        Assert.Equal(1, LyricsService.Pick(new[] { 250.0, 0 }, 200));            // unknown length as a last resort
+        Assert.Equal(0, LyricsService.Pick(new[] { 250.0, 200.0 }, 0));          // track length unknown: server order
+        Assert.Equal(-1, LyricsService.Pick(Array.Empty<double>(), 200));
+    }
+
     [Fact]
     public async Task Lyrics_need_both_switches_and_never_touch_the_network_when_off()
     {

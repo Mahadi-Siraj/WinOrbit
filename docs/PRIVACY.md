@@ -67,7 +67,7 @@ Two optional features use it, each with its own switch under **Settings › Priv
 |---|---|---|---|
 | Weather (Open-Meteo, no account or key) | `geocoding-api.open-meteo.com/v1/search?name=…` | When you search for a place | The place name you typed |
 | | `api.open-meteo.com/v1/forecast?latitude=…&longitude=…` | At most every 30 minutes while a Weather widget is visible, or when you open the island's Weather page or launcher (the same 30-minute cache) | Coordinates of the chosen place (rounded to 3 decimals) and your unit choice |
-| Synced lyrics (LRCLIB, no account or key) | `lrclib.net/api/get?track_name=…&artist_name=…&album_name=…&duration=…`, then `/api/search` if there is no exact match | Once per new song while lyrics are on | The song's title, artist, album and length — what your player publishes to Windows. Results are cached in memory, never on disk |
+| Synced lyrics (LRCLIB, no account or key) | `lrclib.net/api/get?track_name=…&artist_name=…&album_name=…&duration=…`, then up to two `/api/search` requests if there is no exact match (for example the name split from a video title "Artist - Song") | Once per new song while lyrics are on; at most three requests per song | The song's title, artist, album and length — what your player publishes to Windows, with video-page extras such as "(Official Video)" removed. Results are cached in memory, never on disk |
 
 Your IP address is inevitably visible to those services when you enable a feature, as with any web request.
 
