@@ -35,18 +35,78 @@ public partial class IslandWindow : Window
     /// The island's corners for a given "roundness" r (half the height for a capsule). Every shape keeps one
     /// number moving on the spring, so morphing between collapsed, card and panel works the same for all of them.
     /// </summary>
-    internal static CornerRadius ShapeCorners(string shape, double r) => shape switch
+    internal static CornerRadius ShapeCorners(string shape, double r, string edge = "Top") => Orient(shape switch
     {
         "Rounded" => new CornerRadius(Math.Min(r, Math.Max(8, r * 0.5))),
         "Square" => new CornerRadius(Math.Min(r, Math.Max(5, r * 0.26))),
-        "Notch" => new CornerRadius(0, 0, r * 0.8, r * 0.8),      // flush with the screen's top edge, like a camera notch
-        "Drop" => new CornerRadius(r * 0.36, r * 0.36, r, r),     // hangs like a drop: tighter top, full round bottom
+        "Notch" => new CornerRadius(0, 0, r * 0.8, r * 0.8),      // flush with the screen's edge, like a camera notch
+        "Drop" => new CornerRadius(r * 0.36, r * 0.36, r, r),     // hangs like a drop: tighter at the edge, full round away from it
         _ => new CornerRadius(r),
+    }, edge);
+
+    /// <summary>Corners are described for the top edge; turn them so the "edge side" faces the island's actual edge.</summary>
+    internal static CornerRadius Orient(CornerRadius c, string edge) => edge switch
+    {
+        "Bottom" => new CornerRadius(c.BottomLeft, c.BottomRight, c.TopRight, c.TopLeft),   // flipped
+        "Left" => new CornerRadius(c.TopRight, c.BottomRight, c.BottomLeft, c.TopLeft),     // turned a quarter anticlockwise
+        "Right" => new CornerRadius(c.BottomLeft, c.TopLeft, c.TopRight, c.BottomRight),    // turned a quarter clockwise
+        _ => c,
     };
+
+    public static readonly string[] Edges = { "Top", "Bottom", "Left", "Right" };
+    private static string Edge => Edges.Contains(S.Edge) ? S.Edge : "Top";
+    private static bool SideEdge => Edge is "Left" or "Right";
+
+    /// <summary>The direction pointing off the screen from the island's edge (used to tuck it away and drop it in).</summary>
+    private static (int X, int Y) Outward => Edge switch { "Bottom" => (0, 1), "Left" => (-1, 0), "Right" => (1, 0), _ => (0, -1) };
+
+    /// <summary>Where growth starts from: the middle of the side that touches the screen edge.</summary>
+    private static Point EdgeOrigin => Edge switch { "Bottom" => new Point(0.5, 1), "Left" => new Point(0, 0.5), "Right" => new Point(1, 0.5), _ => new Point(0.5, 0) };
+
+    /// <summary>Anchor the glass (and its glow) to the chosen edge, so it grows away from that edge.</summary>
+    private void ApplyEdge()
+    {
+        var (h, v) = Edge switch
+        {
+            "Bottom" => (HorizontalAlignment.Center, VerticalAlignment.Bottom),
+            "Left" => (HorizontalAlignment.Left, VerticalAlignment.Center),
+            "Right" => (HorizontalAlignment.Right, VerticalAlignment.Center),
+            _ => (HorizontalAlignment.Center, VerticalAlignment.Top),
+        };
+        foreach (var el in new FrameworkElement[] { Pill, PillGlow }) { el.HorizontalAlignment = h; el.VerticalAlignment = v; el.RenderTransformOrigin = EdgeOrigin; }
+        // The panel and cards stay put against the edge while the glass grows out from it, rather than sliding.
+        Expanded.VerticalAlignment = v == VerticalAlignment.Center ? VerticalAlignment.Center : v;
+        Expanded.HorizontalAlignment = h;
+        Card.HorizontalAlignment = h;
+    }
+
+    /// <summary>Move the glass off the screen edge by <paramref name="distance"/> (0 = home) on a spring or a timed ease.</summary>
+    private void ShiftOut(double distance, bool spring, double response = 0.46, double damping = 0.62, int ms = 300)
+    {
+        var (ux, uy) = Outward;
+        if (spring)
+        {
+            Springs.To(PillShift, TranslateTransform.XProperty, ux * distance, response, damping);
+            Springs.To(PillShift, TranslateTransform.YProperty, uy * distance, response, damping);
+        }
+        else
+        {
+            Motion.To(PillShift, TranslateTransform.XProperty, ux * distance, ms, Motion.EaseInOut);
+            Motion.To(PillShift, TranslateTransform.YProperty, uy * distance, ms, Motion.EaseInOut);
+        }
+    }
+
+    /// <summary>Start just off the edge, ready to drop in.</summary>
+    private void PlaceOut(double distance)
+    {
+        var (ux, uy) = Outward;
+        PillShift.X = ux * distance;
+        PillShift.Y = uy * distance;
+    }
 
     private void ApplyCorners()
     {
-        var c = ShapeCorners(S.Shape, Math.Max(0, Radius));
+        var c = ShapeCorners(S.Shape, Math.Max(0, Radius), Edge);
         Pill.CornerRadius = c; PillRim.CornerRadius = c; PillGlow.CornerRadius = c;
         ArtWashA.CornerRadius = c; ArtWashB.CornerRadius = c;
     }
@@ -68,6 +128,7 @@ public partial class IslandWindow : Window
     private string _tab = "media";
     private Point _pressPoint;
     private double _pressOffsetX, _pressOffsetY;
+    private string _edgeAtPress = "Top";
     private IDisposable? _monitorSub;
     private readonly DispatcherTimer _clock, _collapseTimer, _mediaTick, _hoverPoll, _peekTimer, _hoverIntent;
     private DateTime _leftAt = DateTime.MinValue;
@@ -192,11 +253,12 @@ public partial class IslandWindow : Window
         if (Motion.Intensity > 0.01)
         {
             Pill.Opacity = 0;
-            PillShift.Y = -30;
+            PlaceOut(30);
             // Drop in once start-up work (widgets, wallpaper, devices) has finished, so the entrance runs on a free thread.
             Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
             {
                 Motion.To(Pill, OpacityProperty, S.Opacity, 420);
+                Motion.To(PillShift, TranslateTransform.XProperty, 0, 520, Motion.Spring);
                 Motion.To(PillShift, TranslateTransform.YProperty, 0, 520, Motion.Spring);
             });
         }
@@ -242,8 +304,9 @@ public partial class IslandWindow : Window
     /// <summary>Shape and thickness changes morph live on the same springs, so you see the new shape take form.</summary>
     private void ApplyShape()
     {
-        var notch = S.Shape == "Notch";
-        Pill.Margin = new Thickness(0, notch ? 0 : 1, 0, 0);
+        ApplyEdge();
+        var m = S.Shape == "Notch" ? 0 : 1;   // a notch sits flush against its edge
+        Pill.Margin = Edge switch { "Bottom" => new Thickness(0, 0, 0, m), "Left" => new Thickness(m, 0, 0, 0), "Right" => new Thickness(0, 0, m, 0), _ => new Thickness(0, m, 0, 0) };
         PillGlow.Margin = Pill.Margin;
         Compact.Height = CollapsedHeight;
         ApplyCorners();
@@ -300,21 +363,38 @@ public partial class IslandWindow : Window
         PillGlow.Visibility = S.RimGlow ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>Place the window so the pill sits at top-centre of its display plus the user's offset.</summary>
+    /// <summary>
+    /// Place the window so the pill sits at the middle of its edge plus the user's offsets: along the edge from its
+    /// centre, and away from the edge. The bottom edge and the sides keep clear of the taskbar.
+    /// </summary>
     public void Place()
     {
         if (_hwnd == IntPtr.Zero) return;
         var mon = Monitors.Find(Device);
         if (!Native.GetWindowRect(_hwnd, out var r)) return;
-        var (ox, oy) = Offset();
-        var half = (mon.Bounds.Width - 120 * mon.Scale) / 2;
-        var dx = Math.Clamp(ox * mon.Scale, -half, half);
-        // Notch sits flush against the top edge of the screen; the other shapes float at the chosen offset.
-        var dy = S.Shape == "Notch" ? 0 : Math.Clamp(oy * mon.Scale, 0, mon.Bounds.Height - 60 * mon.Scale);
-        var x = mon.Bounds.Left + (mon.Bounds.Width - r.Width) / 2 + (int)dx;
-        var y = mon.Bounds.Top + (int)dy;
+        var (x, y) = WindowSpot(Edge, Offset(), S.Shape == "Notch", mon.Bounds, mon.Work, mon.Scale, r.Width, r.Height);
         Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, x, y, 0, 0, Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
         Pill.UpdateBackdrop();
+    }
+
+    /// <summary>Where the island window goes for an edge (pure, so every edge can be tested).</summary>
+    internal static (int X, int Y) WindowSpot(string edge, (double Along, double Away) offset, bool flush, Native.RECT bounds, Native.RECT work, double scale, int width, int height)
+    {
+        var side = edge is "Left" or "Right";
+        var length = side ? bounds.Height : bounds.Width;
+        var half = Math.Max(0, (length - (side ? 160 : 120) * scale) / 2);
+        var along = (int)Math.Clamp(offset.Along * scale, -half, half);
+        // A notch sits flush against its edge; the other shapes float at the chosen distance.
+        var away = flush ? 0 : (int)Math.Clamp(offset.Away * scale, 0, (side ? bounds.Width : bounds.Height) / 3.0);
+        var cx = bounds.Left + (bounds.Width - width) / 2 + along;
+        var cy = bounds.Top + (bounds.Height - height) / 2 + along;
+        return edge switch
+        {
+            "Bottom" => (cx, work.Bottom - height - away),
+            "Left" => (work.Left + away, cy),
+            "Right" => (work.Right - width - away, cy),
+            _ => (cx, bounds.Top + away),
+        };
     }
 
     private (double X, double Y) Offset()
@@ -340,11 +420,11 @@ public partial class IslandWindow : Window
             Place();
             if (Motion.Intensity > 0.01)
             {
-                // Comes back the way it first arrived: dropping in from the top edge with a little bounce.
+                // Comes back the way it first arrived: dropping in from its edge with a little bounce.
                 Pill.Opacity = 0;
-                PillShift.Y = -24;
+                PlaceOut(24);
                 Motion.To(Pill, OpacityProperty, S.Opacity, 260);
-                Springs.To(PillShift, TranslateTransform.YProperty, 0, 0.42, 0.66);
+                ShiftOut(0, true, 0.42, 0.66);
             }
         }
     }
@@ -517,7 +597,7 @@ public partial class IslandWindow : Window
         fill.Freeze();
         CardTileFill.Background = fill;
         // Concentric with the card whatever the island's shape: each tile corner is the card's corner minus the margin.
-        var outer = ShapeCorners(S.Shape, CardHeight / 2);
+        var outer = ShapeCorners(S.Shape, CardHeight / 2, Edge);
         static double Inset(double v) => Math.Max(5, v - 10);
         var tile = new CornerRadius(Inset(outer.TopLeft), Inset(outer.TopRight), Inset(outer.BottomRight), Inset(outer.BottomLeft));
         CardTileFill.CornerRadius = tile; CardTileEdge.CornerRadius = tile;
@@ -635,17 +715,19 @@ public partial class IslandWindow : Window
     private void Droplet(double strength)
     {
         if (_expanded) return;
-        Springs.Kick(PillScale, ScaleTransform.ScaleYProperty, 1.15 * strength, _restScale, 0.36, 0.42);
-        Springs.Kick(PillScale, ScaleTransform.ScaleXProperty, -0.32 * strength, _restScale, 0.36, 0.5);
+        // It swells away from its edge (down from the top, sideways from a side) and narrows along it.
+        var (outwards, along) = SideEdge ? (ScaleTransform.ScaleXProperty, ScaleTransform.ScaleYProperty) : (ScaleTransform.ScaleYProperty, ScaleTransform.ScaleXProperty);
+        Springs.Kick(PillScale, outwards, 1.15 * strength, _restScale, 0.36, 0.42);
+        Springs.Kick(PillScale, along, -0.32 * strength, _restScale, 0.36, 0.5);
     }
 
     /// <summary>Content materialises: grows from slightly small with a soft bounce while fading in.</summary>
     /// <param name="cache">Render the content once as a bitmap while it scales (big panels), then go back to crisp live rendering.</param>
-    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5, bool cache = false, double response = 0.38, double damping = 0.6)
+    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5, bool cache = false, double response = 0.38, double damping = 0.6, double originX = 0.5)
     {
         if (Motion.Intensity <= 0.01) { el.Opacity = 1; return; }
         var st = new ScaleTransform(from, from);
-        el.RenderTransformOrigin = new Point(0.5, originY);
+        el.RenderTransformOrigin = new Point(originX, originY);
         el.RenderTransform = st;
         el.Opacity = 0;
         if (cache) el.CacheMode = new BitmapCache { RenderAtScale = VisualTreeHelper.GetDpi(el).DpiScaleX, SnapsToDevicePixels = true };
@@ -713,7 +795,7 @@ public partial class IslandWindow : Window
         Springs.To(Pill, WidthProperty, ExpandedWidth, MorphResponse, MorphDamping);
         Springs.To(Pill, HeightProperty, HeightFor(_tab), MorphResponse, MorphDamping);
         Springs.To(this, RadiusProperty, 30, MorphResponse, MorphDamping);
-        Pop(Expanded, 0.94, 0, cache: true, response: MorphResponse, damping: MorphDamping);   // the content grows out of the capsule as it opens
+        Pop(Expanded, 0.94, EdgeOrigin.Y, cache: true, response: MorphResponse, damping: MorphDamping, originX: EdgeOrigin.X);   // the content grows out of the capsule as it opens
         if (keyboard) SetInteractive(true);
         ArmCollapse();   // the short count applies only once the pointer has been inside and left
     }
@@ -807,6 +889,7 @@ public partial class IslandWindow : Window
         Native.GetCursorPos(out var p);
         _pressPoint = new Point(p.X, p.Y);
         (_pressOffsetX, _pressOffsetY) = Offset();
+        _edgeAtPress = Edge;
         Pill.CaptureMouse();
     }
 
@@ -817,12 +900,47 @@ public partial class IslandWindow : Window
         double dx = p.X - _pressPoint.X, dy = p.Y - _pressPoint.Y;
         if (!_dragging && Math.Abs(dx) + Math.Abs(dy) < 7) return;
         _dragging = true;
-        var scale = Monitors.Find(Device).Scale;
-        var x = S.KeepCentred ? 0 : Math.Round(_pressOffsetX + dx / scale);
+        var mon = Monitors.Find(Device);
+        var scale = mon.Scale;
+
+        // Carried right up to a different edge of the screen: the island moves to that edge and the drag carries on.
+        if (EdgeNear(new Point(p.X, p.Y), mon.Bounds, 70 * scale) is { } edge && edge != Edge)
+        {
+            S.Edge = edge;
+            var along = edge is "Left" or "Right" ? p.Y - (mon.Bounds.Top + mon.Bounds.Height / 2.0) : p.X - (mon.Bounds.Left + mon.Bounds.Width / 2.0);
+            SetOffset(S.KeepCentred ? 0 : Math.Round(along / scale), 10);
+            _pressPoint = new Point(p.X, p.Y);
+            (_pressOffsetX, _pressOffsetY) = Offset();
+            Radius = CollapsedRadius;
+            ApplyShape();
+            Place();
+            Droplet(0.6);
+            return;
+        }
+
+        // Along the edge and away from it, whichever edge that is.
+        var (dAlong, dAway) = Edge switch
+        {
+            "Bottom" => (dx, -dy),
+            "Left" => (dy, dx),
+            "Right" => (dy, -dx),
+            _ => (dx, dy),
+        };
+        var x = S.KeepCentred ? 0 : Math.Round(_pressOffsetX + dAlong / scale);
         // Magnetic centre: within 18 px of the middle it clicks to exactly centred.
         if (S.SnapToCentre && Math.Abs(x) <= 18) x = 0;
-        SetOffset(x, Math.Max(0, Math.Round(_pressOffsetY + dy / scale)));
+        SetOffset(x, Math.Clamp(Math.Round(_pressOffsetY + dAway / scale), 0, 120));
         Place();
+    }
+
+    /// <summary>The screen edge the pointer is pressed right up against (within <paramref name="reach"/> px), or null.</summary>
+    internal static string? EdgeNear(Point p, Native.RECT b, double reach)
+    {
+        var d = new (string Edge, double Distance)[]
+        {
+            ("Top", p.Y - b.Top), ("Bottom", b.Bottom - p.Y), ("Left", p.X - b.Left), ("Right", b.Right - p.X),
+        }.OrderBy(e => e.Distance).First();
+        return d.Distance <= reach ? d.Edge : null;
     }
 
     /// <summary>Put the island back in the exact horizontal centre (keeps its height from the top).</summary>
@@ -845,7 +963,8 @@ public partial class IslandWindow : Window
         {
             _dragging = false;
             Hub.Store.Save();
-            if (Offset().X == 0 && _pressOffsetX != 0) Peek(Glyph.Check, "Centred", 1.0);
+            if (Edge != _edgeAtPress) Hub.Island.Apply();   // islands on other displays follow to the new edge
+            else if (Offset().X == 0 && _pressOffsetX != 0) Peek(Glyph.Check, "Centred", 1.0);
         }
         else Expand(false);
     }
@@ -876,11 +995,25 @@ public partial class IslandWindow : Window
         Add("Auto-hide", () => { S.AutoHide = !S.AutoHide; Hub.Store.Save(); Hub.Island.Apply(); }, S.AutoHide);
         Add("Centre the island", Centre);
         Add("Keep centred", () => { S.KeepCentred = !S.KeepCentred; if (S.KeepCentred) Centre(); Hub.Store.Save(); }, S.KeepCentred);
-        Add("Reset to top centre", () => { S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Hub.Store.Save(); Hub.Island.Apply(); });
+        Add("Reset to top centre", () => { S.Edge = "Top"; S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Hub.Store.Save(); Hub.Island.Apply(); });
+        var edges = new MenuItem { Header = "Screen edge" };
+        foreach (var edge in Edges)
+        {
+            var item = new MenuItem { Header = edge, IsChecked = Edge == edge };
+            item.Click += (_, _) => { S.Edge = edge; S.OffsetX = 0; S.PerMonitorOffset.Clear(); Hub.Store.Save(); Hub.Island.Apply(); };
+            edges.Items.Add(item);
+        }
+        menu.Items.Add(edges);
         menu.Items.Add(new Separator());
         Add("Hide the island", () => { S.Enabled = false; Hub.Store.Save(); Hub.Island.Apply(); });
         menu.PlacementTarget = Pill;
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.Placement = Edge switch
+        {
+            "Bottom" => System.Windows.Controls.Primitives.PlacementMode.Top,
+            "Left" => System.Windows.Controls.Primitives.PlacementMode.Right,
+            "Right" => System.Windows.Controls.Primitives.PlacementMode.Left,
+            _ => System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
         menu.IsOpen = true;
     }
 
@@ -890,10 +1023,18 @@ public partial class IslandWindow : Window
         if (!S.AutoHide || _expanded || !IsVisible || CPeek.Visibility == Visibility.Visible) return;
         if (!Native.GetCursorPos(out var p) || !Native.GetWindowRect(_hwnd, out var r)) return;
         var mon = Monitors.Find(Device);
-        var centre = (r.Left + r.Right) / 2;
+        int cx = (r.Left + r.Right) / 2, cy = (r.Top + r.Bottom) / 2;
         var band = 190 * mon.Scale;
-        var nearTop = p.Y <= r.Top + 3 * mon.Scale && Math.Abs(p.X - centre) < band && p.Y >= mon.Bounds.Top;
-        if (_autoHidden && nearTop) SetAutoHidden(false);
+        var touch = 3 * mon.Scale;
+        // The pointer pushed into the island's edge of the screen, near where it sits.
+        var nearEdge = Edge switch
+        {
+            "Bottom" => p.Y >= r.Bottom - touch && p.Y <= mon.Bounds.Bottom && Math.Abs(p.X - cx) < band,
+            "Left" => p.X <= r.Left + touch && p.X >= mon.Bounds.Left && Math.Abs(p.Y - cy) < band,
+            "Right" => p.X >= r.Right - touch && p.X <= mon.Bounds.Right && Math.Abs(p.Y - cy) < band,
+            _ => p.Y <= r.Top + touch && p.Y >= mon.Bounds.Top && Math.Abs(p.X - cx) < band,
+        };
+        if (_autoHidden && nearEdge) SetAutoHidden(false);
         else if (!_autoHidden && !Pill.IsMouseOver && !_pressed && (DateTime.UtcNow - _leftAt).TotalSeconds > 1.6) SetAutoHidden(true);
     }
 
@@ -903,8 +1044,9 @@ public partial class IslandWindow : Window
         _autoHidden = hidden;
         if (!hidden) _leftAt = DateTime.UtcNow;
         var (_, oy) = Offset();
-        if (hidden) Motion.To(PillShift, TranslateTransform.YProperty, -(CollapsedHeight + oy + 8), 300, Motion.EaseInOut);
-        else Springs.To(PillShift, TranslateTransform.YProperty, 0, 0.46, 0.62);   // drops back in with a little bounce
+        var depth = SideEdge ? Pill.ActualWidth : CollapsedHeight;
+        if (hidden) ShiftOut(depth + oy + 8, false);
+        else ShiftOut(0, true);   // drops back in with a little bounce
         Pill.IsHitTestVisible = !hidden;
     }
 

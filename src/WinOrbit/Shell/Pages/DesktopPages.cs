@@ -169,6 +169,7 @@ public sealed class IslandPage : PageBase
     public override string Subtitle => "A living capsule at the top of your screen. Click it to expand; scroll on it for volume; drag it to move. Press " + Hub.Settings.General.HotkeyIsland + " to open it with the keyboard.";
     private static IslandSettings S => Hub.Settings.Island;
     private static void Save() { Hub.Store.Save(); Hub.Island.Apply(); }
+    private static bool Side => S.Edge is "Left" or "Right";
 
     /// <summary>A list of apps (process names) as removable chips, plus "Add app…" which lists the apps open right now.</summary>
     private static WrapPanel AppPicker(List<string> list)
@@ -210,13 +211,15 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Show the Dynamic Island", null, S.Enabled, v => { S.Enabled = v; Save(); }, false),
             Kit.Row("Display", monitors.Count > 1 ? "With several displays each island can be dragged to its own position." : "Only one display is connected.",
                 Kit.Combo(monitorOptions, selected, i => { S.Monitor = i == 0 ? "primary" : i == 1 ? "all" : monitors[i - 2].Device; Save(); })),
-            Kit.SliderRow("Horizontal offset", "Distance from the centre of the screen. You can also drag the island.", -900, 900, S.OffsetX, v => { S.OffsetX = Math.Round(v); Save(); }, v => $"{v:0}"),
-            Kit.SliderRow("Distance from top", null, 0, 120, S.OffsetY, v => { S.OffsetY = Math.Round(v); Save(); }, v => $"{v:0} px"),
-            Kit.Row("Centre the island", S.OffsetX == 0 ? "It's exactly centred now." : $"It's {Math.Abs(S.OffsetX):0} px {(S.OffsetX < 0 ? "left" : "right")} of centre.",
+            Kit.Row("Screen edge", "Top, just above the taskbar, or against either side; it opens away from the edge. You can also drag the island right up to another edge.",
+                Kit.Segmented(WinOrbit.Island.IslandWindow.Edges, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Edges, S.Edge)), i => { S.Edge = WinOrbit.Island.IslandWindow.Edges[i]; S.OffsetX = 0; S.PerMonitorOffset.Clear(); Save(); Rebuild(); })),
+            Kit.SliderRow(Side ? "Vertical offset" : "Horizontal offset", "Distance from the middle of the edge. You can also drag the island.", -900, 900, S.OffsetX, v => { S.OffsetX = Math.Round(v); Save(); }, v => $"{v:0}"),
+            Kit.SliderRow($"Distance from {(S.Edge == "Top" ? "top" : S.Edge == "Bottom" ? "the taskbar" : "the edge")}", null, 0, 120, S.OffsetY, v => { S.OffsetY = Math.Round(v); Save(); }, v => $"{v:0} px"),
+            Kit.Row("Centre the island", S.OffsetX == 0 ? "It's exactly centred now." : $"It's {Math.Abs(S.OffsetX):0} px {(S.OffsetX < 0 ? (Side ? "above" : "left") : (Side ? "below" : "right"))} of centre.",
                 Kit.Btn("Centre now", () => { Hub.Island.Centre(); Rebuild(); }, Glyph.Check, true)),
             Kit.ToggleRow("Snap to centre while dragging", "The island clicks into the exact centre when you drag it close.", S.SnapToCentre, v => { S.SnapToCentre = v; Save(); }),
-            Kit.ToggleRow("Keep centred", "Dragging only changes the distance from the top.", S.KeepCentred, v => { S.KeepCentred = v; if (v) Hub.Island.Centre(); Save(); Rebuild(); }),
-            Kit.Row("Reset position", "Back to the top centre on every display.", Kit.Btn("Reset", () => { S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Save(); Rebuild(); }, Glyph.Refresh))));
+            Kit.ToggleRow("Keep centred", "Dragging only changes the distance from the edge.", S.KeepCentred, v => { S.KeepCentred = v; if (v) Hub.Island.Centre(); Save(); Rebuild(); }),
+            Kit.Row("Reset position", "Back to the top centre on every display.", Kit.Btn("Reset", () => { S.Edge = "Top"; S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Save(); Rebuild(); }, Glyph.Refresh))));
 
         var materials = new[] { "Glass", "Smoked", "Solid" };
         Children.Add(Kit.Section("Appearance", null,

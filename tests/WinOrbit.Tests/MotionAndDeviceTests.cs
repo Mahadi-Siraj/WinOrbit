@@ -148,6 +148,49 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Notch_and_drop_face_whichever_edge_the_island_is_on()
+    {
+        System.Windows.CornerRadius C(string shape, string edge) => WinOrbit.Island.IslandWindow.ShapeCorners(shape, 20, edge);
+        var bottom = C("Notch", "Bottom");
+        Assert.Equal(0, bottom.BottomLeft); Assert.Equal(0, bottom.BottomRight); Assert.True(bottom.TopLeft > 0 && bottom.TopRight > 0);
+        var left = C("Notch", "Left");
+        Assert.Equal(0, left.TopLeft); Assert.Equal(0, left.BottomLeft); Assert.True(left.TopRight > 0 && left.BottomRight > 0);
+        var right = C("Notch", "Right");
+        Assert.Equal(0, right.TopRight); Assert.Equal(0, right.BottomRight); Assert.True(right.TopLeft > 0 && right.BottomLeft > 0);
+        var drop = C("Drop", "Bottom");
+        Assert.True(drop.BottomLeft < drop.TopLeft);              // tight at the edge, round away from it
+        Assert.Equal(C("Capsule", "Top"), C("Capsule", "Left"));  // symmetric shapes don't change
+    }
+
+    [Fact]
+    public void Island_window_sits_on_its_edge_clear_of_the_taskbar()
+    {
+        var b = new WinOrbit.Interop.Native.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
+        var work = new WinOrbit.Interop.Native.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1032 };   // 48 px taskbar
+        (int X, int Y) Spot(string edge, double along, double away, bool flush = false) =>
+            WinOrbit.Island.IslandWindow.WindowSpot(edge, (along, away), flush, b, work, 1.0, 560, 420);
+
+        Assert.Equal((680, 10), Spot("Top", 0, 10));
+        Assert.Equal((680, 1032 - 420 - 10), Spot("Bottom", 0, 10));    // above the taskbar
+        Assert.Equal((680, 1032 - 420), Spot("Bottom", 0, 10, flush: true));
+        Assert.Equal((10, 330), Spot("Left", 0, 10));
+        Assert.Equal((1920 - 560 - 10, 330 + 100), Spot("Right", 100, 10)); // along a side is up/down
+        Assert.Equal(680 + 900, Spot("Top", 5000, 0).X);                   // never pushed off the screen
+    }
+
+    [Fact]
+    public void Dragging_to_a_screen_edge_picks_that_edge()
+    {
+        var b = new WinOrbit.Interop.Native.RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
+        string? Near(double x, double y) => WinOrbit.Island.IslandWindow.EdgeNear(new System.Windows.Point(x, y), b, 70);
+        Assert.Equal("Top", Near(960, 20));
+        Assert.Equal("Bottom", Near(960, 1070));
+        Assert.Equal("Left", Near(15, 500));
+        Assert.Equal("Right", Near(1900, 500));
+        Assert.Null(Near(960, 500));   // in the middle of the screen: no edge, just moving away from the current one
+    }
+
+    [Fact]
     public void Island_hides_for_fullscreen_and_chosen_apps_but_not_kept_ones()
     {
         var s = new WinOrbit.Core.IslandSettings { ShowOverFullscreenApps = { "POWERPNT.EXE" }, HideForApps = { "obs64" } };

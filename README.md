@@ -47,6 +47,7 @@ A liquid-glass capsule at the top of your screen that comes alive:
 * **Calendar with events** — pick a day, type "9:30 Stand-up" and press Enter; the island grows into a reminder card ten minutes before and when it starts. Events stay on this PC.
 * **Weather** (optional, off until you turn it on) — now, the next twelve hours and three days, while the glass takes on the sky's colours: blue on a clear day, slate in rain, indigo at night.
 * Quick notes, system monitor. Drag it anywhere — it clicks into the exact centre.
+* **Any screen edge** — top, bottom (just above the taskbar) or either side; it opens away from its edge, and a notch or drop shape turns to face it. Drag it right up to another edge to move it there.
 * **Out of the way** — hides within about a tenth of a second when a game, video or presentation goes fullscreen, and drops back in after. Choose apps it keeps showing over, and apps it always hides for even in a window.
 
 ### 🔎 Launcher — <kbd>Alt</kbd>+<kbd>Space</kbd>

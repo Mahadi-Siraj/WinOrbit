@@ -109,6 +109,9 @@ public sealed class IslandSettings
     public bool RimGlow { get; set; }
     /// <summary>"Capsule", "Rounded", "Square", "Notch" (flush with the top edge) or "Drop" (rounder at the bottom).</summary>
     public string Shape { get; set; } = "Capsule";
+    /// <summary>Which screen edge the island sits on: "Top", "Bottom" (just above the taskbar), "Left" or "Right".
+    /// OffsetX is then the distance along that edge from its centre, OffsetY the distance from the edge.</summary>
+    public string Edge { get; set; } = "Top";
     /// <summary>Collapsed height: "Slim", "Regular" or "Tall".</summary>
     public string Thickness { get; set; } = "Regular";
     /// <summary>While a song plays, the glass takes on the colours of its artwork.</summary>
