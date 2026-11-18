@@ -37,24 +37,73 @@ public static class RenderGuard
         {
             // A window that is still painting (busy start-up) can miss the sentinel once. Only a window that stays
             // blank across three looks, ~0.7 s apart, is treated as not presented — falling back costs smoothness.
+            // While the screen is off, no monitor is connected or the PC is locked, DWM hands back a blank picture of
+            // every window, so the check stops and waits for Windows to report a screen or display change.
             var misses = 0;
             var timer = new DispatcherTimer(DispatcherPriority.ApplicationIdle) { Interval = TimeSpan.FromMilliseconds(600) };
+            var waiting = false;
+            void Resume()
+            {
+                if (!waiting) return;
+                waiting = false;
+                if (Hub.Ready) Hub.Power.ScreenChanged -= OnScreen;
+                Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplay;
+                if (!window.IsLoaded) return;
+                misses = 0;
+                timer.Interval = TimeSpan.FromMilliseconds(1500);   // let the GPU settle after the screen comes back
+                timer.Start();
+            }
+            void OnScreen() => window.Dispatcher.BeginInvoke(Resume);
+            void OnDisplay(object? s, EventArgs e) => window.Dispatcher.BeginInvoke(Resume);
+            window.Closed += (_, _) => { timer.Stop(); Resume(); };
             timer.Tick += (_, _) =>
             {
-                timer.Interval = TimeSpan.FromMilliseconds(700);
                 try
                 {
-                    var (ok, blank) = Check(window, dot);
-                    if (ok != false) { timer.Stop(); return; }
-                    if (!blank) { timer.Stop(); Log.Info("Render check: window has content; keeping hardware rendering"); return; }
-                    if (++misses < 3) return;
-                    timer.Stop();
-                    UseSoftware(window, onSoftware, "the GPU did not present the window");
+                    var showing = !Hub.Ready || Hub.Power.IsScreenShowing;
+                    var (ok, blank) = showing ? Check(window, dot) : (null, false);
+                    var step = Next(showing, ok, blank, misses);
+                    switch (step)
+                    {
+                        case Step.Wait:
+                            timer.Stop();
+                            Log.Info("Render check: screen off, no monitor or locked; checking again when that changes");
+                            waiting = true;
+                            if (Hub.Ready) Hub.Power.ScreenChanged += OnScreen;
+                            Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplay;
+                            return;
+                        case Step.Look:
+                            misses++;
+                            timer.Interval = TimeSpan.FromMilliseconds(700);
+                            return;
+                        case Step.KeepHardware:
+                            timer.Stop();
+                            if (ok == false) Log.Info("Render check: window has content; keeping hardware rendering");
+                            return;
+                        default:
+                            timer.Stop();
+                            UseSoftware(window, onSoftware, "the GPU did not present the window");
+                            return;
+                    }
                 }
                 catch (Exception ex) { timer.Stop(); Log.Warn("Render check skipped: " + ex.Message); }
             };
             timer.Start();
         };
+    }
+
+    internal enum Step { Wait, Look, KeepHardware, Software }
+
+    /// <summary>
+    /// What the render check does next. Screen off or locked: wait (a blank capture proves nothing then).
+    /// Sentinel seen, or the check can't judge, or the window has real content: keep hardware rendering.
+    /// A flat, blank window: look again, and fall back to software only on the third blank look in a row.
+    /// </summary>
+    internal static Step Next(bool screenShowing, bool? ok, bool blank, int misses)
+    {
+        if (!screenShowing) return Step.Wait;
+        if (ok != false || !blank) return Step.KeepHardware;
+        return misses + 1 >= 3 ? Step.Software : Step.Look;
     }
 
     public static void UseSoftware(Window window, Action? onSoftware, string reason)

@@ -10,7 +10,7 @@ Requirements: Windows 10 2004+ or 11, the .NET 8 SDK. Optional: Inno Setup 6 for
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 173 unit tests, under a second
+dotnet test tests\WinOrbit.Tests                  # 174 unit tests, under a second
 src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
@@ -38,7 +38,7 @@ Useful command-line switches: `--startup` (tray only), `--page <name>` (open a s
 | `App.xaml.cs`, `Hub.cs` | Start-up order, single instance, tray, hotkeys. `Hub` holds every long-lived service (`Hub.Settings`, `Hub.Store`, `Hub.Media`, `Hub.Devices`, `Hub.Foreground`, `Hub.Weather`, `Hub.Island`…) |
 | `Core/` | Settings and data models, the JSON store, app info |
 | `Interop/Native.cs` | **Every** P/Invoke and COM interface, in one file you can audit |
-| `Design/` | Theme engine, glass surface, `Controls.xaml` styles, `Motion` (timed easing), `Springs` (spring physics), `RenderGuard` (GPU fallback), `Visuals` (month view, sparkline, equaliser), dialogs, line icons |
+| `Design/` | Theme engine, glass surface, `Controls.xaml` styles, `Motion` (timed easing), `Springs` (spring physics), `RenderGuard` (GPU fallback; it waits while the screen is off, no monitor is connected or the PC is locked, because every window looks blank then), `Visuals` (month view, sparkline, equaliser), dialogs, line icons |
 | `Island/` | The Dynamic Island (see §4) and Control Centre tiles |
 | `Launcher/` | Alt+Space launcher: app index, icons, calculator, unit conversion |
 | `Widgets/` | Desktop widget host (drag, snap, resize) and the 13 widget kinds |
@@ -112,7 +112,7 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 173 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 174 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.
 * Never toggle someone's real Wi-Fi, Bluetooth, dark mode or night light in a test without asking; use the `Demo()` previews instead.

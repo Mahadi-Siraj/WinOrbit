@@ -372,6 +372,28 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Render_check_waits_while_the_screen_is_off_or_locked()
+    {
+        int[] one = { 0x3 }, none = Array.Empty<int>(), inactive = { 0x2 };
+        Assert.True(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, one));
+        Assert.True(WinOrbit.Services.PowerEvents.ScreenShowing(2, false, one));       // dimmed still shows
+        Assert.True(WinOrbit.Services.PowerEvents.ScreenShowing(null, false, one));    // not reported yet
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(0, false, one));
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, true, one));
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, none));     // monitor switched off (DisplayPort)
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, inactive));
+        Assert.True(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, new[] { 0x2, 0x3 }));
+
+        Assert.Equal(WinOrbit.Design.RenderGuard.Step.Wait, WinOrbit.Design.RenderGuard.Next(false, null, false, 2));
+        Assert.Equal(WinOrbit.Design.RenderGuard.Step.KeepHardware, WinOrbit.Design.RenderGuard.Next(true, true, false, 0));
+        Assert.Equal(WinOrbit.Design.RenderGuard.Step.KeepHardware, WinOrbit.Design.RenderGuard.Next(true, null, false, 0));
+        Assert.Equal(WinOrbit.Design.RenderGuard.Step.KeepHardware, WinOrbit.Design.RenderGuard.Next(true, false, false, 2));
+        Assert.Equal(WinOrbit.Design.RenderGuard.Step.Look, WinOrbit.Design.RenderGuard.Next(true, false, true, 0));
+        Assert.Equal(WinOrbit.Design.RenderGuard.Step.Look, WinOrbit.Design.RenderGuard.Next(true, false, true, 1));
+        Assert.Equal(WinOrbit.Design.RenderGuard.Step.Software, WinOrbit.Design.RenderGuard.Next(true, false, true, 2));
+    }
+
+    [Fact]
     public void Registry_watcher_wakes_on_a_write()
     {
         const string path = @"Software\WinOrbit.Tests\Watch";

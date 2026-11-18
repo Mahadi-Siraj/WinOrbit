@@ -196,6 +196,40 @@ public static class Native
     [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc proc, IntPtr lParam);
     [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr parent, EnumProc proc, IntPtr lParam);
     [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
+
+    // Display adapters and the monitors plugged into them (read-only), so the render check can tell
+    // "no monitor connected" (a switched-off DisplayPort screen) from a GPU that failed to present.
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct DISPLAY_DEVICE
+    {
+        public int cb;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string DeviceName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceString;
+        public int StateFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceID;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string DeviceKey;
+    }
+    public const int DISPLAY_DEVICE_ACTIVE = 0x1, DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x1;
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool EnumDisplayDevices(string? device, int index, ref DISPLAY_DEVICE info, int flags);
+
+    /// <summary>State flags of every monitor on an adapter that is part of the desktop.</summary>
+    public static List<int> DesktopMonitorFlags()
+    {
+        var flags = new List<int>();
+        for (var i = 0; i < 16; i++)
+        {
+            var adapter = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
+            if (!EnumDisplayDevices(null, i, ref adapter, 0)) break;
+            if ((adapter.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) == 0) continue;
+            for (var j = 0; j < 16; j++)
+            {
+                var monitor = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
+                if (!EnumDisplayDevices(adapter.DeviceName, j, ref monitor, 0)) break;
+                flags.Add(monitor.StateFlags);
+            }
+        }
+        return flags;
+    }
     [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
     [DllImport("gdi32.dll")] public static extern IntPtr CreateCompatibleDC(IntPtr hdc);

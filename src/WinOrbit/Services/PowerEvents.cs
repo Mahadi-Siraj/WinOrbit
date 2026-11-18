@@ -15,6 +15,13 @@ public sealed class PowerEvents : IDisposable
     private static readonly Guid BatteryPercent = new("a7ad8041-b45a-4cae-87a3-eecbb468a9e1");
     private static readonly Guid MonitorBrightness = new("8ffee2c6-2d01-46be-adb9-398addc5b4ff");
     private static readonly Guid EnergySaverStatus = new("550e8400-e29b-41d4-a716-446655440000");   // GUID_ENERGY_SAVER_STATUS (Windows 11)
+    private static readonly Guid ConsoleDisplayState = new("6fe69556-704a-47a0-8f24-c28d936fda47"); // GUID_CONSOLE_DISPLAY_STATE
+
+    /// <summary>The screen: 0 off, 1 on, 2 dimmed. Null until Windows has reported it.</summary>
+    public int? Display { get; private set; }
+
+    /// <summary>True while this Windows session is locked (lock screen showing).</summary>
+    public bool Locked { get; private set; }
 
     /// <summary>Windows 11 Energy Saver: 0 off, 1 on, 2 on with extra savings. Null if this Windows doesn't report it.</summary>
     public int? EnergySaver { get; private set; }
@@ -44,12 +51,13 @@ public sealed class PowerEvents : IDisposable
             _window = new HwndSource(new HwndSourceParameters("WinOrbit power") { ParentWindow = new IntPtr(-3), Width = 0, Height = 0, WindowStyle = 0 });
             _window.AddHook(Hook);
             _quietUntil = DateTime.UtcNow.AddSeconds(3);
-            foreach (var g in new[] { AcDcSource, BatteryPercent, MonitorBrightness, EnergySaverStatus })
+            foreach (var g in new[] { AcDcSource, BatteryPercent, MonitorBrightness, EnergySaverStatus, ConsoleDisplayState })
             {
                 var guid = g;
                 var h = RegisterPowerSettingNotification(_window.Handle, ref guid, 0);
                 if (h != IntPtr.Zero) _registrations.Add(h);
             }
+            Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
         }
         catch (Exception ex) { Log.Warn("Power notifications unavailable: " + ex.Message); }
     }
@@ -81,6 +89,12 @@ public sealed class PowerEvents : IDisposable
             EnergySaver = value;
             if (changed && !quiet) EnergySaverChanged?.Invoke(value);
         }
+        else if (setting == ConsoleDisplayState)
+        {
+            var changed = Display != value;
+            Display = value;
+            if (changed) ScreenChanged?.Invoke();
+        }
         else if (setting == MonitorBrightness)
         {
             var changed = Brightness is not null && Brightness != value;
@@ -94,8 +108,37 @@ public sealed class PowerEvents : IDisposable
     internal static int? LowBatteryWarning(int previous, int now) =>
         previous > 10 && now <= 10 ? 10 : previous > 20 && now <= 20 ? 20 : null;
 
+    private void OnSessionSwitch(object? sender, Microsoft.Win32.SessionSwitchEventArgs e)
+    {
+        var was = Locked;
+        if (e.Reason is Microsoft.Win32.SessionSwitchReason.SessionLock or Microsoft.Win32.SessionSwitchReason.ConsoleDisconnect or Microsoft.Win32.SessionSwitchReason.RemoteDisconnect) Locked = true;
+        else if (e.Reason is Microsoft.Win32.SessionSwitchReason.SessionUnlock or Microsoft.Win32.SessionSwitchReason.ConsoleConnect or Microsoft.Win32.SessionSwitchReason.RemoteConnect) Locked = false;
+        if (Locked != was) ScreenChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Whether a window's pixels can be trusted right now: the session is unlocked, the screen is on (or dimmed)
+    /// and at least one monitor is active. A DisplayPort monitor that is switched off disappears from Windows,
+    /// which keeps drawing a desktop nobody can see; the GPU then presents nothing.
+    /// </summary>
+    internal static bool ScreenShowing(int? display, bool locked, IReadOnlyCollection<int> monitorFlags) =>
+        !locked && display != 0 && monitorFlags.Any(f => (f & Interop.Native.DISPLAY_DEVICE_ACTIVE) != 0);
+
+    public bool IsScreenShowing
+    {
+        get
+        {
+            try { return ScreenShowing(Display, Locked, Interop.Native.DesktopMonitorFlags()); }
+            catch { return ScreenShowing(Display, Locked, new[] { Interop.Native.DISPLAY_DEVICE_ACTIVE }); }
+        }
+    }
+
+    /// <summary>The screen turned on or off, or the session was locked or unlocked.</summary>
+    public event Action? ScreenChanged;
+
     public void Dispose()
     {
+        Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
         foreach (var h in _registrations) UnregisterPowerSettingNotification(h);
         _registrations.Clear();
         _window?.Dispose();
