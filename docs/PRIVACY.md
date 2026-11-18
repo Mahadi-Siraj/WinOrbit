@@ -49,6 +49,8 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 | Three on/off values Windows stores when you flip them: dark/light mode (`HKCU\…\Themes\Personalize`), night light (its CloudStore state), airplane mode (`HKLM\SYSTEM\…\RadioManagement\SystemRadioState`, read-only) | Mode alerts. Windows wakes WinOrbit when one of those keys is written (`RegNotifyChangeKeyValue`); nothing is polled and nothing is written | No (not logged) |
 | Names and connection state of **paired** Bluetooth devices (device watchers plus each paired device's `ConnectionStatusChanged` event); names of plugged-in USB devices | Bluetooth and USB alerts. Windows pushes the changes; nothing scans for nearby devices, and listening for a device's status does not connect to it | No (not logged) |
 
+**Rain soon** (Dynamic Island › Live activities, **off by default**) uses the weather request described below. While it is on — and only if weather itself is on — WinOrbit asks for your place's forecast every 30 minutes even when no weather is on screen. It shares the weather cache, so with a weather widget open there are no extra requests. Each request shows in the network ledger.
+
 ## 3. Network access
 
 There is exactly **one** class that can open a network connection: `NetworkGate` in `src/WinOrbit/Services/Network.cs`.

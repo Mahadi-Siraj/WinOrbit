@@ -59,6 +59,7 @@ public partial class IslandWindow
         Hub.Devices.ModeChanged += OnMode;
 
         InitFiles();
+        Hub.Island.Rain.RainSoon += OnRainSoon;
         Pill.AllowDrop = true;
         Pill.DragEnter += OnDragEnter;
         Pill.DragOver += OnDragOver;
@@ -87,6 +88,7 @@ public partial class IslandWindow
         Hub.Devices.RadioChanged -= OnRadio;
         Hub.Devices.ModeChanged -= OnMode;
         CleanupFiles();
+        Hub.Island.Rain.RainSoon -= OnRainSoon;
     }
 
     // ------------------------------------------------------------------ keys and connections
@@ -242,6 +244,7 @@ public partial class IslandWindow
             case "wifi-radio": ShowCard(GlyphWifiOff, "Wi-Fi", "Off", Neutral, 2.6, toggle: false, switchColor: BtBlue); break;
             case "bt-radio": ShowCard(GlyphBluetooth, "Bluetooth", "On", BtBlue, 2.6, toggle: true); break;
             case "screenshot": DemoScreenshot(); break;
+            case "rain": ShowCard(Glyph.Cloud, RainAlerts.Title(40, "Showers"), "70% chance", RainBlue, 4); break;
             case "download": ShowCard(Glyph.Download, "report.pdf", "Downloaded · click to open", Connected, 4,
                 actions: new (string, string, Action)[] { (Glyph.Folder, "Show in folder", () => { }) }); break;
         }

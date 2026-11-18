@@ -1682,12 +1682,14 @@ public sealed class IslandController
     private readonly List<IslandWindow> _windows = new();
     public DownloadWatcher Downloads { get; }
     public ScreenshotWatcher Screenshots { get; }
+    public RainAlerts Rain { get; }
     public IReadOnlyList<IslandWindow> Windows => _windows;
 
     public IslandController(Dispatcher ui)
     {
         Downloads = new DownloadWatcher(ui);
         Screenshots = new ScreenshotWatcher(ui);
+        Rain = new RainAlerts(ui);
         Hub.Shell.DisplayChanged += () => ui.BeginInvoke(DispatcherPriority.Background, Apply);
     }
 
@@ -1696,6 +1698,7 @@ public sealed class IslandController
         var s = Hub.Settings.Island;
         Downloads.SetEnabled(s.Enabled && s.WatchDownloads);
         Screenshots.SetEnabled(s.Enabled && s.ScreenshotCards);
+        Rain.SetEnabled(s.Enabled && s.RainAlerts);
         Hub.Devices?.Apply();
         var targets = !s.Enabled ? new List<string>()
             : s.Monitor == "all" ? Monitors.All().Select(m => m.Device).ToList()

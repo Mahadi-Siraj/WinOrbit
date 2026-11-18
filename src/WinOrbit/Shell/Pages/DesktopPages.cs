@@ -251,6 +251,10 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Bluetooth devices", "Your paired headphones, keyboards, mice and phones connecting and disconnecting.", S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(); }, true, Glyph.Bluetooth),
             Kit.ToggleRow("USB devices", "Drives, mice, controllers and other USB devices plugged in or removed, by name.", S.UsbAlerts, v => { S.UsbAlerts = v; Save(); }, true, Glyph.Usb),
             Kit.ToggleRow("Screenshots", "A card with a thumbnail when a screenshot lands in your Screenshots folder (Win+PrtScn, Snipping Tool). Click it to open the picture, drag it straight into a chat or email, or show it in its folder.", S.ScreenshotCards, v => { S.ScreenshotCards = v; Save(); }, true, Glyph.Photo),
+            Kit.ToggleRow("Rain soon", Hub.Weather.Enabled
+                    ? "A card when rain or snow is likely within two hours while it's dry now, once per spell. Checks the forecast for your place every 30 minutes, even when no weather is on screen; each check shows in the network ledger."
+                    : "Turn on Weather (with your place) in Settings › Privacy & network first. Then it checks the forecast every 30 minutes and shows a card when rain is likely within two hours.",
+                S.RainAlerts, v => { S.RainAlerts = v; Save(); }, true, Glyph.Cloud),
             Kit.ToggleRow("Display and system modes", "Dark or light mode, night light and airplane mode switching on or off. Windows signals each change; nothing is checked on a timer.", S.SystemAlerts, v => { S.SystemAlerts = v; Save(); }, true, Glyph.Moon),
             Kit.ToggleRow("Event reminders", "A card ten minutes before, and when, an event you added in the island's calendar starts.", S.EventReminders, v => { S.EventReminders = v; Save(); }, true, Glyph.Calendar),
             Kit.ToggleRow("Album colours", "While a song plays, the glass glows with the colours of its artwork and cross-fades when the track changes. The Album rim uses them too. Worked out on this PC from the artwork Windows already has.", S.AlbumTint, v => { S.AlbumTint = v; Save(); }, true, Glyph.Color),
@@ -267,7 +271,8 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("Dark mode", () => Hub.Island.Demo("dark")), Kit.Btn("Night light", () => Hub.Island.Demo("night")),
                 Kit.Btn("Airplane mode", () => Hub.Island.Demo("airplane")), Kit.Btn("Energy saver", () => Hub.Island.Demo("saver")),
                 Kit.Btn("New song", () => Hub.Island.Demo("song")), Kit.Btn("Event reminder", () => Hub.Island.Demo("event")),
-                Kit.Btn("Screenshot", () => Hub.Island.Demo("screenshot")), Kit.Btn("Download", () => Hub.Island.Demo("download"))))));
+                Kit.Btn("Screenshot", () => Hub.Island.Demo("screenshot")), Kit.Btn("Download", () => Hub.Island.Demo("download")),
+                Kit.Btn("Rain soon", () => Hub.Island.Demo("rain"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]

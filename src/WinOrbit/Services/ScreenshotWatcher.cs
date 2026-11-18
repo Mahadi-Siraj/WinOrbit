@@ -74,7 +74,7 @@ public sealed class ScreenshotWatcher : IDisposable
                 catch (IOException) { }
                 catch (UnauthorizedAccessException) { return; }
             }
-            _ui.BeginInvoke(() =>
+            _ = _ui.BeginInvoke(() =>
             {
                 // Created and Renamed can both fire for one capture.
                 if (string.Equals(path, _last, StringComparison.OrdinalIgnoreCase) && (DateTime.UtcNow - _lastAt).TotalSeconds < 5) return;

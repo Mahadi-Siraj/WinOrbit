@@ -105,6 +105,8 @@ public sealed class IslandSettings
     public bool UsbAlerts { get; set; } = true;
     /// <summary>A card with a thumbnail when a screenshot is saved: click to open, drag it into any app.</summary>
     public bool ScreenshotCards { get; set; } = true;
+    /// <summary>A card when rain is likely within two hours. Needs weather on; checks the forecast every 30 minutes. Off by default.</summary>
+    public bool RainAlerts { get; set; }
     /// <summary>Island edge: "Glass" (the plain illuminated rim) or a coloured gradient preset.</summary>
     public string Rim { get; set; } = "Glass";
     /// <summary>A soft coloured glow around the island in the rim's colours.</summary>

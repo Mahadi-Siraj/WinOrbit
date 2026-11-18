@@ -221,6 +221,45 @@ public class MotionAndDeviceTests
     public void A_click_never_runs_a_downloaded_program(string path, bool opens)
         => Assert.Equal(opens, WinOrbit.Island.IslandWindow.SafeToOpen(path));
 
+    private static WeatherReport Forecast(int nowCode, params (int Code, int Chance)[] hours)
+    {
+        var r = new WeatherReport { Code = nowCode };
+        var t = DateTime.Today.AddHours(14);
+        foreach (var (code, chance) in hours) { r.Hours.Add(new WeatherHour(t, 12, code, true, chance)); t = t.AddHours(1); }
+        return r;
+    }
+
+    [Fact]
+    public void Rain_soon_is_announced_only_when_it_is_dry_now()
+    {
+        // Dry now, showers next hour: about 40 minutes away at 14:20.
+        var soon = RainAlerts.Soon(Forecast(2, (2, 10), (80, 70), (61, 80)), 20);
+        Assert.NotNull(soon);
+        Assert.Equal(40, soon!.Value.Minutes);
+        Assert.Equal(70, soon.Value.Chance);
+        Assert.Equal("Showers", soon.Value.What);
+
+        // Two hours out still counts; a high chance with a dry code reads as "Rain".
+        var later = RainAlerts.Soon(Forecast(3, (3, 20), (3, 30), (3, 85)), 0);
+        Assert.Equal((120, 85, "Rain"), later!.Value);
+
+        Assert.Null(RainAlerts.Soon(Forecast(61, (61, 90), (61, 90)), 0));          // raining already
+        Assert.Null(RainAlerts.Soon(Forecast(2, (2, 75), (61, 90)), 0));            // as good as raining this hour
+        Assert.Null(RainAlerts.Soon(Forecast(2, (2, 0), (3, 30), (51, 20)), 0));    // drizzle at 20 %: not worth a card
+        Assert.Null(RainAlerts.Soon(Forecast(2, (2, 0), (2, 0), (2, 0), (61, 90)), 0)); // three hours away: too early
+        Assert.Null(RainAlerts.Soon(Forecast(0), 0));                                // no hourly data
+    }
+
+    [Fact]
+    public void Rain_soon_title_reads_naturally()
+    {
+        Assert.Equal("Rain any minute now", RainAlerts.Title(5, "Rain"));
+        Assert.Equal("Showers in about 40 min", RainAlerts.Title(38, "Showers"));
+        Assert.Equal("Snow in about an hour", RainAlerts.Title(60, "Snow"));
+        Assert.Equal("Rain in under two hours", RainAlerts.Title(110, "Rain"));
+        Assert.True(RainAlerts.IsWet(95) && RainAlerts.IsWet(73) && !RainAlerts.IsWet(3) && !RainAlerts.IsWet(45));
+    }
+
     [Fact]
     public void Volume_mixer_groups_sessions_by_app()
     {

@@ -23,6 +23,19 @@ public partial class IslandWindow
 
     private static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
 
+    private static readonly Color RainBlue = Color.FromRgb(0x5A, 0xA9, 0xFF);
+
+    /// <summary>Rain (or snow) is likely soon while it's dry now: a card, once per spell.</summary>
+    private void OnRainSoon(int minutes, int chance, string what)
+    {
+        if (!S.RainAlerts) return;
+        var place = Hub.Settings.Privacy.WeatherPlace;
+        var detail = chance >= 0 ? $"{chance}% chance" : "Likely";
+        if (!string.IsNullOrWhiteSpace(place)) detail += " · " + place.Split(',')[0];
+        ShowCard(Glyph.Cloud, RainAlerts.Title(minutes, what), detail, RainBlue, 6,
+            onClick: S.Modules.Contains("weather") ? () => { Expand(false); ShowTab("weather"); } : null);
+    }
+
     private async void ShowWeather(bool force = false)
     {
         if (!Hub.Weather.Enabled)
