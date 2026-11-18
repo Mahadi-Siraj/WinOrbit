@@ -68,6 +68,8 @@ public partial class IslandWindow
     {
         if (e.Start is not { } s) return null;
         var lead = s - now;
+        // A reminder: only on its minute (the clock wakes on minute boundaries, so 30 s covers timer drift).
+        if (e.AtTimeOnly) return lead <= TimeSpan.FromSeconds(30) && lead > TimeSpan.FromMinutes(-5) ? "now" : null;
         if (lead > TimeSpan.FromMinutes(1) && lead <= TimeSpan.FromMinutes(10.5)) return "soon";
         if (lead <= TimeSpan.FromMinutes(1) && lead > TimeSpan.FromMinutes(-5)) return "now";
         return null;
@@ -172,6 +174,12 @@ public partial class IslandWindow
     {
         var start = ev.Start!.Value;
         var at = Fmt.Time(start, Hub.Settings.General.Use24Hour);
+        if (ev.AtTimeOnly)
+        {
+            ShowCard(Glyph.Clock, ev.Title, "Reminder · " + at, EventRed, 10);
+            try { System.Media.SystemSounds.Asterisk.Play(); } catch { }
+            return;
+        }
         var minutes = (int)Math.Ceiling((start - now).TotalMinutes - 0.05);
         var sub = minutes >= 2 ? $"In {minutes} minutes · {at}" : now < start ? $"In a minute · {at}" : "Now · " + at;
         ShowCard(Glyph.Calendar, ev.Title, sub, EventRed, minutes >= 2 ? 5 : 7);

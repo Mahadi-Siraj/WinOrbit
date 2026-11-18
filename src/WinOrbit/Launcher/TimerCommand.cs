@@ -51,6 +51,19 @@ public static class TimerCommand
         return new(TimerMode.Countdown, TimeSpan.FromSeconds(Math.Round(total.TotalSeconds)));
     }
 
+    /// <summary>A length written only with numbers and units ("20 min", "1h 30m", "2 hours"), or null.</summary>
+    internal static TimeSpan? Duration(string text)
+    {
+        var total = TimeSpan.Zero;
+        var rest = Part.Replace(text, m =>
+        {
+            var n = double.Parse(m.Groups[1].Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+            total += char.ToLowerInvariant(m.Groups[2].Value[0]) switch { 'h' => TimeSpan.FromHours(n), 'm' => TimeSpan.FromMinutes(n), _ => TimeSpan.FromSeconds(n) };
+            return " ";
+        });
+        return rest.Trim().Length == 0 && total > TimeSpan.Zero ? total : null;
+    }
+
     /// <summary>"5-minute timer", "1 h 30 min timer", "90-second timer".</summary>
     internal static string Describe(TimeSpan t)
     {

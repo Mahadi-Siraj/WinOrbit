@@ -338,6 +338,8 @@ public sealed class CalendarEvent
     public string? Uid { get; set; }
     /// <summary>The .ics file name it was imported from; null when typed in.</summary>
     public string? Source { get; set; }
+    /// <summary>A reminder set from the launcher ("remind me in 20 min to …"): one card at the time, no 10-minute heads-up.</summary>
+    public bool AtTimeOnly { get; set; }
 
     [JsonIgnore] public DateTime? Start => Time is { } t ? Date.Date + t : null;
 }

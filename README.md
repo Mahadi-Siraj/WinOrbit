@@ -51,7 +51,7 @@ A liquid-glass capsule at the top of your screen that comes alive:
 * **Out of the way** — hides within about a tenth of a second when a game, video or presentation goes fullscreen, and drops back in after. Choose apps it keeps showing over, and apps it always hides for even in a window.
 
 ### 🔎 Launcher — <kbd>Alt</kbd>+<kbd>Space</kbd>
-Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (dark mode, lock, focus, profiles…), recent files, a calculator (`12*7`, `200*15%`), unit conversion (`10 km to mi`) and timers (`timer 5 min`, `focus 50`, `stopwatch`) that count down in the island. Learns your favourites — on your PC only.
+Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (dark mode, lock, focus, profiles…), recent files, a calculator (`12*7`, `200*15%`), unit conversion (`10 km to mi`) timers (`timer 5 min`, `focus 50`, `stopwatch`) that count down in the island, and reminders (`remind me in 20 min to stretch`, `remind me at 6pm to call mom`). Learns your favourites — on your PC only.
 
 ### 🧊 Liquid-glass desktop
 * **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers.
@@ -110,7 +110,7 @@ Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 f
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build
-dotnet test tests\WinOrbit.Tests          # 219 unit tests
+dotnet test tests\WinOrbit.Tests          # 241 unit tests
 .\tools\build-release.ps1                 # tests + installer + portable zip into .\artifacts
 ```
 
