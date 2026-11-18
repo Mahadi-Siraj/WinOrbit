@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using WinOrbit.Core;
 using WinOrbit.Design;
+using WinOrbit.Services;
 
 namespace WinOrbit.Island;
 
@@ -28,7 +29,8 @@ public partial class IslandWindow
         "calendar" => (Rgb(0xFF, 0x6B, 0x61), Rgb(0xD7, 0x16, 0x2A)),
         "notes" => (Rgb(0xFF, 0xE0, 0x5C), Rgb(0xF5, 0xA6, 0x00)),
         "clipboard" => (Rgb(0xD0, 0x7B, 0xFF), Rgb(0x8E, 0x3F, 0xD8)),
-        "shelf" => (Rgb(0x7D, 0xD8, 0xFF), Rgb(0x0A, 0x7C, 0xF0)),
+        "weather" => (Rgb(0x7D, 0xD8, 0xFF), Rgb(0x0A, 0x7C, 0xF0)),
+        "shelf" => (Rgb(0x6E, 0xE7, 0x9B), Rgb(0x16, 0xA3, 0x4A)),
         _ => (Rgb(0x9C, 0xA3, 0xAF), Rgb(0x4B, 0x55, 0x63)),
     };
 
@@ -40,7 +42,8 @@ public partial class IslandWindow
     {
         TabHome.Children.Clear();
         _homeTiles.Clear();
-        TabHome.Columns = modules.Count <= 3 ? Math.Max(1, modules.Count) : modules.Count <= 6 ? 3 : 4;
+        // Never more than two rows, so the grid always fits the panel.
+        TabHome.Columns = modules.Count <= 3 ? Math.Max(1, modules.Count) : modules.Count <= 6 ? 3 : (modules.Count + 1) / 2;
         foreach (var id in modules) TabHome.Children.Add(HomeTile(id));
     }
 
@@ -122,7 +125,27 @@ public partial class IslandWindow
                     glyph.FontWeight = FontWeights.Bold;
                     glyph.FontSize = 24;
                     glyph.Text = DateTime.Now.Day.ToString();
-                    sub.Text = DateTime.Now.ToString("dddd");
+                    sub.Text = NextToday(Events, DateTime.Now) is { Start: { } at } next
+                        ? $"{Fmt.Time(at, Hub.Settings.General.Use24Hour)} {next.Title}"
+                        : DateTime.Now.ToString("dddd");
+                    break;
+                case "weather":
+                    if (!Hub.Weather.Enabled) { sub.Text = "Off · set up"; ResetGlyph(glyph, Glyph.Cloud); break; }
+                    if (Hub.Weather.Last is { } wx)
+                    {
+                        // The tile shows the temperature, like the calendar shows the date.
+                        glyph.FontFamily = (FontFamily)FindResource("F.Family");
+                        glyph.FontWeight = FontWeights.Bold;
+                        glyph.FontSize = 20;
+                        glyph.Text = $"{wx.Temperature:0}°";
+                        sub.Text = WeatherService.Describe(wx.Code, wx.IsDay).Text;
+                    }
+                    else
+                    {
+                        sub.Text = Hub.Settings.Privacy.WeatherPlace;
+                        ResetGlyph(glyph, Glyph.Cloud);
+                        _ = LoadWeatherForTile();
+                    }
                     break;
                 case "notes":
                     var note = Hub.Store.Data.Notes.TryGetValue(UserData.IslandNoteKey, out var n) ? n : "";
@@ -136,6 +159,24 @@ public partial class IslandWindow
                 case "shelf": sub.Text = Shelf.Count == 0 ? "Drop files here" : Shelf.Count == 1 ? "1 file" : $"{Shelf.Count} files"; break;
             }
         }
+    }
+
+    private void ResetGlyph(TextBlock glyph, string icon)
+    {
+        glyph.FontFamily = (FontFamily)FindResource("F.Icons");
+        glyph.FontWeight = FontWeights.Normal;
+        glyph.FontSize = 22;
+        glyph.Text = icon;
+    }
+
+    /// <summary>First look at the launcher since starting: fetch once (the shared 30-minute cache) and fill the tile in.</summary>
+    private async Task LoadWeatherForTile()
+    {
+        try
+        {
+            if (await Hub.Weather.GetAsync() is not null && _expanded && _tab == HomeTab) RefreshHome();
+        }
+        catch { /* the tile keeps the place name; the weather page explains any failure */ }
     }
 
     /// <summary>Tiles arrive one after another, each popping in on a spring — a short ripple across the grid.</summary>

@@ -99,13 +99,76 @@ public class MotionAndDeviceTests
     [Fact]
     public void Launcher_tiles_each_have_their_own_colours()
     {
-        string[] modules = { "media", "system", "controls", "focus", "calendar", "notes", "clipboard", "shelf" };
+        string[] modules = { "media", "system", "controls", "focus", "calendar", "weather", "notes", "clipboard", "shelf" };
         var tops = modules.Select(m => WinOrbit.Island.IslandWindow.TileColors(m).Top).ToList();
         Assert.Equal(modules.Length, tops.Distinct().Count());
         // Every tile is a gradient, and an unknown module still gets a (grey) tile rather than nothing.
         Assert.All(modules, m => { var (t, b) = WinOrbit.Island.IslandWindow.TileColors(m); Assert.NotEqual(t, b); });
         Assert.DoesNotContain(WinOrbit.Island.IslandWindow.TileColors("unknown").Top, tops);
         Assert.Equal("home", WinOrbit.Island.IslandWindow.HomeTab);
+    }
+
+    [Theory]
+    [InlineData("9:30 Stand-up", 9, 30, "Stand-up")]
+    [InlineData("14:30 Dentist", 14, 30, "Dentist")]
+    [InlineData("7pm Dinner with Sam", 19, 0, "Dinner with Sam")]
+    [InlineData("9.15am Gym", 9, 15, "Gym")]
+    [InlineData("12am Midnight call", 0, 0, "Midnight call")]
+    [InlineData("12 PM Lunch", 12, 0, "Lunch")]
+    public void Calendar_reads_a_time_in_front_of_the_title(string text, int hour, int minute, string title)
+    {
+        var (time, parsed) = WinOrbit.Island.IslandWindow.ParseEvent(text);
+        Assert.Equal(new TimeSpan(hour, minute, 0), time);
+        Assert.Equal(title, parsed);
+    }
+
+    [Theory]
+    [InlineData("Bins out")]
+    [InlineData("3 books to return")]   // a bare number isn't a time
+    [InlineData("25:00 Nope")]
+    [InlineData("13pm Nope")]
+    public void Calendar_keeps_text_without_a_time_as_an_all_day_title(string text)
+    {
+        var (time, title) = WinOrbit.Island.IslandWindow.ParseEvent(text);
+        Assert.Null(time);
+        Assert.Equal(text, title);
+    }
+
+    [Fact]
+    public void Calendar_orders_a_day_and_times_its_reminders()
+    {
+        var day = new DateTime(2026, 11, 18);
+        var all = new List<WinOrbit.Core.CalendarEvent>
+        {
+            new() { Date = day, Time = new TimeSpan(19, 0, 0), Title = "Dinner" },
+            new() { Date = day, Title = "Bins out" },
+            new() { Date = day, Time = new TimeSpan(9, 30, 0), Title = "Stand-up" },
+            new() { Date = day.AddDays(1), Time = new TimeSpan(8, 0, 0), Title = "Tomorrow" },
+        };
+        Assert.Equal(new[] { "Bins out", "Stand-up", "Dinner" }, WinOrbit.Island.IslandWindow.EventsOn(all, day).Select(e => e.Title));
+        Assert.Equal("Dinner", WinOrbit.Island.IslandWindow.NextToday(all, day.AddHours(12))?.Title);
+        Assert.Null(WinOrbit.Island.IslandWindow.NextToday(all, day.AddHours(20)));
+
+        var dinner = all[0];
+        var due = (Func<DateTime, string?>)(now => WinOrbit.Island.IslandWindow.ReminderDue(dinner, now));
+        Assert.Null(due(day.AddHours(18).AddMinutes(30)));               // 30 minutes early: nothing yet
+        Assert.Equal("soon", due(day.AddHours(18).AddMinutes(50)));      // 10 minutes before
+        Assert.Equal("now", due(day.AddHours(19)));                       // on the minute
+        Assert.Equal("now", due(day.AddHours(19).AddMinutes(4)));         // island was busy: still shown
+        Assert.Null(due(day.AddHours(19).AddMinutes(6)));                 // too late to be useful
+        Assert.Null(WinOrbit.Island.IslandWindow.ReminderDue(all[1], day.AddHours(9)));   // all-day events don't pop up
+    }
+
+    [Fact]
+    public void Weather_skies_differ_by_condition_and_time_of_day()
+    {
+        var clearDay = WinOrbit.Island.IslandWindow.SkyColors(0, true);
+        Assert.NotEqual(clearDay, WinOrbit.Island.IslandWindow.SkyColors(0, false));
+        Assert.NotEqual(clearDay, WinOrbit.Island.IslandWindow.SkyColors(61, true));
+        Assert.NotEqual(WinOrbit.Island.IslandWindow.SkyColors(61, true), WinOrbit.Island.IslandWindow.SkyColors(95, true));
+        Assert.Equal("Clear", WinOrbit.Services.WeatherService.Describe(0, false).Text);
+        Assert.Equal(WinOrbit.Design.LineIcons.Moon, WinOrbit.Services.WeatherService.Describe(0, false).Icon);
+        Assert.Equal(WinOrbit.Design.LineIcons.Rain, WinOrbit.Services.WeatherService.Describe(61, false).Icon);
     }
 
     [Fact]

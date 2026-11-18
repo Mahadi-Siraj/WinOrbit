@@ -303,17 +303,41 @@
                         <!-- Calendar -->
                         <Grid x:Name="TabCalendar" Visibility="Collapsed">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="178"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock x:Name="CalDay" Style="{StaticResource Text.Label}" Foreground="{DynamicResource T.Accent}" FontSize="12"/>
-                                <TextBlock x:Name="CalNumber" FontSize="64" FontWeight="SemiBold" Margin="-3,-8,0,-6"/>
-                                <TextBlock x:Name="CalMonth" Style="{StaticResource Text.Muted}"/>
-                                <TextBlock x:Name="CalWeek" Style="{StaticResource Text.Caption}" Margin="0,6,0,0"/>
-                            </StackPanel>
+                            <!-- The picked day: its date, its events, and a line to add one -->
+                            <Grid Margin="0,0,14,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock x:Name="CalDay" Style="{StaticResource Text.Label}" Foreground="{DynamicResource T.Accent}" FontSize="11.5"/>
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock x:Name="CalNumber" FontSize="40" FontWeight="SemiBold" Margin="-2,-5,10,-5" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock x:Name="CalMonth" Style="{StaticResource Text.Muted}"/>
+                                        <TextBlock x:Name="CalWeek" Style="{StaticResource Text.Caption}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <StackPanel x:Name="CalEvents"/>
+                                </ScrollViewer>
+                                <Border Grid.Row="3" Style="{StaticResource Card.Inset}" Padding="10,5" Margin="0,6,0,0">
+                                    <Grid>
+                                        <TextBlock x:Name="CalAddHint" Text="Add… e.g. 9:30 Stand-up" Style="{StaticResource Text.Caption}" Foreground="{DynamicResource T.Text3}" IsHitTestVisible="False" VerticalAlignment="Center"/>
+                                        <TextBox x:Name="CalAdd" Style="{StaticResource TextBox.Bare}" AutomationProperties.Name="Add an event" MaxLength="80"
+                                                 PreviewMouseDown="OnNotesMouseDown" TextChanged="OnCalAddChanged" KeyDown="OnCalAddKey"/>
+                                    </Grid>
+                                </Border>
+                            </Grid>
                             <d:MonthView x:Name="CalView" Grid.Column="1" CellSize="25"/>
                         </Grid>
+
+                        <!-- Weather (built in code: the off state, or now / next hours / next days) -->
+                        <Grid x:Name="TabWeather" Visibility="Collapsed"/>
 
                         <!-- Notes -->
                         <Grid x:Name="TabNotes" Visibility="Collapsed">

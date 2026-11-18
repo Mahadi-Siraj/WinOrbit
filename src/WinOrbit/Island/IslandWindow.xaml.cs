@@ -183,6 +183,7 @@ public partial class IslandWindow : Window
         Hub.Theme.Applied += OnThemeApplied;
         _downloads.Changed += OnDownloadsChanged;
         InitLive();
+        InitCalendar();
         ApplySettings();
         UpdateClock();
         AlignClock();
@@ -346,6 +347,7 @@ public partial class IslandWindow : Window
         CDate.Text = now.ToString("ddd d MMM", CultureInfo.CurrentCulture);
         if (_expanded && _tab == "calendar") UpdateCalendar();
         if (!_expanded) FitCompact();
+        CheckReminders(now);
     }
 
     public void RefreshCompact()
@@ -727,7 +729,7 @@ public partial class IslandWindow : Window
 
     private void Poke() { if (_expanded) ArmCollapse(); }
 
-    private bool BusyInside => _pinned || _seekDragging || NotesBox.IsKeyboardFocusWithin || Mouse.LeftButton == MouseButtonState.Pressed && Pill.IsMouseOver;
+    private bool BusyInside => _pinned || _seekDragging || NotesBox.IsKeyboardFocusWithin || CalAdd.IsKeyboardFocusWithin || Mouse.LeftButton == MouseButtonState.Pressed && Pill.IsMouseOver;
 
     /// <summary>Keyboard interaction is opt-in: only then does the island accept focus.</summary>
     private void SetInteractive(bool on)
@@ -883,7 +885,7 @@ public partial class IslandWindow : Window
     private static readonly (string Id, string Glyph, string Name)[] AllTabs =
     {
         ("media", Glyph.Music, "Media"), ("system", Glyph.Chip, "System"), ("controls", Glyph.Settings, "Control Centre"),
-        ("focus", Glyph.Stopwatch, "Focus timer"), ("calendar", Glyph.Calendar, "Calendar"), ("notes", Glyph.Note, "Notes"),
+        ("focus", Glyph.Stopwatch, "Focus timer"), ("calendar", Glyph.Calendar, "Calendar"), ("weather", Glyph.Cloud, "Weather"), ("notes", Glyph.Note, "Notes"),
         ("clipboard", Glyph.Copy, "Clipboard"), ("shelf", GlyphShelf, "File shelf")
     };
 
@@ -902,6 +904,12 @@ public partial class IslandWindow : Window
             S.ModulesVersion = 2;
             Hub.Store.Save();
         }
+        if (S.ModulesVersion < 3)
+        {
+            if (!S.Modules.Contains("weather")) S.Modules.Add("weather");
+            S.ModulesVersion = 3;
+            Hub.Store.Save();
+        }
         var list = AllTabs.Select(t => t.Id).Where(id => S.Modules.Contains(id)).ToList();
         if (list.Count == 0) list.Add("media");
         return list;
@@ -913,10 +921,13 @@ public partial class IslandWindow : Window
         var active = ActiveTabs();
         if (!active.Contains(_tab) && _tab != HomeTab) _tab = active[0];
         BuildHome(active);
+        // Each button narrows as modules are added so the bar always clears the pin, settings and collapse buttons
+        // (about 326 px are free beside them; each button is its ~16 px glyph, its padding and a 2 px margin each side).
+        var pad = Math.Clamp((326.0 / (active.Count + 1) - 20) / 2, 5, 11);
         // The launcher's own button leads the bar; the modules follow.
         foreach (var t in new[] { (Id: HomeTab, Glyph: Glyph.Tiles, Name: "All modules") }.Concat(AllTabs.Where(t => active.Contains(t.Id))))
         {
-            var rb = new RadioButton { GroupName = "IslandTabs" + GetHashCode(), ToolTip = t.Name, Tag = t.Id, Padding = new Thickness(11, 6, 11, 6), IsChecked = t.Id == _tab };
+            var rb = new RadioButton { GroupName = "IslandTabs" + GetHashCode(), ToolTip = t.Name, Tag = t.Id, Padding = new Thickness(pad, 6, pad, 6), IsChecked = t.Id == _tab };
             rb.SetResourceReference(StyleProperty, "Segment");
             System.Windows.Automation.AutomationProperties.SetName(rb, t.Name);
             var icon = new TextBlock { Text = t.Glyph, FontSize = 14, FontFamily = (FontFamily)FindResource("F.Icons") };
@@ -944,10 +955,11 @@ public partial class IslandWindow : Window
         TabControls.Visibility = id == "controls" ? Visibility.Visible : Visibility.Collapsed;
         TabFocus.Visibility = id == "focus" ? Visibility.Visible : Visibility.Collapsed;
         TabCalendar.Visibility = id == "calendar" ? Visibility.Visible : Visibility.Collapsed;
+        TabWeather.Visibility = id == "weather" ? Visibility.Visible : Visibility.Collapsed;
         TabNotes.Visibility = id == "notes" ? Visibility.Visible : Visibility.Collapsed;
         TabClipboard.Visibility = id == "clipboard" ? Visibility.Visible : Visibility.Collapsed;
         TabShelf.Visibility = id == "shelf" ? Visibility.Visible : Visibility.Collapsed;
-        var view = id switch { HomeTab => (FrameworkElement)TabHome, "media" => TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
+        var view = id switch { HomeTab => (FrameworkElement)TabHome, "media" => TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "weather" => TabWeather, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
         Motion.Enter(view, 8, 220);
         _mediaTick.Stop();
         UpdateMonitorSubscription();
@@ -957,7 +969,8 @@ public partial class IslandWindow : Window
             case "media": UpdateMedia(); LoadVolume(); break;
             case "controls": LoadVolume(); LoadBrightness(); RefreshQuick(); break;
             case "focus": UpdateFocus(); break;
-            case "calendar": CalView.ShowToday(); UpdateCalendar(); break;
+            case "calendar": _calDay = DateTime.Today; CalView.Select(_calDay); UpdateCalendar(); break;
+            case "weather": ShowWeather(); break;
             case "clipboard": RenderClipboard(); break;
             case "shelf": RenderShelf(); break;
             case "notes":
@@ -1333,16 +1346,7 @@ public partial class IslandWindow : Window
         t.SetMode(t.Mode, Math.Clamp((int)Math.Round(t.Total.TotalMinutes) + delta, 5, 180));
     }
 
-    // ----- calendar / notes -----
-    private void UpdateCalendar()
-    {
-        var now = DateTime.Now;
-        CalDay.Text = now.ToString("dddd", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture);
-        CalNumber.Text = now.Day.ToString(CultureInfo.CurrentCulture);
-        CalMonth.Text = now.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
-        CalWeek.Text = $"Week {ISOWeek.GetWeekOfYear(now)} · day {now.DayOfYear}";
-    }
-
+    // ----- notes -----
     private void OnNotesMouseDown(object sender, MouseButtonEventArgs e) => SetInteractive(true);
 
     private void OnNotesChanged(object sender, TextChangedEventArgs e)

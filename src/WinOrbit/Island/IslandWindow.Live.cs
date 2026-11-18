@@ -227,6 +227,10 @@ public partial class IslandWindow
                 if (Hub.Media.HasTrack) ShowMediaCard();
                 else ShowSampleSong();
                 break;
+            case "event":
+                var at = DateTime.Today.AddHours(DateTime.Now.Hour + 1);
+                ShowEventCard(new CalendarEvent { Date = at.Date, Time = at.TimeOfDay, Title = "Stand-up" }, at.AddMinutes(-10));
+                break;
             case "night": ShowCard(Glyph.Moon, "Night light", "On · warmer colours", Amber, 2.6, toggle: true); break;
             case "airplane": ShowCard(GlyphAirplane, "Airplane mode", "On · radios off", Flight, 2.6, toggle: true); break;
             case "caps": ShowCard("", "Caps Lock", "On", KeyLit, 2.4, toggle: true, cap: "A", switchColor: Connected); break;
@@ -378,24 +382,30 @@ public partial class IslandWindow
     private bool _washOnA;
 
     /// <summary>The artwork's colours as a soft diagonal light through the glass: strongest where the artwork sits.</summary>
-    private static Brush WashBrush(Palette p)
+    private static Brush WashBrush(Palette p) => WashBrush(p.Accent, p.Secondary, p.Dominant);
+
+    private static Brush WashBrush(Color first, Color middle, Color last)
     {
         Color A(Color c, byte a) => Color.FromArgb(a, c.R, c.G, c.B);
         var b = new LinearGradientBrush { StartPoint = new Point(0, 0.2), EndPoint = new Point(1, 0.8) };
-        b.GradientStops.Add(new GradientStop(A(p.Accent, 0x70), 0));
-        b.GradientStops.Add(new GradientStop(A(p.Secondary, 0x40), 0.5));
-        b.GradientStops.Add(new GradientStop(A(p.Dominant, 0x26), 1));
+        b.GradientStops.Add(new GradientStop(A(first, 0x70), 0));
+        b.GradientStops.Add(new GradientStop(A(middle, 0x40), 0.5));
+        b.GradientStops.Add(new GradientStop(A(last, 0x26), 1));
         b.Freeze();
         return b;
     }
 
-    /// <summary>Show the album colours while a song plays where music is on screen; fade them out otherwise.</summary>
+    /// <summary>
+    /// Show the album colours while a song plays where music is on screen (or the sky's colours on the weather
+    /// page); fade them out otherwise.
+    /// </summary>
     private void UpdateArtWash()
     {
         var m = Hub.Media;
+        var sky = _expanded && _tab == "weather" ? _skyWash : null;
         var musicOnScreen = _expanded ? _tab == "media" : _card ? _cardIsMedia : CMedia.Visibility == Visibility.Visible && CNormal.Visibility == Visibility.Visible;
-        var want = S.AlbumTint && _artPalette is not null && m.HasTrack && m.IsPlaying && musicOnScreen;
-        var key = want ? _artKey : "";
+        var want = sky is not null || S.AlbumTint && _artPalette is not null && m.HasTrack && m.IsPlaying && musicOnScreen;
+        var key = sky is not null ? _skyKey : want ? _artKey : "";
         if (key == _washKey) return;
         _washKey = key;
         if (!want)
@@ -406,7 +416,7 @@ public partial class IslandWindow
         }
         _washOnA = !_washOnA;
         var (show, hide) = _washOnA ? (ArtWashA, ArtWashB) : (ArtWashB, ArtWashA);
-        show.Background = WashBrush(_artPalette!);
+        show.Background = sky ?? WashBrush(_artPalette!);
         Motion.To(show, OpacityProperty, 1, 900, Motion.EaseInOut);
         Motion.To(hide, OpacityProperty, 0, 900, Motion.EaseInOut);
     }

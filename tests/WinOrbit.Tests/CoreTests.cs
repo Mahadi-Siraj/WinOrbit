@@ -615,5 +615,26 @@ public class PrivacyTests
         Assert.Equal(11.4, r.Temperature);
         Assert.Equal(2, r.Days.Count);
         Assert.Equal("Rain", WeatherService.Describe(r.Days[1].Code).Text);
+        Assert.True(r.IsDay);          // fields the old shape lacks fall back quietly
+        Assert.Empty(r.Hours);
+    }
+
+    [Fact]
+    public void Weather_parser_reads_hours_sun_times_and_night()
+    {
+        var json = """
+        {"current":{"temperature_2m":28.1,"apparent_temperature":33,"weather_code":0,"wind_speed_10m":4,"is_day":0,"relative_humidity_2m":79},
+         "hourly":{"time":["2026-11-18T18:00","2026-11-18T19:00"],"temperature_2m":[28.4,null],"weather_code":[0,1],"is_day":[0,0],"precipitation_probability":[0,45]},
+         "daily":{"time":["2026-11-18"],"weather_code":[1],"temperature_2m_max":[34],"temperature_2m_min":[27],"sunrise":["2026-11-18T06:36"],"sunset":["2026-11-18T17:38"],"precipitation_probability_max":[5]}}
+        """;
+        using var doc = JsonDocument.Parse(json);
+        var r = WeatherService.Parse(doc.RootElement);
+        Assert.False(r.IsDay);
+        Assert.Equal(79, r.Humidity);
+        Assert.Equal(2, r.Hours.Count);
+        Assert.Equal(0, r.Hours[1].Temperature);   // a null hour reads as 0 instead of failing the whole report
+        Assert.Equal(45, r.Hours[1].RainChance);
+        Assert.Equal(new DateTime(2026, 11, 18, 17, 38, 0), r.Days[0].Sunset);
+        Assert.Equal(5, r.Days[0].RainChance);
     }
 }

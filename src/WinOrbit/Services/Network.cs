@@ -162,13 +162,19 @@ public sealed record WeatherPlace(string Name, string Region, double Lat, double
     public override string ToString() => string.IsNullOrEmpty(Region) ? Name : $"{Name}, {Region}";
 }
 
-public sealed record WeatherDay(DateTime Date, double Min, double Max, int Code);
+public sealed record WeatherDay(DateTime Date, double Min, double Max, int Code, int RainChance = -1, DateTime? Sunrise = null, DateTime? Sunset = null);
+
+/// <summary>One hour of the forecast, in the place's own local time.</summary>
+public sealed record WeatherHour(DateTime Time, double Temperature, int Code, bool IsDay, int RainChance);
 
 public sealed class WeatherReport
 {
     public double Temperature, Feels, Wind;
     public int Code;
+    public int Humidity = -1;
+    public bool IsDay = true;
     public List<WeatherDay> Days = new();
+    public List<WeatherHour> Hours = new();
     public DateTime Fetched = DateTime.Now;
 }
 
@@ -210,8 +216,10 @@ public sealed class WeatherService
         var p = _privacy();
         var ci = CultureInfo.InvariantCulture;
         var url = $"https://api.open-meteo.com/v1/forecast?latitude={p.WeatherLat.ToString("0.###", ci)}&longitude={p.WeatherLon.ToString("0.###", ci)}" +
-                  "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4" +
-                  (p.WeatherFahrenheit ? "&temperature_unit=fahrenheit" : "");
+                  "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day,relative_humidity_2m" +
+                  "&hourly=temperature_2m,weather_code,is_day,precipitation_probability&forecast_hours=12" +
+                  "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=4" +
+                  (p.WeatherFahrenheit ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : "");
         using var doc = JsonDocument.Parse(await _net.GetStringAsync(url, "Weather: forecast"));
         var report = Parse(doc.RootElement);
         _cache = report;
@@ -219,6 +227,9 @@ public sealed class WeatherService
     }
 
     public void Invalidate() => _cache = null;
+
+    /// <summary>The last report fetched, without asking the network (for the launcher's tile and the island).</summary>
+    public WeatherReport? Last => Enabled ? _cache : null;
 
     internal static WeatherReport Parse(JsonElement root)
     {
@@ -228,18 +239,50 @@ public sealed class WeatherService
             Temperature = cur.GetProperty("temperature_2m").GetDouble(),
             Feels = cur.GetProperty("apparent_temperature").GetDouble(),
             Wind = cur.GetProperty("wind_speed_10m").GetDouble(),
-            Code = cur.GetProperty("weather_code").GetInt32()
+            Code = cur.GetProperty("weather_code").GetInt32(),
+            Humidity = cur.TryGetProperty("relative_humidity_2m", out var h) && h.ValueKind == JsonValueKind.Number ? h.GetInt32() : -1,
+            IsDay = !cur.TryGetProperty("is_day", out var d) || d.ValueKind != JsonValueKind.Number || d.GetInt32() == 1,
         };
         if (root.TryGetProperty("daily", out var daily))
         {
-            var dates = daily.GetProperty("time").EnumerateArray().Select(d => DateTime.Parse(d.GetString()!, CultureInfo.InvariantCulture)).ToArray();
-            var max = daily.GetProperty("temperature_2m_max").EnumerateArray().Select(d => d.GetDouble()).ToArray();
-            var min = daily.GetProperty("temperature_2m_min").EnumerateArray().Select(d => d.GetDouble()).ToArray();
-            var code = daily.GetProperty("weather_code").EnumerateArray().Select(d => d.GetInt32()).ToArray();
-            for (var i = 0; i < dates.Length; i++) report.Days.Add(new WeatherDay(dates[i], min[i], max[i], code[i]));
+            var dates = Dates(daily, "time");
+            var max = Numbers(daily, "temperature_2m_max");
+            var min = Numbers(daily, "temperature_2m_min");
+            var code = Numbers(daily, "weather_code");
+            var rain = Numbers(daily, "precipitation_probability_max");
+            var rise = Dates(daily, "sunrise");
+            var set = Dates(daily, "sunset");
+            for (var i = 0; i < dates.Length; i++)
+                report.Days.Add(new WeatherDay(dates[i], min[i], max[i], (int)code[i], i < rain.Length ? (int)rain[i] : -1,
+                    i < rise.Length ? rise[i] : null, i < set.Length ? set[i] : null));
+        }
+        if (root.TryGetProperty("hourly", out var hourly))
+        {
+            var times = Dates(hourly, "time");
+            var temp = Numbers(hourly, "temperature_2m");
+            var code = Numbers(hourly, "weather_code");
+            var day = Numbers(hourly, "is_day");
+            var rain = Numbers(hourly, "precipitation_probability");
+            for (var i = 0; i < times.Length && i < temp.Length && i < code.Length; i++)
+                report.Hours.Add(new WeatherHour(times[i], temp[i], (int)code[i], i >= day.Length || day[i] >= 1, i < rain.Length ? (int)rain[i] : -1));
         }
         return report;
     }
+
+    // Missing or null values (Open-Meteo sends null for hours it has no model data for) read as 0 rather than failing.
+    private static double[] Numbers(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var a) && a.ValueKind == JsonValueKind.Array
+            ? a.EnumerateArray().Select(v => v.ValueKind == JsonValueKind.Number ? v.GetDouble() : 0).ToArray()
+            : Array.Empty<double>();
+
+    private static DateTime[] Dates(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var a) && a.ValueKind == JsonValueKind.Array
+            ? a.EnumerateArray().Select(v => DateTime.Parse(v.GetString()!, CultureInfo.InvariantCulture)).ToArray()
+            : Array.Empty<DateTime>();
+
+    /// <summary>WMO weather code → (description, line icon path from <see cref="Design.LineIcons"/>); clear nights show the moon.</summary>
+    public static (string Text, string Icon) Describe(int code, bool isDay) =>
+        !isDay && code is 0 or 1 ? (code == 0 ? "Clear" : "Mostly clear", Design.LineIcons.Moon) : Describe(code);
 
     /// <summary>WMO weather code → (description, line icon path from <see cref="Design.LineIcons"/>).</summary>
     public static (string Text, string Icon) Describe(int code) => code switch

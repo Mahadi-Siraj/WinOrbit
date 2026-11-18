@@ -11,7 +11,7 @@ Everything lives in one folder: `%APPDATA%\WinOrbit` (or `Data\` beside the exe 
 | File | Contents | Why |
 |---|---|---|
 | `settings.json` | Active theme, island settings, widget positions/options, layout, hotkeys, automation rules, Rainmeter favourites/recent list, privacy switches | Restore your desktop after a restart |
-| `data.json` | Notes, task lists, focus-session history (start time + minutes), clipboard items **you pinned** (text only), how often you opened each launcher result (to rank your favourites first) | Widget content, launcher ranking |
+| `data.json` | Notes, task lists, focus-session history (start time + minutes), clipboard items **you pinned** (text only), how often you opened each launcher result (to rank your favourites first), events you added in the island's calendar (day, optional time, title) | Widget content, launcher ranking, event reminders |
 | `backups\nightlight-state.bin` | Windows' night-light state as it was before the island's Night light tile first changed it | Restore if a future Windows changes the format |
 | `themes\*.json`, `profiles\*.json` | Themes and profiles you created | Your customisations |
 | `backups\windows-settings-backup.json` | Original values of Windows settings WinOrbit changed (e.g. `AppsUseLightTheme`, accent colour, wallpaper path) | **Revert all** and uninstall rollback |
@@ -59,7 +59,7 @@ Two optional features use it, each with its own switch under **Settings › Priv
 | Feature | Request | When | Data sent |
 |---|---|---|---|
 | Weather (Open-Meteo, no account or key) | `geocoding-api.open-meteo.com/v1/search?name=…` | When you search for a place | The place name you typed |
-| | `api.open-meteo.com/v1/forecast?latitude=…&longitude=…` | At most every 30 minutes while a Weather widget is visible | Coordinates of the chosen place (rounded to 3 decimals) |
+| | `api.open-meteo.com/v1/forecast?latitude=…&longitude=…` | At most every 30 minutes while a Weather widget is visible, or when you open the island's Weather page or launcher (the same 30-minute cache) | Coordinates of the chosen place (rounded to 3 decimals) and your unit choice |
 | Synced lyrics (LRCLIB, no account or key) | `lrclib.net/api/get?track_name=…&artist_name=…&album_name=…&duration=…`, then `/api/search` if there is no exact match | Once per new song while lyrics are on | The song's title, artist, album and length — what your player publishes to Windows. Results are cached in memory, never on disk |
 
 Your IP address is inevitably visible to those services when you enable a feature, as with any web request.

@@ -117,6 +117,8 @@ public sealed class IslandSettings
     public bool AlbumTint { get; set; } = true;
     /// <summary>Pop-ups when dark/light mode, night light, airplane mode or Energy Saver are switched.</summary>
     public bool SystemAlerts { get; set; } = true;
+    /// <summary>A card 10 minutes before, and when, each calendar event with a time starts.</summary>
+    public bool EventReminders { get; set; } = true;
     /// <summary>Equaliser bars follow what is actually playing (Windows' output meter) instead of a loop.</summary>
     public bool AudioReactive { get; set; } = true;
     /// <summary>Show a dot while an app uses the microphone or camera, like phones do.</summary>
@@ -312,6 +314,19 @@ public sealed class FocusSession
     public string Label { get; set; } = "Focus";
 }
 
+/// <summary>An event added in the island's calendar. Stays on this PC.</summary>
+public sealed class CalendarEvent
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
+    /// <summary>The day (date part only).</summary>
+    public DateTime Date { get; set; }
+    /// <summary>Start time, or null for an all-day event.</summary>
+    public TimeSpan? Time { get; set; }
+    public string Title { get; set; } = "";
+
+    [JsonIgnore] public DateTime? Start => Time is { } t ? Date.Date + t : null;
+}
+
 /// <summary>User content (notes, tasks, session history). Local only.</summary>
 public sealed class UserData
 {
@@ -322,6 +337,8 @@ public sealed class UserData
     public List<string> ClipPins { get; set; } = new();
     /// <summary>How often each launcher result was opened, to rank favourites first. Stays on this PC.</summary>
     public Dictionary<string, int> LaunchCounts { get; set; } = new();
+    /// <summary>Events added in the island's calendar.</summary>
+    public List<CalendarEvent> Events { get; set; } = new();
 
     [JsonIgnore] public const string IslandNoteKey = "island";
 }

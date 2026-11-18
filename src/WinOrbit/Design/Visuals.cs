@@ -192,6 +192,15 @@ public sealed class MonthView : Grid
 
     public double CellSize { get; set; } = 26;
 
+    /// <summary>The picked day (ringed); null when nothing is picked.</summary>
+    public DateTime? Selected { get; set; }
+
+    /// <summary>Days that get a small dot beneath the number (e.g. days with events).</summary>
+    public Func<DateTime, bool>? Marked { get; set; }
+
+    /// <summary>A day was clicked. Days are only clickable while someone listens.</summary>
+    public event Action<DateTime>? DayClicked;
+
     public MonthView()
     {
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -232,6 +241,14 @@ public sealed class MonthView : Grid
         Build();
     }
 
+    /// <summary>Pick a day (turning the page to its month) and redraw.</summary>
+    public void Select(DateTime day)
+    {
+        Selected = day.Date;
+        _month = new DateTime(day.Year, day.Month, 1);
+        Build();
+    }
+
     public void Build()
     {
         var culture = CultureInfo.CurrentCulture;
@@ -266,7 +283,26 @@ public sealed class MonthView : Grid
             }
             else text.SetResourceReference(TextBlock.ForegroundProperty, inMonth ? "T.Text" : "T.Text3");
             if (!inMonth) text.Opacity = 0.55;
+            if (Selected == date && date != DateTime.Today)
+            {
+                var ring = new Ellipse { StrokeThickness = 1.5 };
+                ring.SetResourceReference(Shape.StrokeProperty, "T.Accent");
+                cell.Children.Add(ring);
+            }
             cell.Children.Add(text);
+            if (Marked?.Invoke(date) == true)
+            {
+                var mark = new Ellipse { Width = 4, Height = 4, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 1.5), IsHitTestVisible = false };
+                mark.SetResourceReference(Shape.FillProperty, date == DateTime.Today ? "T.OnAccent" : "T.Accent");
+                cell.Children.Add(mark);
+            }
+            if (DayClicked is not null)
+            {
+                cell.Background = Brushes.Transparent;   // hit-testable across the whole cell
+                cell.Cursor = System.Windows.Input.Cursors.Hand;
+                var day = date;
+                cell.MouseLeftButtonUp += (_, e) => { e.Handled = true; DayClicked?.Invoke(day); };
+            }
             _days.Children.Add(cell);
         }
     }
