@@ -188,6 +188,12 @@ public class MotionAndDeviceTests
         Assert.Equal("Left", Near(15, 500));
         Assert.Equal("Right", Near(1900, 500));
         Assert.Null(Near(960, 500));   // in the middle of the screen: no edge, just moving away from the current one
+        // In a corner it has to leave its own edge first, so it can't flicker between two edges.
+        double From(string edge, double x, double y) => WinOrbit.Island.IslandWindow.EdgeDistance(new System.Windows.Point(x, y), b, edge);
+        Assert.Equal(20, From("Top", 15, 20));
+        Assert.Equal(15, From("Left", 15, 20));
+        Assert.Equal(10, From("Bottom", 960, 1070));
+        Assert.Equal(20, From("Right", 1900, 500));
     }
 
     [Fact]

@@ -240,7 +240,7 @@ public sealed class WeatherService
             Feels = cur.GetProperty("apparent_temperature").GetDouble(),
             Wind = cur.GetProperty("wind_speed_10m").GetDouble(),
             Code = cur.GetProperty("weather_code").GetInt32(),
-            Humidity = cur.TryGetProperty("relative_humidity_2m", out var h) && h.ValueKind == JsonValueKind.Number ? h.GetInt32() : -1,
+            Humidity = cur.TryGetProperty("relative_humidity_2m", out var h) && h.ValueKind == JsonValueKind.Number ? (int)Math.Round(h.GetDouble()) : -1,
             IsDay = !cur.TryGetProperty("is_day", out var d) || d.ValueKind != JsonValueKind.Number || d.GetInt32() == 1,
         };
         if (root.TryGetProperty("daily", out var daily))
@@ -252,7 +252,7 @@ public sealed class WeatherService
             var rain = Numbers(daily, "precipitation_probability_max");
             var rise = Dates(daily, "sunrise");
             var set = Dates(daily, "sunset");
-            for (var i = 0; i < dates.Length; i++)
+            for (var i = 0; i < dates.Length && i < min.Length && i < max.Length && i < code.Length; i++)
                 report.Days.Add(new WeatherDay(dates[i], min[i], max[i], (int)code[i], i < rain.Length ? (int)rain[i] : -1,
                     i < rise.Length ? rise[i] : null, i < set.Length ? set[i] : null));
         }
@@ -277,7 +277,7 @@ public sealed class WeatherService
 
     private static DateTime[] Dates(JsonElement e, string name) =>
         e.TryGetProperty(name, out var a) && a.ValueKind == JsonValueKind.Array
-            ? a.EnumerateArray().Select(v => DateTime.Parse(v.GetString()!, CultureInfo.InvariantCulture)).ToArray()
+            ? a.EnumerateArray().Select(v => v.ValueKind == JsonValueKind.String && DateTime.TryParse(v.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var t) ? t : DateTime.MinValue).ToArray()
             : Array.Empty<DateTime>();
 
     /// <summary>WMO weather code → (description, line icon path from <see cref="Design.LineIcons"/>); clear nights show the moon.</summary>

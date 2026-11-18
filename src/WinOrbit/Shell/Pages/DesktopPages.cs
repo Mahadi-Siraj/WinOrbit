@@ -229,7 +229,7 @@ public sealed class IslandPage : PageBase
             Kit.Row("Rim", "A coloured edge around the island. Glass keeps the material's own light rim.",
                 Kit.Segmented(WinOrbit.Island.IslandWindow.Rims.Select(r => r.Name).ToArray(), Math.Max(0, Array.FindIndex(WinOrbit.Island.IslandWindow.Rims, r => r.Id == S.Rim)), i => { S.Rim = WinOrbit.Island.IslandWindow.Rims[i].Id; Save(); }), false),
             Kit.ToggleRow("Rim glow", "A soft halo in the rim's colours around the island.", S.RimGlow, v => { S.RimGlow = v; Save(); }, true),
-            Kit.WideRow("Shape", "Capsule is fully round; Rounded and Square are soft and crisp rectangles; Notch sits flush with the top of the screen like a camera notch; Drop is tighter on top and round underneath.",
+            Kit.WideRow("Shape", "Capsule is fully round; Rounded and Square are soft and crisp rectangles; Notch sits flush against its screen edge like a camera notch; Drop is tighter at the edge and round away from it.",
                 Kit.Segmented(WinOrbit.Island.IslandWindow.Shapes, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Shapes, S.Shape)), i => { S.Shape = WinOrbit.Island.IslandWindow.Shapes[i]; Save(); })),
             Kit.Row("Thickness", "How tall the collapsed island is.",
                 Kit.Segmented(WinOrbit.Island.IslandWindow.Thicknesses, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Thicknesses, S.Thickness)), i => { S.Thickness = WinOrbit.Island.IslandWindow.Thicknesses[i]; Save(); })),

@@ -418,7 +418,7 @@ public partial class IslandWindow : Window
         {
             Show();
             Place();
-            if (Motion.Intensity > 0.01)
+            if (Motion.Intensity > 0.01 && !_autoHidden)   // an auto-hidden island stays tucked away until the pointer calls it
             {
                 // Comes back the way it first arrived: dropping in from its edge with a little bounce.
                 Pill.Opacity = 0;
@@ -840,7 +840,8 @@ public partial class IslandWindow : Window
 
     private void Poke() { if (_expanded) ArmCollapse(); }
 
-    private bool BusyInside => _pinned || _seekDragging || NotesBox.IsKeyboardFocusWithin || CalAdd.IsKeyboardFocusWithin || Mouse.LeftButton == MouseButtonState.Pressed && Pill.IsMouseOver;
+    // A pointer resting on the open island (reading the weather, say) keeps it open; leaving starts the short count.
+    private bool BusyInside => _pinned || _seekDragging || Pill.IsMouseOver || NotesBox.IsKeyboardFocusWithin || CalAdd.IsKeyboardFocusWithin;
 
     /// <summary>Keyboard interaction is opt-in: only then does the island accept focus.</summary>
     private void SetInteractive(bool on)
@@ -904,7 +905,8 @@ public partial class IslandWindow : Window
         var scale = mon.Scale;
 
         // Carried right up to a different edge of the screen: the island moves to that edge and the drag carries on.
-        if (EdgeNear(new Point(p.X, p.Y), mon.Bounds, 70 * scale) is { } edge && edge != Edge)
+        // It has to leave its own edge first, so a corner doesn't flip it back and forth between two edges.
+        if (EdgeNear(new Point(p.X, p.Y), mon.Bounds, 70 * scale) is { } edge && edge != Edge && EdgeDistance(new Point(p.X, p.Y), mon.Bounds, Edge) > 110 * scale)
         {
             S.Edge = edge;
             var along = edge is "Left" or "Right" ? p.Y - (mon.Bounds.Top + mon.Bounds.Height / 2.0) : p.X - (mon.Bounds.Left + mon.Bounds.Width / 2.0);
@@ -942,6 +944,15 @@ public partial class IslandWindow : Window
         }.OrderBy(e => e.Distance).First();
         return d.Distance <= reach ? d.Edge : null;
     }
+
+    /// <summary>How far the pointer is from one edge of the screen.</summary>
+    internal static double EdgeDistance(Point p, Native.RECT b, string edge) => edge switch
+    {
+        "Bottom" => b.Bottom - p.Y,
+        "Left" => p.X - b.Left,
+        "Right" => b.Right - p.X,
+        _ => p.Y - b.Top,
+    };
 
     /// <summary>Put the island back in the exact horizontal centre (keeps its height from the top).</summary>
     public void Centre()

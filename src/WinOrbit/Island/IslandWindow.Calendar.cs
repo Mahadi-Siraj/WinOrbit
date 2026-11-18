@@ -147,7 +147,8 @@ public partial class IslandWindow
     private void CheckReminders(DateTime now)
     {
         if (!S.EventReminders || _expanded || !IsVisible) return;   // shown later (up to 5 minutes) if the island is busy or hidden
-        foreach (var ev in Events.Where(e => e.Start is { } s && s.Date >= now.Date.AddDays(-1) && s.Date <= now.Date).OrderBy(e => e.Start))
+        // Anything starting in the next quarter hour or the last few minutes — across midnight too.
+        foreach (var ev in Events.Where(e => e.Start is { } s && s > now.AddMinutes(-6) && s < now.AddMinutes(15)).OrderBy(e => e.Start))
         {
             var due = ReminderDue(ev, now);
             if (due is null || _reminded.Contains(ev.Id + due)) continue;
