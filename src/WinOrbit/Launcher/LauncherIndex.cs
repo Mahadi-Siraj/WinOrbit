@@ -185,6 +185,7 @@ public static class LauncherIndex
         if (TimerCommand.Item(q, Hub.Timers) is { } timer) results.Add(timer);
         if (ReminderCommand.Item(q) is { } reminder) results.Add(reminder);
         if (WorldTime.Item(q) is { } worldTime) results.Add(worldTime);
+        results.AddRange(ClipSearch.Items(q));
 
         var counts = Hub.Store.Data.LaunchCounts;
         foreach (var item in _apps.Concat(snapshot))
