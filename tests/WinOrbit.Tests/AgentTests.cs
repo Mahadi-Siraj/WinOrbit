@@ -154,6 +154,7 @@ public class AgentTests
             var h = hooks.GetProperty(name)[0].GetProperty("hooks")[0];
             Assert.Equal("command", h.GetProperty("type").GetString());
             Assert.True(h.GetProperty("async").GetBoolean());
+            Assert.Equal("powershell", h.GetProperty("shell").GetString());
             // Unquoted: PowerShell, cmd and Git Bash all run it as is.
             Assert.Equal("C:/Users/SOMEON~1/AppData/Local/Programs/WinOrbit/WinOrbit.exe --agent claude", h.GetProperty("command").GetString());
         }

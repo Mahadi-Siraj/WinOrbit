@@ -260,11 +260,13 @@ internal static class AgentSetup
 
     /// <summary>
     /// The "hooks" block for Claude Code's settings.json. Every hook is async, so Claude never waits for WinOrbit.
-    /// PostToolUse (each step) is what turns "needs you" back into "working" once you've answered.
+    /// PostToolUse (each step) is what turns "needs you" back into "working" once you've answered. "shell": "powershell"
+    /// says the command is meant for PowerShell (it also runs as is in Git Bash), which stops Claude Code warning that
+    /// Git Bash wasn't found on PCs without it.
     /// </summary>
     internal static string ClaudeCode(string exe)
     {
-        object Hook() => new Dictionary<string, object> { ["type"] = "command", ["command"] = Command(exe, "claude"), ["async"] = true };
+        object Hook() => new Dictionary<string, object> { ["type"] = "command", ["command"] = Command(exe, "claude"), ["shell"] = "powershell", ["async"] = true };
         object Entry() => new[] { new Dictionary<string, object> { ["hooks"] = new[] { Hook() } } };
         var hooks = new Dictionary<string, object>
         {
