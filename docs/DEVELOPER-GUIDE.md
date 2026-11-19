@@ -10,7 +10,7 @@ Requirements: Windows 10 2004+ or 11, the .NET 8 SDK. Optional: Inno Setup 6 for
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 267 unit tests, under a second
+dotnet test tests\WinOrbit.Tests                  # 299 unit tests, under a second
 src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
@@ -60,7 +60,7 @@ The class is split into partial files:
 | `IslandWindow.xaml.cs` | Shape and corners, placement on the screen edge, the collapsed capsule, liquid motion, expand/collapse, pointer (click, drag, wheel), auto-hide, fullscreen hiding, tab switching |
 | `IslandWindow.Cards.cs` | `ShowCard` / `EndCard`: the card pop-up, its switch, artwork, and file actions (click, drag out, buttons) |
 | `IslandWindow.Tabs.cs` | The pages: media, Control Centre (volume, brightness, quick tiles), system monitor, focus timer, quick note, header buttons |
-| `IslandController.cs` | `IslandController` (one island per display, the shared watchers, `Apply()`) and `DownloadWatcher` |
+| `IslandController.cs` | `IslandController` (one island per display, the shared watchers, `Apply()`), `DownloadWatcher`, and `ShowAppCard` for cards from the local pipe (`Services/IslandPipe.cs`: opt-in `\\.\pipe\WinOrbit.Island`, current user only, refuses remote clients; `Parse`, `Clean` and `RateGate` are the tested decision logic). A card's second line always starts with the sender's process name; never give pipe cards a click action, link or button |
 | `IslandWindow.Live.cs` | Live activities: volume/brightness meter, charging, lock keys, keyboard language, network, radios, Bluetooth/USB, album colours, the `Demo()` previews |
 | `IslandWindow.Calendar.cs` | Calendar page, event parsing, reminders |
 | `IslandWindow.Weather.cs` | Weather page and sky colours |
@@ -114,7 +114,7 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 267 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 299 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.
 * Never toggle someone's real Wi-Fi, Bluetooth, dark mode or night light in a test without asking; use the `Demo()` previews instead.

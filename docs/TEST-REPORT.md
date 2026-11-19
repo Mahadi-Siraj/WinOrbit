@@ -29,7 +29,7 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
 Re-check after adding live activities (volume meter, privacy dot, reactive bars, lyrics, clipboard/shelf), release build, 60 s sampled 20 s after start: **0.113 % CPU, 56 MB average working set (max 65 MB), 18 threads, 0 TCP / 0 UDP**. Short sample, so it includes the tail of start-up, and the reactive bars run while music plays; the 5-minute figure above remains the reference.
 
-## 2. Automated tests — 267 passing (19 Nov 2026; 85 at 1.0)
+## 2. Automated tests — 299 passing (19 Nov 2026; 85 at 1.0)
 
 `dotnet test tests/WinOrbit.Tests` (also run by `tools/build-release.ps1`, in Release):
 
@@ -47,6 +47,8 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Calendar import (1.3) | `.ics` parsing: UTC / time-zone / floating times, all-day spans, daily-weekly-monthly-yearly repeats with COUNT/UNTIL/EXDATE, moved and cancelled occurrences, re-import replacing by UID |
 | Launcher (1.3) | timer phrases (and "5m" staying five metres); reminder phrases and times (bare hours, "tomorrow", passed times); reminders firing only on their minute; world-time places, Windows zone IDs all present, offset wording; clipboard search prefix, filtering and one-line previews |
 | Lyrics and updates (1.3) | video-title clean-up ("(Official Video)", "[4K]", remasters, "feat."), artist/song split, length matching; version-file parsing and comparison |
+| Island and glass (1.3) | sideways swipe → exactly one skip per swipe; microphone-pill label and level; side-bubble placement, width and liquid neck; curved-glass band, bend, corner clamping and light direction, and that the compiled ps_2_0 shader is embedded in the app |
+| Cards from your apps (1.3) | pipe message parsing and refusals with reasons, plain-text clean-up (control and direction-override characters removed), length limits, per-program and overall rate limits |
 | Live, read-only (always run) | real playback devices with exactly one default; the Bluetooth battery query accepted by Windows |
 
 ## 3. Functional tests on the real desktop
@@ -92,6 +94,10 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Bluetooth battery card (19 Nov) | Preview › Bluetooth | ✅ "Headphones · Connected", then "Connected · 80% battery" in place 1.5 s later. The device query with the battery property is accepted by Windows (live test); no Bluetooth headset here to show a real level |
 | Lyrics for video titles (19 Nov) | unit tests + `LiveLyricsTests` | ✅ "(Official Video)", "[4K]", "- 2011 Remaster", "feat." removed; "Artist - Song" split when the channel isn't the artist; live LRCLIB lookup still returns synced lines |
 | Launcher timer and reminder (19 Nov) | Alt+Space › "timer 5 sec"; "remind me in 1 min to check the reminder card" | ✅ countdown in the capsule, then a "Timer done · 5-second timer finished" card. Reminder: result line "Remind me at 00:31", nothing at 00:30:57, the card at 00:31:02; data.json restored afterwards |
+| Microphone pill (19 Nov) | Preview › Microphone pill; clicks on its mute button | ✅ app name, bars and mute; the preview's mute never touches the real microphone; a click no longer leaves a press armed that dragged the island |
+| Side bubble (19 Nov) | Preview › Side bubble on Top/Capsule, Left/Notch, Bottom/Drop and with Reduce motion | ✅ the bubble splits off ~8 px beside the capsule (below it on the side edges) and merges back; with Reduce motion it appears and leaves without movement |
+| Curved glass edges (19 Nov) | island and launcher captured with the setting on and off; pointer moved over the island | ✅ rim sheen and bent colours at the ends with it on, flat with it off; the rim nearest the pointer brightens (one rim column 57 → 62 → 91) |
+| Cards from your apps (19 Nov) | pipe off; pipe on; cards from PowerShell 7 and Windows PowerShell 5.1 | ✅ off: nothing to connect to. On: `ok` and a card "Build finished / pwsh · All 299 tests passed"; Windows PowerShell's card names "powershell"; bad JSON and a missing title are refused with the reason; the fourth card in a burst gets `busy` |
 | Check for updates (19 Nov) | Settings › Updates › Check now, network switch on | ✅ one request to raw.githubusercontent.com, "You have the latest version (1.2.0)" |
 
 ## 4. Not verified here (and why)
@@ -103,4 +109,7 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Windows tweaks applied for real | Not applied, to avoid changing the test PC's Windows settings. Read paths were exercised (the page shows the current values); write + backup + revert logic is straightforward registry/API code but was not run on this PC. |
 | Weather | Network is off by default and wasn't enabled. Parsing is unit-tested. |
 | Windows 10 | Not available. The app targets 10 2004+; Mica/Acrylic fall back to WinOrbit's own glass there. |
+| Microphone pill in a real call; swipe-to-skip with music playing | Only the previews and the wheel path were checked (sideways scroll reaches the skip code; nothing was playing). |
+| Pipe cards from another computer | Only one PC. The pipe admits only the current user and WinOrbit hangs up on remote clients, but that branch was not exercised. |
+| Curved glass under software rendering | The shader is switched off whenever a window renders in software (checked in code, and by the `Switched` event); not forced on this PC. |
 | Long-running stability | 5-minute benchmarks plus ~45 minutes of continuous development sessions without crash or handle growth; no multi-day soak test. |

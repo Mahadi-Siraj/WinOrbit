@@ -180,6 +180,11 @@ public static class Native
     [DllImport("user32.dll")] public static extern bool UnhookWindowsHookEx(IntPtr hook);
     [DllImport("user32.dll")] public static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr GetModuleHandle(string? name);
+
+    /// <summary>Which process is on the other end of a named pipe (the island's local card pipe names its sender).</summary>
+    [DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetNamedPipeClientProcessId(Microsoft.Win32.SafeHandles.SafePipeHandle pipe, out uint processId);
+    /// <summary>Succeeds only for a client on another computer (a local client fails with ERROR_PIPE_LOCAL), so the pipe can refuse it.</summary>
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool GetNamedPipeClientComputerName(Microsoft.Win32.SafeHandles.SafePipeHandle pipe, System.Text.StringBuilder name, uint size);
     [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
     [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     public delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);

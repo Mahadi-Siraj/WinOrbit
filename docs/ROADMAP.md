@@ -67,6 +67,11 @@ Wave 5 — **built after 1.2, not released yet** (18–19 Nov 2026; committed, w
 * ✅ **Reminders from the launcher** — `remind me in 20 min to stretch`, `remind me at 6pm to call mom`; one card on that minute, kept in the island's calendar.
 * ✅ **World time in the launcher** — `time in Tokyo`, `dhaka time`; offline, from Windows' time-zone data.
 * ✅ **Clipboard search in the launcher** — `clip`, `clip invoice` (🧪 unit-tested; not yet checked on screen).
+* ✅ **Microphone pill** — during a call the capsule shows the app, your voice level and Windows' own mute (🧪 checked with the preview; no real call yet).
+* ✅ **Swipe to skip** — two-finger sideways swipe or a tilted wheel on the island (🧪 the gesture reaches the skip code; not yet tried with music playing).
+* ✅ **Side bubble** — short alerts split off beside a busy capsule and flow back in.
+* ✅ **Curved glass edges** — a GPU shader bends the wallpaper round the rim of every glass surface; off under software rendering.
+* ✅ **Cards from your scripts and apps** — opt-in local pipe, current user only, plain text naming the sender, rate-limited.
 * ✅ Copy a setup summary for bug reports; backups leave out Windows-tweak originals; accessibility fixes; island code split into smaller files; render check no longer misfires while the monitor is off.
 * 📦 winget manifest prepared in `packaging/winget/` (not submitted).
 
@@ -75,7 +80,9 @@ Still open:
 2. **Automatic update check** (opt-in, daily) — deliberately not added: the app promises it never checks by itself. The owner decides.
 3. **README demo GIF and 1.2/1.3 screenshots.**
 4. **Microsoft Store (MSIX)** — fixes the SmartScreen warning and unlocks notifications in the island; needs a developer account.
-5. Items from Wave 3 above (ARM64, code signing, languages).
+5. Items from Wave 3 above (ARM64, code signing, languages). For signing, the SignPath Foundation offers free certificates to open-source projects; applying is the owner's call. Until then builds stay unsigned.
+6. **Live window glass** — glass that bends the actual windows behind it rather than the wallpaper (Windows.Graphics.Capture). It would capture the screen, so it would have to be opt-in; waiting for the owner's decision.
+7. **Display scaling 125 % / 150 %** — the code is per-monitor-DPI aware, but changing the test PC's scaling needs the owner's OK.
 
 Deliberately not planned:
 * **"Eyes that follow the cursor" / desktop pets** — in the Dyno thread, most replies said it's the first thing they'd turn off.

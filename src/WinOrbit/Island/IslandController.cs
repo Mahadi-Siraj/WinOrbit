@@ -102,6 +102,8 @@ public sealed class IslandController
     public ScreenshotWatcher Screenshots { get; }
     public RainAlerts Rain { get; }
     public KeyboardLanguage Language { get; }
+    /// <summary>Cards from your scripts and apps (opt-in local pipe).</summary>
+    public IslandPipe Pipe { get; }
     public IReadOnlyList<IslandWindow> Windows => _windows;
 
     public IslandController(Dispatcher ui)
@@ -110,6 +112,8 @@ public sealed class IslandController
         Screenshots = new ScreenshotWatcher(ui);
         Rain = new RainAlerts(ui);
         Language = new KeyboardLanguage(ui);
+        Pipe = new IslandPipe(ui);
+        Pipe.Received += ShowAppCard;
         Hub.Shell.DisplayChanged += () => ui.BeginInvoke(DispatcherPriority.Background, Apply);
     }
 
@@ -120,6 +124,7 @@ public sealed class IslandController
         Screenshots.SetEnabled(s.Enabled && s.ScreenshotCards);
         Rain.SetEnabled(s.Enabled && s.RainAlerts);
         Language.SetEnabled(s.Enabled && s.LanguageAlerts);
+        Pipe.SetEnabled(s.Enabled && s.AppCards);
         Hub.Devices?.Apply();
         var targets = !s.Enabled ? new List<string>()
             : s.Monitor == "all" ? Monitors.All().Select(m => m.Device).ToList()
@@ -151,5 +156,26 @@ public sealed class IslandController
     public void Demo(string what) { foreach (var w in _windows) w.Demo(what); }
     /// <summary>Events changed outside the island (an import): redraw the month marks and the open day.</summary>
     public void RefreshCalendar() { foreach (var w in _windows) w.RefreshCalendar(); }
-    public void CloseAll() { foreach (var w in _windows.ToList()) w.Close(); _windows.Clear(); }
+    public void CloseAll() { Pipe.SetEnabled(false); foreach (var w in _windows.ToList()) w.Close(); _windows.Clear(); }
+
+    /// <summary>
+    /// A card from the local pipe. The sending program's name always leads the second line, so a card can't pass
+    /// itself off as one of WinOrbit's own; the card has no click action, link or buttons.
+    /// </summary>
+    private void ShowAppCard(PipeCard card)
+    {
+        if (!Hub.Settings.Island.AppCards) return;
+        var (glyph, color) = AppCardLook(card.Icon);
+        var line = card.Text.Length > 0 ? $"{card.Sender} · {card.Text}" : card.Sender;
+        foreach (var w in _windows) w.ShowCard(glyph, card.Title, line, color, card.Seconds);
+    }
+
+    internal static (string Glyph, Color Color) AppCardLook(string icon) => icon switch
+    {
+        "done" => ("", Color.FromRgb(0x34, 0xC7, 0x59)),
+        "warning" => ("", Color.FromRgb(0xFF, 0x9F, 0x0A)),
+        "error" => ("", Color.FromRgb(0xFF, 0x45, 0x3A)),
+        "bell" => ("", Color.FromRgb(0x5E, 0x9E, 0xFF)),
+        _ => ("", Color.FromRgb(0x5E, 0x9E, 0xFF)),
+    };
 }

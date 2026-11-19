@@ -74,6 +74,8 @@ Two optional features use it, each with its own switch under **Settings › Priv
 
 Your IP address is inevitably visible to those services when you enable a feature, as with any web request.
 
+**Cards from your scripts and apps** (Dynamic Island › Live activities, **off by default**) is not a network feature and does not use the gate. While it is on, WinOrbit opens one local named pipe, `\\.\pipe\WinOrbit.Island`; while it is off the pipe does not exist. The pipe is created with `PipeOptions.CurrentUserOnly`, so only programs running under your own Windows account can connect, and WinOrbit also hangs up on any client that reaches it from another computer. It reads one line of JSON (at most 2 KB) and shows it as a plain-text card headed by the sending program's name (looked up with `GetNamedPipeClientProcessId`). The card has no links, commands or buttons, and nothing in it is stored. Each program gets three cards at once, then one every five seconds (six at once and one every two seconds for all programs together). The log records the program's name for each card, never the text.
+
 Links such as "Open rainmeter.net", and the launcher's "Search the web for …", open in **your own browser**; WinOrbit itself makes no request.
 
 There is **no** automatic update checker. **Settings › Privacy & network › Updates › Check now** makes one request when you click it, and only while the network switch is on: `raw.githubusercontent.com/Mahadi-Siraj/WinOrbit/main/VERSION`, the one-line version file releases are published from. Nothing is sent but the request itself (GitHub sees your IP address), it shows in the request ledger, and nothing is downloaded or installed; if a newer version exists, WinOrbit offers to open the release page in your browser.
