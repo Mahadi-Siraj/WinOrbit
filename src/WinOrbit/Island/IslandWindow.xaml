@@ -369,6 +369,9 @@
                         <!-- Weather (built in code: the off state, or now / next hours / next days) -->
                         <Grid x:Name="TabWeather" Visibility="Collapsed"/>
 
+                        <!-- Coding agents (built in code; only when coding agents are on) -->
+                        <Grid x:Name="TabAgents" Visibility="Collapsed"/>
+
                         <!-- Notes -->
                         <Grid x:Name="TabNotes" Visibility="Collapsed">
                             <Border Style="{StaticResource Card.Inset}" Padding="12,10">

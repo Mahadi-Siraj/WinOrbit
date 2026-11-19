@@ -977,7 +977,7 @@ public partial class IslandWindow : Window
     {
         ("media", Glyph.Music, "Media"), ("system", Glyph.Chip, "System"), ("controls", Glyph.Settings, "Control Centre"),
         ("focus", Glyph.Stopwatch, "Focus timer"), ("calendar", Glyph.Calendar, "Calendar"), ("weather", Glyph.Cloud, "Weather"), ("notes", Glyph.Note, "Notes"),
-        ("clipboard", Glyph.Copy, "Clipboard"), ("shelf", GlyphShelf, "File shelf")
+        ("clipboard", Glyph.Copy, "Clipboard"), ("shelf", GlyphShelf, "File shelf"), ("agents", GlyphAgents, "Coding agents")
     };
 
     private List<string> ActiveTabs()
@@ -1001,7 +1001,8 @@ public partial class IslandWindow : Window
             S.ModulesVersion = 3;
             Hub.Store.Save();
         }
-        var list = AllTabs.Select(t => t.Id).Where(id => S.Modules.Contains(id)).ToList();
+        // The Agents tab exists only while coding agents are on (its own switch, off by default).
+        var list = AllTabs.Select(t => t.Id).Where(id => id == "agents" ? S.CodingAgents : S.Modules.Contains(id)).ToList();
         if (list.Count == 0) list.Add("media");
         return list;
     }
@@ -1047,7 +1048,8 @@ public partial class IslandWindow : Window
         TabNotes.Visibility = id == "notes" ? Visibility.Visible : Visibility.Collapsed;
         TabClipboard.Visibility = id == "clipboard" ? Visibility.Visible : Visibility.Collapsed;
         TabShelf.Visibility = id == "shelf" ? Visibility.Visible : Visibility.Collapsed;
-        var view = id switch { "media" => (FrameworkElement)TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "weather" => TabWeather, "clipboard" => TabClipboard, "shelf" => TabShelf, _ => TabNotes };
+        TabAgents.Visibility = id == "agents" ? Visibility.Visible : Visibility.Collapsed;
+        var view = id switch { "media" => (FrameworkElement)TabMedia, "system" => TabSystem, "controls" => TabControls, "focus" => TabFocus, "calendar" => TabCalendar, "weather" => TabWeather, "clipboard" => TabClipboard, "shelf" => TabShelf, "agents" => TabAgents, _ => TabNotes };
         Motion.Enter(view, 8, 220);
         _mediaTick.Stop();
         UpdateMonitorSubscription();
@@ -1060,6 +1062,7 @@ public partial class IslandWindow : Window
             case "weather": ShowWeather(); break;
             case "clipboard": RenderClipboard(); break;
             case "shelf": RenderShelf(); break;
+            case "agents": RenderAgents(); break;
             case "notes":
                 _loadingUi = true;
                 NotesBox.Text = Hub.Store.Data.Notes.TryGetValue(UserData.IslandNoteKey, out var n) ? n : "";

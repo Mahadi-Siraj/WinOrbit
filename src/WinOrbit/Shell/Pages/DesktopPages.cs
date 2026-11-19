@@ -169,6 +169,22 @@ public sealed class IslandPage : PageBase
     public override string Subtitle => "A living capsule at the top of your screen. Click it to expand; scroll on it for volume; drag it to move. Press " + Hub.Settings.General.HotkeyIsland + " to open it with the keyboard.";
     private static IslandSettings S => Hub.Settings.Island;
     private static void Save() { Hub.Store.Save(); Hub.Island.Apply(); }
+    private const string GlyphAgentsRow = "";
+
+    /// <summary>A button that copies some text and says so for a moment.</summary>
+    private static Button CopyButton(string label, Func<string> text)
+    {
+        Button? b = null;
+        b = Kit.Btn(label, () =>
+        {
+            try { Clipboard.SetText(text()); } catch { return; }
+            b!.Content = "Copied";
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            t.Tick += (_, _) => { t.Stop(); b.Content = label; };
+            t.Start();
+        }, Glyph.Copy);
+        return b;
+    }
     private const string GlyphMicRow = "";
 
     private void ImportCalendar()
@@ -304,6 +320,18 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("New song", () => Hub.Island.Demo("song")), Kit.Btn("Event reminder", () => Hub.Island.Demo("event")),
                 Kit.Btn("Screenshot", () => Hub.Island.Demo("screenshot")), Kit.Btn("Download", () => Hub.Island.Demo("download")),
                 Kit.Btn("Rain soon", () => Hub.Island.Demo("rain")), Kit.Btn("Keyboard language", () => Hub.Island.Demo("language"))))));
+
+        var exe = Environment.ProcessPath ?? "WinOrbit.exe";
+        Children.Add(Kit.Section("Coding agents", "See what AI coding tools on this PC are doing — Claude Code, Codex or your own scripts — in an Agents tab on the island, with a card when one needs your OK and a short note when it's done. Off by default. WinOrbit doesn't change those tools' settings: copy the setup for each tool you use.",
+            Kit.ToggleRow("Coding agents", @"Adds the Agents tab and listens for the tools' updates on the local pipe \\.\pipe\WinOrbit.Island (programs running as you only; never reachable from the network). Each session shows a short title (its first request), its folder's name and a few words like ""Editing app.cs"". Nothing is saved: the list is in memory, sessions drop off after three hours of silence, and turning this off clears it.",
+                S.CodingAgents, v => { S.CodingAgents = v; Save(); }, false, GlyphAgentsRow),
+            Kit.Row("Claude Code", @"Copy, then paste into %USERPROFILE%\.claude\settings.json (merge it with any hooks you already have) — or paste it into Claude Code and ask it to add these hooks. Claude never waits for WinOrbit: every hook runs in the background.",
+                CopyButton("Copy setup", () => AgentSetup.ClaudeCode(exe))),
+            Kit.Row("Codex", @"Add this line to %USERPROFILE%\.codex\config.toml (near the top, before any [section]). Codex reports when it finishes a turn.",
+                CopyButton("Copy line", () => AgentSetup.Codex(exe))),
+            Kit.Row("Your own tool", @"Send one line of JSON — session, state (working, needs-you, done or ended), title, text, folder — to ""WinOrbit.exe --agent <name>"". The button copies a PowerShell example.",
+                CopyButton("Copy example", () => AgentSetup.Own(exe))),
+            Kit.Row("Preview", "The card a session shows when it needs you.", Kit.Btn("Needs you", () => Hub.Island.Demo("agent")))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]

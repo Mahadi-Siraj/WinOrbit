@@ -29,10 +29,19 @@ public sealed class IslandPipe : IDisposable
 
     private readonly Dispatcher _ui;
     private readonly RateGate _gate = new();
+    // Coding agents report every tool step, so each session gets a bigger allowance than a card sender.
+    private readonly RateGate _agentGate = new(burst: 12, every: 0.25, totalBurst: 40, totalEvery: 0.1);
     private CancellationTokenSource? _cts;
+
+    /// <summary>Whether cards from scripts and apps are accepted.</summary>
+    public bool Cards { get; set; }
+    /// <summary>Whether coding-agent status updates are accepted.</summary>
+    public bool Agents { get; set; }
 
     /// <summary>A card arrived and passed every check. Raised on the UI thread.</summary>
     public event Action<PipeCard>? Received;
+    /// <summary>A coding-agent update arrived and passed every check. Raised on the UI thread.</summary>
+    public event Action<AgentEvent>? AgentReceived;
 
     public IslandPipe(Dispatcher ui) => _ui = ui;
 
@@ -86,6 +95,14 @@ public sealed class IslandPipe : IDisposable
             var sender = Sender(pipe);
             if (sender is null) reply = "error: could not identify the sending program";
             else if (line is null) reply = $"error: send one line of JSON, at most {MaxBytes} bytes";
+            else if (AgentEvent.Parse(line, out var isAgent, out var agentError) is { } ev)
+            {
+                if (!Agents) reply = "error: coding agents are turned off in WinOrbit";
+                else if (!_agentGate.Allow(ev.Agent + "/" + ev.Session, DateTime.UtcNow)) reply = "busy: too many updates, try again in a moment";
+                else { _ = _ui.BeginInvoke(() => AgentReceived?.Invoke(ev)); reply = "ok"; }
+            }
+            else if (isAgent) reply = "error: " + agentError;
+            else if (!Cards) reply = "error: cards from scripts and apps are turned off in WinOrbit";
             else if (Parse(line, sender, out var error) is not { } card) reply = "error: " + error;
             else if (!_gate.Allow(sender, DateTime.UtcNow)) reply = "busy: too many cards, try again in a few seconds";
             else
@@ -204,20 +221,27 @@ internal sealed class RateGate
     internal const double Burst = 3, Every = 5;              // per program: 3 at once, then 1 per 5 s
     internal const double TotalBurst = 6, TotalEvery = 2;    // everyone together: 6 at once, then 1 per 2 s
 
+    private readonly double _burst, _every, _totalBurst, _totalEvery;
     private readonly Dictionary<string, (double Tokens, DateTime At)> _each = new(StringComparer.OrdinalIgnoreCase);
-    private (double Tokens, DateTime At) _all = (TotalBurst, DateTime.MinValue);
+    private (double Tokens, DateTime At) _all;
+
+    public RateGate(double burst = Burst, double every = Every, double totalBurst = TotalBurst, double totalEvery = TotalEvery)
+    {
+        (_burst, _every, _totalBurst, _totalEvery) = (burst, every, totalBurst, totalEvery);
+        _all = (totalBurst, DateTime.MinValue);
+    }
 
     public bool Allow(string sender, DateTime now)
     {
         lock (_each)
         {
-            (double Tokens, DateTime At) mine = _each.TryGetValue(sender, out var b) ? Refill(b, now, Burst, Every) : (Burst, now);
-            var all = Refill(_all, now, TotalBurst, TotalEvery);
+            (double Tokens, DateTime At) mine = _each.TryGetValue(sender, out var b) ? Refill(b, now, _burst, _every) : (_burst, now);
+            var all = Refill(_all, now, _totalBurst, _totalEvery);
             if (mine.Tokens < 1 || all.Tokens < 1) { _each[sender] = mine; _all = all; return false; }
             _each[sender] = (mine.Tokens - 1, now);
             _all = (all.Tokens - 1, now);
-            // Forget programs that are back to a full allowance (they'd start full anyway).
-            if (_each.Count > 64) foreach (var k in _each.Where(e => Refill(e.Value, now, Burst, Every).Tokens >= Burst).Select(e => e.Key).ToList()) _each.Remove(k);
+            // Forget senders that are back to a full allowance (they'd start full anyway).
+            if (_each.Count > 64) foreach (var k in _each.Where(e => Refill(e.Value, now, _burst, _every).Tokens >= _burst).Select(e => e.Key).ToList()) _each.Remove(k);
             return true;
         }
     }

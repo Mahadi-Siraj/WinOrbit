@@ -12,6 +12,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
     <AssemblyName>WinOrbit</AssemblyName>
+    <!-- Program.Main answers the agent switch (AI tool hooks) before WPF loads, then starts App as usual. -->
+    <StartupObject>WinOrbit.Program</StartupObject>
     <RootNamespace>WinOrbit</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\winorbit.ico</ApplicationIcon>

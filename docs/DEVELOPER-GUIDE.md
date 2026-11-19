@@ -10,7 +10,7 @@ Requirements: Windows 10 2004+ or 11, the .NET 8 SDK. Optional: Inno Setup 6 for
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 304 unit tests, under a second
+dotnet test tests\WinOrbit.Tests                  # 319 unit tests, under a second
 src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
@@ -67,6 +67,7 @@ The class is split into partial files:
 | `IslandWindow.Mixer.cs` | Volume by app in the Control Centre (`Services/AppVolume.cs` does the Core Audio work) |
 | `IslandWindow.Files.cs` | File cards: screenshot saved (`Services/ScreenshotWatcher.cs`) and download finished; open, drag out, show in folder |
 | `IslandWindow.Split.cs` | The side bubble (`Satellite`): short alerts split off beside a busy capsule. One sprung value, `SplitGap`, places the capsule (`PillSplit`), the bubble (`SatShift`, `SatScale`) and the liquid neck (`Bridge`, filled with the same wallpaper slice through `GlassSurface.Slice`). `Peek`, `PeekKey`, lock keys and the keyboard language route here while `PillBusy` |
+| `IslandWindow.Agents.cs` | The Agents tab (only while `CodingAgents` is on), the "needs you" card and the "finished" note. The data comes from `Services/AgentSessions.cs`: `AgentClient` is `WinOrbit.exe --agent <tool>`, handled in `Program.Main` before WPF loads, which turns a tool's hook JSON into one small `AgentEvent` (`AgentHook.Translate` keeps a title, the folder's name and a few words, nothing else) and sends it to the pipe; `AgentBoard` keeps at most 8 sessions in memory; `AgentSetup` builds the snippets Settings copies. `--agent` must stay silent on stdout and always exit 0 |
 | `IslandWindow.Call.cs` | The microphone pill (`Services/MicMeter.cs` reads the level and mute), the scroll-wheel hook that is installed only while the pointer is over the island (Windows' "scroll inactive windows" may be off), and `SwipeGesture` (sideways swipe → one track skip) |
 
 ### Motion
@@ -114,7 +115,7 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 304 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 319 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.
 * Never toggle someone's real Wi-Fi, Bluetooth, dark mode or night light in a test without asking; use the `Demo()` previews instead.

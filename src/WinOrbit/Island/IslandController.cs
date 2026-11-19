@@ -104,6 +104,8 @@ public sealed class IslandController
     public KeyboardLanguage Language { get; }
     /// <summary>Cards from your scripts and apps (opt-in local pipe).</summary>
     public IslandPipe Pipe { get; }
+    /// <summary>Coding-agent sessions reported through the pipe (in memory only).</summary>
+    public AgentBoard Agents { get; } = new();
     public IReadOnlyList<IslandWindow> Windows => _windows;
 
     public IslandController(Dispatcher ui)
@@ -114,6 +116,10 @@ public sealed class IslandController
         Language = new KeyboardLanguage(ui);
         Pipe = new IslandPipe(ui);
         Pipe.Received += ShowAppCard;
+        Pipe.AgentReceived += e => { if (Hub.Settings.Island.CodingAgents) Agents.Apply(e); };
+        Agents.NeedsYou += s => { foreach (var w in _windows) w.AgentNeedsYou(s); };
+        Agents.Finished += s => { foreach (var w in _windows) w.AgentFinished(s); };
+        Agents.Changed += () => { foreach (var w in _windows) w.OnAgentsChanged(); };
         Hub.Shell.DisplayChanged += () => ui.BeginInvoke(DispatcherPriority.Background, Apply);
     }
 
@@ -124,7 +130,10 @@ public sealed class IslandController
         Screenshots.SetEnabled(s.Enabled && s.ScreenshotCards);
         Rain.SetEnabled(s.Enabled && s.RainAlerts);
         Language.SetEnabled(s.Enabled && s.LanguageAlerts);
-        Pipe.SetEnabled(s.Enabled && s.AppCards);
+        Pipe.Cards = s.AppCards;
+        Pipe.Agents = s.CodingAgents;
+        Pipe.SetEnabled(s.Enabled && (s.AppCards || s.CodingAgents));
+        if (!s.CodingAgents || !s.Enabled) Agents.Clear();   // turning it off forgets every session at once
         Hub.Devices?.Apply();
         var targets = !s.Enabled ? new List<string>()
             : s.Monitor == "all" ? Monitors.All().Select(m => m.Device).ToList()

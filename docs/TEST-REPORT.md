@@ -29,7 +29,7 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
 Re-check after adding live activities (volume meter, privacy dot, reactive bars, lyrics, clipboard/shelf), release build, 60 s sampled 20 s after start: **0.113 % CPU, 56 MB average working set (max 65 MB), 18 threads, 0 TCP / 0 UDP**. Short sample, so it includes the tail of start-up, and the reactive bars run while music plays; the 5-minute figure above remains the reference.
 
-## 2. Automated tests — 304 passing (19 Nov 2026; 85 at 1.0)
+## 2. Automated tests — 319 passing (19 Nov 2026; 85 at 1.0)
 
 `dotnet test tests/WinOrbit.Tests` (also run by `tools/build-release.ps1`, in Release):
 
@@ -50,6 +50,7 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Island and glass (1.3) | sideways swipe → exactly one skip per swipe; microphone-pill label and level; side-bubble placement, width and liquid neck; curved-glass band, bend, corner clamping and light direction, and that the compiled ps_2_0 shader is embedded in the app |
 | Live glass (1.3) | which screens are captured (only those showing glass; none with the screen off or under a fullscreen app), update spacing, change detection that notices a small local change but not a gentle shimmer, picture size and blur |
 | Cards from your apps (1.3) | pipe message parsing and refusals with reasons, plain-text clean-up (control and direction-override characters removed), length limits, per-program and overall rate limits |
+| Coding agents (1.3) | Claude Code hook payloads (prompt → working with a one-line title, steps → "Editing file.cs" with the file's name only, permission notification → needs you, idle reminder ignored, Stop → done, SessionEnd → removed); Codex `notify` and permission hooks; Cursor and Gemini CLI names; the plain format for your own tools; pipe message round trip and refusals; late updates ignored; needs-you first; at most 8 sessions without dropping one that waits for you; 3-hour expiry; Claude Code setup is valid JSON with background hooks; agent rate limit; when piped input is complete |
 | Live, read-only (always run) | real playback devices with exactly one default; the Bluetooth battery query accepted by Windows |
 
 ## 3. Functional tests on the real desktop
@@ -100,6 +101,7 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Curved glass edges (19 Nov) | island and launcher captured with the setting on and off; pointer moved over the island | ✅ rim sheen and bent colours at the ends with it on, flat with it off; the rim nearest the pointer brightens (one rim column 57 → 62 → 91) |
 | Cards from your apps (19 Nov) | pipe off; pipe on; cards from PowerShell 7 and Windows PowerShell 5.1 | ✅ off: nothing to connect to. On: `ok` and a card "Build finished / pwsh · All 299 tests passed"; Windows PowerShell's card names "powershell"; bad JSON and a missing title are refused with the reason; the fourth card in a burst gets `busy` |
 | Live glass (19 Nov) | turned on; a red-and-green test window placed behind the island; ordinary screen grab; window affinity read back; CPU measured (Release, 30 s each) | ✅ the island's glass turned red on the left and green on the right, and dark again once the window closed (checked with an in-app snapshot, since captures can't see the island). The island and all five widgets report `WDA_EXCLUDEFROMCAPTURE` and are missing from screen grabs; no yellow capture frame. **Found and fixed** on the way: the graphics device was reset until it was made multithread-protected; the island was skipped because WPF's "main window" was the island. CPU: 1.5 % of one core off, 5.2 % on with Wallpaper Engine animating behind every widget, 4.8 % with a window flashing behind the island; +40–50 MB working set |
+| Coding agents (19 Nov) | switch on; sample Claude Code and Codex hook payloads sent through `WinOrbit.exe --agent` (one at a time, four at once, and piped from PowerShell); Agents tab opened | ✅ "Claude Code needs you" card with the permission message; "Claude Code finished · api" note; tab shows "1 needs you · 2 working · 1 done", titles, "Editing IslandRenderer.Agents.cs", folders and times; Clear removes finished ones; four updates sent at the same moment all arrive. Each `--agent` call takes about 90 ms including starting the process. **Found and fixed:** text piped from PowerShell never arrived and the helper kept running, because PowerShell doesn't close the input of a windowed program; it now stops reading once one whole JSON object has arrived. ⚠️ Not yet tried with a live Claude Code or Codex session |
 | Check for updates (19 Nov) | Settings › Updates › Check now, network switch on | ✅ one request to raw.githubusercontent.com, "You have the latest version (1.2.0)" |
 
 ## 4. Not verified here (and why)

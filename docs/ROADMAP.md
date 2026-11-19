@@ -73,8 +73,38 @@ Wave 5 — **built after 1.2, not released yet** (18–19 Nov 2026; committed, w
 * ✅ **Curved glass edges** — a GPU shader bends the wallpaper round the rim of every glass surface; off under software rendering.
 * ✅ **Live glass** (opt-in, Windows 11) — glass shows the windows behind it through Windows' screen capture, shrunk on the graphics card; WinOrbit's glass windows leave screenshots while it's on.
 * ✅ **Cards from your scripts and apps** — opt-in local pipe, current user only, plain text naming the sender, rate-limited.
+* ✅ **Coding agents** (opt-in) — an Agents tab for Claude Code, Codex and your own tools, fed by their hooks through the same pipe (see Wave 6, item 1).
 * ✅ Copy a setup summary for bug reports; backups leave out Windows-tweak originals; accessibility fixes; island code split into smaller files; render check no longer misfires while the monitor is off.
 * 📦 winget manifest prepared in `packaging/winget/` (not submitted).
+
+Wave 6 — **proposed** (19 Nov 2026), from a sweep of what Notchify 5.9, NotchPixel, Halo, V-Notch, Dynamic Edge, BuildNotch, Nusa, Isle and DynamicBar list on their own pages. Already matched and not repeated here: open on click, Caps Lock / keyboard-language alerts, slim capsule, pinned clipboard items, per-app mixer, output switch, Bluetooth battery, file shelf, reminders, world clock, swipe to skip, liquid glass, published SHA-256 checksums.
+
+Fits the rules, in suggested order:
+1. ✅ **Coding-agent tab** (NotchPixel, Halo, BuildNotch, V-Notch) — built 19 Nov 2026, off by default. One row per session of Claude Code, Codex or any tool with hooks: *needs you* / *working* / *done*, folder and the current step; a card when one needs you. The tools' hooks run `WinOrbit.exe --agent`, which writes one line to the existing local pipe, so nothing goes online. WinOrbit shows the setup to copy and never edits `~/.claude` itself. (🧪 checked with sample hook payloads; not yet with a live Claude Code or Codex session.)
+2. **Media extras** (Notchify, Dynamic Edge, Halo):
+   * shuffle, repeat and playback speed (Windows' media session already offers all three);
+   * a switcher when several players are open;
+   * "hide media from these apps";
+   * a full lyrics view where a click on a line seeks there;
+   * an optional wavy progress bar.
+3. **Copy text from the screen** (Notchify 5.9, Nusa Smart OCR). Freeze the screen, drag a box, and copy the text in it. The same "copy text" works on images in clipboard history. Uses Windows' built-in offline OCR (`Windows.Media.Ocr`). QR codes would need a decoder written from scratch, since no NuGet packages are allowed, so they come later.
+4. **Choose and reorder island tabs** (Notchify 5.9, Nusa). A tab that's off isn't built.
+5. **Microphone mute shortcut** (NotchPixel Ctrl+Alt+M). A global hotkey for the existing Windows-level mute, with the call pill showing how long the call has run.
+6. **Screen recording** (Notchify, BuildNotch). Windows screen capture plus Windows' own H.264 encoder, with system sound and the microphone. The island is already kept out of captures. Large: needs its own design and privacy section.
+7. **Stay behind windows** (V-Notch). An option to keep the island on the desktop layer under maximised apps.
+
+Possible, but each needs the owner's decision first:
+* **Phone as remote / files to phone** (NotchPixel PC Deck, Notchify, Smart Notch). Needs a listener on the local network: off by default, a one-time code in a QR, same Wi-Fi only, and a Windows Firewall prompt. It's the first thing in WinOrbit that other devices could reach, so it needs a security review before any code.
+* **Translate** (V-Notch, Halo, Nusa). Needs an online service and goes through the network gate.
+* **Game strip with FPS** (NotchPixel). CPU, GPU, RAM and temperature are easy. FPS needs ETW present events, which need admin or the Performance Log Users group, so the strip would ship without FPS.
+* **OBS recording pill** (NotchPixel). Uses OBS's own WebSocket on localhost, opt-in.
+
+Not planned:
+* **Song recognition.** There's no free official service.
+* **Discord call controls.** Discord's RPC needs an approved client.
+* **Web drawer.** Needs WebView2, a NuGet package.
+* **Taskbar replacement.** Tray icons need undocumented Explorer internals.
+* **Notification mirroring and verification-code buttons.** Still blocked on MSIX (item 4 below).
 
 Still open:
 1. **Island follows the cursor between monitors** — each display already gets its own island; a "follow the pointer" mode needs a multi-monitor PC to test.

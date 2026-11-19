@@ -138,6 +138,8 @@ public sealed class IslandSettings
     public bool SplitAlerts { get; set; } = true;
     /// <summary>Scripts and apps you run can show a short card through the local pipe \\.\pipe\WinOrbit.Island. Off by default.</summary>
     public bool AppCards { get; set; }
+    /// <summary>The Agents tab: status of AI coding tools on this PC (Claude Code, Codex…) reported by their hooks. Off by default.</summary>
+    public bool CodingAgents { get; set; }
     /// <summary>Show the current lyric line in the capsule while music plays (needs Lyrics in Privacy).</summary>
     public bool LyricsInCapsule { get; set; } = true;
     /// <summary>Keep a history of copied text, links and images in memory. Off by default.</summary>
