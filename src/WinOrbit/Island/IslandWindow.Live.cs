@@ -61,6 +61,7 @@ public partial class IslandWindow
 
         InitFiles();
         InitCall();
+        InitSplit();
         Hub.Island.Rain.RainSoon += OnRainSoon;
         Hub.Island.Language.Changed += OnLanguage;
         Pill.AllowDrop = true;
@@ -107,6 +108,7 @@ public partial class IslandWindow
     private void OnLanguage(string code, string language, string layout)
     {
         if (!S.LanguageAlerts) return;
+        if (PillBusy || SatelliteShowing) { ShowSatellite(null, code.Length <= 3 ? code : code[..3], true, language, null, 1.8); return; }
         ShowCard("", language, layout.Length > 0 ? layout + " keyboard" : "Keyboard", AccentColor(), 1.8, cap: code.Length <= 3 ? code : code[..3]);
     }
 
@@ -128,6 +130,8 @@ public partial class IslandWindow
             DeviceEvents.LockKey.Num => ("1", "Num Lock"),
             _ => ("S", "Scroll Lock")
         };
+        // While music, a call or a timer is showing, the key splits off in a side bubble instead of covering it.
+        if (PillBusy || SatelliteShowing) { ShowSatellite(null, cap, on, $"{name} {(on ? "on" : "off")}", null, 1.8); return; }
         ShowCard("", name, on ? "On" : "Off", on ? KeyLit : Neutral, 1.8, toggle: on, cap: cap, switchColor: Connected);
     }
 
@@ -260,6 +264,7 @@ public partial class IslandWindow
             case "volume": ShowHud(Glyph.Volume, 0.42, "42"); break;
             case "mic": Peek(GlyphMic, "Teams is using your microphone", 3); break;
             case "call": DemoCall(); break;
+            case "split": DemoSplit(); break;
             case "saver": ShowCard(GlyphLeaf, "Energy saver", "On", Saver, 2.6, toggle: true); break;
             case "dark": ShowCard(Glyph.Moon, "Dark mode", "Apps and Windows", Indigo, 2.6, toggle: true); break;
             case "song":

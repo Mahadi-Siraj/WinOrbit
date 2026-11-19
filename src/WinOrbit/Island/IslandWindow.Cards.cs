@@ -43,6 +43,7 @@ public partial class IslandWindow
         Action? onClick = null, string? file = null, IReadOnlyList<(string Glyph, string Name, Action Do)>? actions = null)
     {
         if (_expanded || !IsVisible) return;
+        EndSatellite(true);   // a card takes over the whole island
         var fresh = !_card;
         _card = true;
         _cardIsMedia = false;

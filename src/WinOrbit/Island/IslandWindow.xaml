@@ -21,6 +21,35 @@
             </Border.Effect>
         </Border>
 
+        <!-- Liquid neck between the capsule and its side bubble while they are close: the same blurred wallpaper and
+             tint as the glass, so for a moment they look like one drop pulling apart (drawn by IslandWindow.Split.cs). -->
+        <Canvas x:Name="Bridge" IsHitTestVisible="False" Visibility="Collapsed">
+            <Path x:Name="BridgeBack"/>
+            <Path x:Name="BridgeTint"/>
+        </Canvas>
+
+        <!-- Side bubble: a short alert while the capsule is busy with music, a call or a timer -->
+        <d:GlassSurface x:Name="Satellite" UseLayoutRounding="False" HorizontalAlignment="Center" VerticalAlignment="Top" Height="38" Width="38" Margin="0,1,0,0"
+                        SampleWallpaper="True" ShadowSize="18" Cursor="Hand" Visibility="Collapsed" Opacity="0" AutomationProperties.Name="Island alert">
+            <d:GlassSurface.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform x:Name="SatScale" ScaleX="1" ScaleY="1"/>
+                    <TranslateTransform x:Name="SatShift"/>
+                </TransformGroup>
+            </d:GlassSurface.RenderTransform>
+            <StackPanel x:Name="SatContent" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0">
+                <Border x:Name="SatKey" Visibility="Collapsed" MinWidth="22" Height="19" CornerRadius="5" BorderThickness="1.3" Padding="3,0,3,0"
+                        BorderBrush="{DynamicResource T.Text2}" VerticalAlignment="Center">
+                    <Grid>
+                        <TextBlock x:Name="SatKeyText" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                        <Ellipse x:Name="SatKeyLed" Width="4" Height="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2.5,-2,0"/>
+                    </Grid>
+                </Border>
+                <TextBlock x:Name="SatGlyph" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource T.Accent}" VerticalAlignment="Center"/>
+                <TextBlock x:Name="SatText" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="7,0,0,0" TextTrimming="CharacterEllipsis" Visibility="Collapsed"/>
+            </StackPanel>
+        </d:GlassSurface>
+
         <d:GlassSurface x:Name="Pill" UseLayoutRounding="False" HorizontalAlignment="Center" VerticalAlignment="Top" Width="220" Height="38" Margin="0,1,0,0"
                         SampleWallpaper="True" ShadowSize="24" Cursor="Hand" AutomationProperties.Name="Dynamic Island" RenderTransformOrigin="0.5,0">
             <d:GlassSurface.RenderTransform>
@@ -28,6 +57,8 @@
                 <TransformGroup>
                     <ScaleTransform x:Name="PillScale" ScaleX="1" ScaleY="1"/>
                     <TranslateTransform x:Name="PillShift"/>
+                    <!-- Moves aside along the edge while a side bubble shows, so the pair stays centred -->
+                    <TranslateTransform x:Name="PillSplit"/>
                 </TransformGroup>
             </d:GlassSurface.RenderTransform>
             <Grid ClipToBounds="True">

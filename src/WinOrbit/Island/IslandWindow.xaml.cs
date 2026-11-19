@@ -306,6 +306,7 @@ public partial class IslandWindow : Window
     /// <summary>Shape and thickness changes morph live on the same springs, so you see the new shape take form.</summary>
     private void ApplyShape()
     {
+        EndSatellite(true);
         ApplyEdge();
         var m = S.Shape == "Notch" ? 0 : 1;   // a notch sits flush against its edge
         Pill.Margin = Edge switch { "Bottom" => new Thickness(0, 0, 0, m), "Left" => new Thickness(m, 0, 0, 0), "Right" => new Thickness(0, 0, m, 0), _ => new Thickness(0, m, 0, 0) };
@@ -415,7 +416,7 @@ public partial class IslandWindow : Window
         var hide = ShouldHide(S, fg.ProcessName,
             fullscreenHere: fg.IsFullscreen && (fg.FullscreenDevice == Device || single),
             inFrontHere: !fg.DesktopForeground && (fg.ForegroundDevice == Device || single));
-        if (hide && IsVisible) { if (_expanded) Collapse(true); Hide(); }
+        if (hide && IsVisible) { if (_expanded) Collapse(true); EndSatellite(true); Hide(); }
         else if (!hide && !IsVisible && !_closing)
         {
             Show();
@@ -527,6 +528,7 @@ public partial class IslandWindow : Window
     public void Peek(string glyph, string text, double seconds = 4, Color? color = null)
     {
         if (_expanded || !IsVisible) return;
+        if (PillBusy || SatelliteShowing && !_card) { ShowSatellite(glyph, null, false, text, color, Math.Min(seconds, 4)); return; }   // the capsule keeps its activity
         EndCard();
         var fresh = CPeek.Visibility != Visibility.Visible;
         _hudTimer?.Stop();
@@ -543,6 +545,7 @@ public partial class IslandWindow : Window
     public void PeekKey(string cap, string text, bool on, double seconds = 1.6)
     {
         if (_expanded || !IsVisible) return;
+        if (PillBusy || SatelliteShowing && !_card) { ShowSatellite(null, cap, on, text, null, seconds); return; }
         EndCard();
         var fresh = CPeek.Visibility != Visibility.Visible;
         _hudTimer?.Stop();
@@ -653,6 +656,7 @@ public partial class IslandWindow : Window
     public void Expand(bool keyboard)
     {
         if (_expanded || !IsVisible) { if (keyboard && _expanded) SetInteractive(true); return; }
+        EndSatellite(true);
         _expanded = true;
         _peekTimer.Stop();
         if (_card) { _card = false; _cardTimer?.Stop(); SetCardActions(null, null, null); Card.Visibility = Visibility.Collapsed; Card.Opacity = 0; }
@@ -937,7 +941,7 @@ public partial class IslandWindow : Window
     // ------------------------------------------------------------------ auto-hide
     private void PollAutoHide()
     {
-        if (!S.AutoHide || _expanded || !IsVisible || CPeek.Visibility == Visibility.Visible) return;
+        if (!S.AutoHide || _expanded || !IsVisible || CPeek.Visibility == Visibility.Visible || SatelliteShowing) return;
         if (!Native.GetCursorPos(out var p) || !Native.GetWindowRect(_hwnd, out var r)) return;
         var mon = Monitors.Find(Device);
         int cx = (r.Left + r.Right) / 2, cy = (r.Top + r.Bottom) / 2;

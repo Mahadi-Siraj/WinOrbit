@@ -66,6 +66,7 @@ The class is split into partial files:
 | `IslandWindow.Weather.cs` | Weather page and sky colours |
 | `IslandWindow.Mixer.cs` | Volume by app in the Control Centre (`Services/AppVolume.cs` does the Core Audio work) |
 | `IslandWindow.Files.cs` | File cards: screenshot saved (`Services/ScreenshotWatcher.cs`) and download finished; open, drag out, show in folder |
+| `IslandWindow.Split.cs` | The side bubble (`Satellite`): short alerts split off beside a busy capsule. One sprung value, `SplitGap`, places the capsule (`PillSplit`), the bubble (`SatShift`, `SatScale`) and the liquid neck (`Bridge`, filled with the same wallpaper slice through `GlassSurface.Slice`). `Peek`, `PeekKey`, lock keys and the keyboard language route here while `PillBusy` |
 | `IslandWindow.Call.cs` | The microphone pill (`Services/MicMeter.cs` reads the level and mute), the scroll-wheel hook that is installed only while the pointer is over the island (Windows' "scroll inactive windows" may be off), and `SwipeGesture` (sideways swipe → one track skip) |
 
 ### Motion

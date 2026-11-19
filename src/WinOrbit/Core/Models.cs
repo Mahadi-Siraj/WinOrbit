@@ -134,6 +134,8 @@ public sealed class IslandSettings
     public bool CallPill { get; set; } = true;
     /// <summary>Swipe sideways on the island (two fingers on a touchpad, or tilt the mouse wheel) to skip tracks.</summary>
     public bool SwipeToSkip { get; set; } = true;
+    /// <summary>While the capsule shows music, a call or a timer, short alerts split off into a bubble beside it.</summary>
+    public bool SplitAlerts { get; set; } = true;
     /// <summary>Show the current lyric line in the capsule while music plays (needs Lyrics in Privacy).</summary>
     public bool LyricsInCapsule { get; set; } = true;
     /// <summary>Keep a history of copied text, links and images in memory. Off by default.</summary>

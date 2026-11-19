@@ -146,32 +146,40 @@ public class GlassSurface : ContentControl
         if (!SampleWallpaper || !Hub.Ready || !IsLoaded || ActualWidth < 1 || ActualHeight < 1) { if (!SampleWallpaper && Backdrop is not null) Backdrop = null; return; }
         try
         {
-            if (PresentationSource.FromVisual(this) is null) return;
-            var topLeft = PointToScreen(new Point(0, 0));
-            var bottomRight = PointToScreen(new Point(ActualWidth, ActualHeight));
-            var mon = Monitors.FromPoint((int)((topLeft.X + bottomRight.X) / 2), (int)((topLeft.Y + bottomRight.Y) / 2));
-            var image = Hub.Wallpaper.Backdrop(mon.Device);
-            if (image is null) { Backdrop = null; return; }
-
-            double mw = mon.Bounds.Width, mh = mon.Bounds.Height;
-            var x = (topLeft.X - mon.Bounds.Left) / mw;
-            var y = (topLeft.Y - mon.Bounds.Top) / mh;
-            var w = (bottomRight.X - topLeft.X) / mw;
-            var h = (bottomRight.Y - topLeft.Y) / mh;
-
-            // Refraction: sample a slightly smaller area than we cover, so the backdrop is gently magnified like a lens.
-            var refraction = Application.Current.TryFindResource("G.Refraction") as double? ?? 0;
-            x += w * refraction / 2; y += h * refraction / 2; w *= 1 - refraction; h *= 1 - refraction;
-
-            if (_brush is null || !ReferenceEquals(_brush.ImageSource, image))
+            if (Slice(this, new Rect(0, 0, ActualWidth, ActualHeight), true) is not { } slice) { Backdrop = null; return; }
+            if (_brush is null || !ReferenceEquals(_brush.ImageSource, slice.Image))
             {
-                _brush = new ImageBrush(image) { ViewboxUnits = BrushMappingMode.RelativeToBoundingBox, Stretch = Stretch.Fill };
+                _brush = new ImageBrush(slice.Image) { ViewboxUnits = BrushMappingMode.RelativeToBoundingBox, Stretch = Stretch.Fill };
                 RenderOptions.SetBitmapScalingMode(_brush, BitmapScalingMode.Linear);
                 Backdrop = _brush;
             }
-            _brush.Viewbox = new Rect(x, y, Math.Max(0.0005, w), Math.Max(0.0005, h));
+            _brush.Viewbox = slice.Viewbox;
         }
         catch { /* not connected to a presentation source yet */ }
+    }
+
+    /// <summary>
+    /// The blurred wallpaper under <paramref name="area"/> (in <paramref name="visual"/>'s coordinates): the image and the
+    /// part of it to show. <paramref name="refract"/> samples a slightly smaller area, so it looks gently magnified.
+    /// </summary>
+    internal static (ImageSource Image, Rect Viewbox)? Slice(Visual visual, Rect area, bool refract)
+    {
+        if (!Hub.Ready || PresentationSource.FromVisual(visual) is null || area.Width < 1 || area.Height < 1) return null;
+        var topLeft = visual.PointToScreen(area.TopLeft);
+        var bottomRight = visual.PointToScreen(area.BottomRight);
+        var mon = Monitors.FromPoint((int)((topLeft.X + bottomRight.X) / 2), (int)((topLeft.Y + bottomRight.Y) / 2));
+        if (Hub.Wallpaper.Backdrop(mon.Device) is not { } image) return null;
+        double mw = mon.Bounds.Width, mh = mon.Bounds.Height;
+        var x = (topLeft.X - mon.Bounds.Left) / mw;
+        var y = (topLeft.Y - mon.Bounds.Top) / mh;
+        var w = (bottomRight.X - topLeft.X) / mw;
+        var h = (bottomRight.Y - topLeft.Y) / mh;
+        if (refract)
+        {
+            var refraction = Application.Current.TryFindResource("G.Refraction") as double? ?? 0;
+            x += w * refraction / 2; y += h * refraction / 2; w *= 1 - refraction; h *= 1 - refraction;
+        }
+        return (image, new Rect(x, y, Math.Max(0.0005, w), Math.Max(0.0005, h)));
     }
 }
 
