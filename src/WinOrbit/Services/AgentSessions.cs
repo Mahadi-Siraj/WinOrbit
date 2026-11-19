@@ -241,8 +241,22 @@ internal static class AgentClient
 /// <summary>The text people copy from Settings to connect a tool: each runs <c>WinOrbit.exe --agent &lt;tool&gt;</c>.</summary>
 internal static class AgentSetup
 {
-    /// <summary>The exe path with forward slashes, which every shell a hook may run in (Git Bash, cmd) accepts.</summary>
-    internal static string Command(string exe, string tool) => $"\"{exe.Replace('\\', '/')}\" --agent {tool}";
+    /// <summary>
+    /// The command a hook runs. Tools run hooks through whatever shell they use (PowerShell, cmd or Git Bash), and a
+    /// quoted path is a syntax error in PowerShell, so the path goes in unquoted, with forward slashes, which all three
+    /// accept. A path with spaces is first replaced by its short 8.3 form, which has none.
+    /// </summary>
+    internal static string Command(string exe, string tool) => $"{exe.Replace('\\', '/')} --agent {tool}";
+
+    /// <summary>This WinOrbit.exe, in a form <see cref="Command"/> can use unquoted.</summary>
+    internal static string ExePath()
+    {
+        var exe = Environment.ProcessPath ?? "WinOrbit.exe";
+        if (!exe.Contains(' ')) return exe;
+        var sb = new StringBuilder(520);
+        var n = Interop.Native.GetShortPathName(exe, sb, (uint)sb.Capacity);
+        return n > 0 && n < sb.Capacity && !sb.ToString().Contains(' ') ? sb.ToString() : exe;
+    }
 
     /// <summary>
     /// The "hooks" block for Claude Code's settings.json. Every hook is async, so Claude never waits for WinOrbit.

@@ -146,7 +146,7 @@ public class AgentTests
     [Fact]
     public void Claude_code_setup_is_valid_json_with_background_hooks()
     {
-        var json = AgentSetup.ClaudeCode(@"C:\Users\Some One\AppData\Local\Programs\WinOrbit\WinOrbit.exe");
+        var json = AgentSetup.ClaudeCode(@"C:\Users\SOMEON~1\AppData\Local\Programs\WinOrbit\WinOrbit.exe");
         using var doc = JsonDocument.Parse(json);
         var hooks = doc.RootElement.GetProperty("hooks");
         foreach (var name in new[] { "UserPromptSubmit", "PostToolUse", "Notification", "Stop", "SessionEnd" })
@@ -154,7 +154,8 @@ public class AgentTests
             var h = hooks.GetProperty(name)[0].GetProperty("hooks")[0];
             Assert.Equal("command", h.GetProperty("type").GetString());
             Assert.True(h.GetProperty("async").GetBoolean());
-            Assert.Equal("\"C:/Users/Some One/AppData/Local/Programs/WinOrbit/WinOrbit.exe\" --agent claude", h.GetProperty("command").GetString());
+            // Unquoted: PowerShell, cmd and Git Bash all run it as is.
+            Assert.Equal("C:/Users/SOMEON~1/AppData/Local/Programs/WinOrbit/WinOrbit.exe --agent claude", h.GetProperty("command").GetString());
         }
         Assert.Equal(@"notify = ['C:\x\WinOrbit.exe', '--agent', 'codex']", AgentSetup.Codex(@"C:\x\WinOrbit.exe"));
     }

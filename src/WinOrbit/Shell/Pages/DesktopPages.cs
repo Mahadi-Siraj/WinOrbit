@@ -321,7 +321,7 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("Screenshot", () => Hub.Island.Demo("screenshot")), Kit.Btn("Download", () => Hub.Island.Demo("download")),
                 Kit.Btn("Rain soon", () => Hub.Island.Demo("rain")), Kit.Btn("Keyboard language", () => Hub.Island.Demo("language"))))));
 
-        var exe = Environment.ProcessPath ?? "WinOrbit.exe";
+        var exe = AgentSetup.ExePath();
         Children.Add(Kit.Section("Coding agents", "See what AI coding tools on this PC are doing — Claude Code, Codex or your own scripts — in an Agents tab on the island, with a card when one needs your OK and a short note when it's done. Off by default. WinOrbit doesn't change those tools' settings: copy the setup for each tool you use.",
             Kit.ToggleRow("Coding agents", @"Adds the Agents tab and listens for the tools' updates on the local pipe \\.\pipe\WinOrbit.Island (programs running as you only; never reachable from the network). Each session shows a short title (its first request), its folder's name and a few words like ""Editing app.cs"". Nothing is saved: the list is in memory, sessions drop off after three hours of silence, and turning this off clears it.",
                 S.CodingAgents, v => { S.CodingAgents = v; Save(); }, false, GlyphAgentsRow),

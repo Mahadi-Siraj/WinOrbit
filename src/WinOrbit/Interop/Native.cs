@@ -237,6 +237,8 @@ public static class Native
 
     /// <summary>Succeeds only for a client on another computer (a local client fails with ERROR_PIPE_LOCAL), so the pipe can refuse it.</summary>
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool GetNamedPipeClientComputerName(Microsoft.Win32.SafeHandles.SafePipeHandle pipe, System.Text.StringBuilder name, uint size);
+    /// <summary>The 8.3 form of a path (no spaces), for commands that other programs run through a shell.</summary>
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern uint GetShortPathName(string longPath, System.Text.StringBuilder shortPath, uint size);
     [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
     [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     public delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
