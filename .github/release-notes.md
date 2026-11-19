@@ -9,7 +9,7 @@ Free, open source (GPL-3.0), about 45–80 MB of RAM and ~0.1 % CPU at idle, zer
 | `WinOrbit-Portable-*-win-x64.zip` | No install and no runtime needed. Unzip anywhere, run `WinOrbit.exe`. |
 | `SHA256SUMS.txt` | Checksums for both. |
 
-Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScreen warns, choose *More info → Run anyway*.
+Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScreen warns, choose *More info → Run anyway*. [Code signing policy](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/CODE_SIGNING_POLICY.md)
 
 ### New in 1.3.1
 - 🪄 Island cards show longer second lines in full (they were cut off at about 40 characters, e.g. a coding agent's permission request)

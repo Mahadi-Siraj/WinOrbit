@@ -74,7 +74,7 @@ Grab the files from the **[latest release](../../releases/latest)**:
 | `WinOrbit-Setup-<version>.exe` | Recommended. Installs for your user only — **no admin prompt**. Needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (setup checks and links it). |
 | `WinOrbit-Portable-<version>-win-x64.zip` | No install, no runtime needed. Unzip anywhere and run `WinOrbit.exe`; settings stay next to it. |
 
-> **SmartScreen:** WinOrbit isn't code-signed (certificates cost money), so Windows may say *"Windows protected your PC"*. Click **More info → Run anyway**. Every release lists SHA-256 checksums, and the source is right here.
+> **SmartScreen:** WinOrbit isn't code-signed (certificates cost money), so Windows may say *"Windows protected your PC"*. Click **More info → Run anyway**. Every release lists SHA-256 checksums, and the source is right here. WinOrbit is applying for free open-source code signing: see the [code signing policy](CODE_SIGNING_POLICY.md).
 
 Upgrading from an earlier build called *Glasswave* keeps all your settings.
 
