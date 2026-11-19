@@ -54,7 +54,7 @@ Wave 3 (reach and trust):
 
 Wave 4 — **done in 1.2** (18 Nov 2026): liquid spring motion, every screen edge, shapes, album colours, calendar events with reminders, weather tab, connection and radio cards.
 
-Wave 5 — **built after 1.2, not released yet** (18–19 Nov 2026; committed, waiting for the owner's go-ahead to publish as 1.3):
+Wave 5 — **done in 1.3** (built 18–19 Nov 2026, released 19 Nov 2026):
 * ✅ **Volume by app** and a one-click **output device** switch in the Control Centre.
 * ✅ **Screenshot cards** and **finished-download cards** (click to open, drag into a chat, show in folder; programs are never started from a card).
 * ✅ **Rain soon** card (opt-in, uses the weather the user already turned on).

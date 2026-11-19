@@ -1,6 +1,6 @@
 ## WinOrbit — the Dynamic Island and desktop suite Windows deserves
 
-Free, open source (GPL-3.0), ~60 MB RAM and ~0.1 % CPU at idle, zero telemetry.
+Free, open source (GPL-3.0), about 45–80 MB of RAM and ~0.1 % CPU at idle, zero telemetry.
 
 ### Download
 | File | For |
@@ -11,16 +11,23 @@ Free, open source (GPL-3.0), ~60 MB RAM and ~0.1 % CPU at idle, zero telemetry.
 
 Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScreen warns, choose *More info → Run anyway*.
 
-### New in 1.2
-- 🌊 **Liquid motion** — the island moves on spring physics: it bounces open, squashes when pressed and swells like a droplet when something arrives
-- 🔌 **More live activities** — Caps/Num/Scroll Lock, Wi-Fi and Ethernet, the Wi-Fi and Bluetooth radios, dark/light mode, night light, airplane mode, Bluetooth and USB devices, shown as cards with a switch that flips
-- 🔷 **Shapes and rims** — Capsule, Rounded, Square, Notch or Drop in three thicknesses, with optional coloured rims and glow
-- 🎨 **Album colours** — while a song plays, the glass glows with its artwork's colours
-- 📅 **Calendar events** — type "9:30 Stand-up" on any day; the island reminds you ten minutes before and when it starts (stays on this PC)
-- 🌤️ **Weather page** (opt-in) — now, the next twelve hours and three days, with the glass taking on the sky's colours
-- 🖥️ **Any screen edge** — top, bottom (above the taskbar), left or right; drag it to another edge to move it
-- 🎮 **Out of the way** — hides within about a tenth of a second for fullscreen apps; choose apps it keeps showing over or always hides for
-- 🐛 Fixes — the open island no longer closes while the pointer rests on it; auto-hide stays tucked after a fullscreen app closes; reminders work across midnight
+### New in 1.3
+- 🤖 **Coding agents** (opt-in) — an Agents tab that shows what Claude Code, Codex or your own tools are doing: working, needs you, done. The island keeps an orange rim while a session waits for your OK and flashes green when one finishes. Setup is copy-and-paste from Settings; WinOrbit never edits those tools' settings, and only a short title, the folder name and a few words of status are kept (in memory)
+- 🎚️ **Volume by app** and an **output device switch** (speakers, headphones, HDMI) in the Control Centre
+- 📸 **Screenshot cards** — a thumbnail after Win+PrtScn: click to open, drag it into a chat, or show it in its folder
+- ⬇️ **Finished-download cards** — click to open (programs are only shown in their folder, never started)
+- 🫧 **Side bubble** — short alerts (Caps Lock, keyboard language, "copied") split off beside a busy capsule instead of replacing your music or call
+- 🎙️ **Microphone pill** during calls — the app, a live level and Windows' own mute
+- ⌨️ **Launcher** (Alt+Space) — `timer 5 min`, `focus 50`, `stopwatch`, `remind me in 20 min to stretch`, `time in Tokyo` (offline), and `clip` to search clipboard history
+- 📅 **Calendar import** from `.ics` files, repeating events included (stays on this PC)
+- 🌧️ **Rain soon** (opt-in), **keyboard language** card, **Bluetooth battery** on the "Connected" card
+- 🧩 **Cards from your scripts** (opt-in) — a local, current-user-only pipe your own scripts can use to show "Build finished"
+- 🪟 **Live glass** (opt-in, Windows 11) — glass shows the windows behind it, not just the wallpaper; **curved glass edges**; a new **Black** material
+- 🌊 **Smoother motion** — calmer shared springs: the island opens and closes with one small overshoot and no slow creep, drawing about 40 % fewer frames per motion (less CPU)
+- 🔒 **Check for updates** only when you click it, through the network switch; **copy a setup summary** for bug reports (no names or paths)
+- 🐛 Fixes — a script that never read its reply could block the local pipe; turning Live glass off no longer risks waiting on a capture in progress; the settings window no longer falls back to software drawing for the whole session after the monitor was off; lyrics for "(Official Video)" titles
+
+Untested here: multiple monitors, scaling above 100 %, Windows 10, Codex, a real call with the microphone pill.
 
 ### Highlights
 - 🏝️ **Dynamic Island** — now playing with album art, seek bar and ±10 s, music-reactive equaliser, synced lyrics (opt-in), VLC/foobar2000/Winamp/PotPlayer/MPC/mpv support
