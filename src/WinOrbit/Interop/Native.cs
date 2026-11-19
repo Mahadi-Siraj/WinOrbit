@@ -120,7 +120,8 @@ public static class Native
 
     public const int WM_HOTKEY = 0x0312, WM_SETTINGCHANGE = 0x001A, WM_DISPLAYCHANGE = 0x007E, WM_DPICHANGED = 0x02E0,
         WM_WINDOWPOSCHANGING = 0x0046, WM_MOUSEACTIVATE = 0x0021, WM_APP = 0x8000, WM_LBUTTONUP = 0x0202, WM_LBUTTONDBLCLK = 0x0203,
-        WM_RBUTTONUP = 0x0205, WM_CONTEXTMENU = 0x007B, WM_NCHITTEST = 0x0084, WM_GETMINMAXINFO = 0x0024;
+        WM_RBUTTONUP = 0x0205, WM_CONTEXTMENU = 0x007B, WM_NCHITTEST = 0x0084, WM_GETMINMAXINFO = 0x0024,
+        WM_MOUSEHWHEEL = 0x020E;   // sideways scroll: a tilting mouse wheel or a two-finger swipe on a touchpad
     public const int MA_NOACTIVATE = 3;
 
     public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20, DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWA_BORDER_COLOR = 34,
@@ -168,6 +169,17 @@ public static class Native
     public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, IntPtr rect, IntPtr data);
     [DllImport("user32.dll")] public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc proc, IntPtr data);
     [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT pt);
+
+    // ---- low-level mouse hook (WH_MOUSE_LL). It runs in WinOrbit's own process — nothing is injected anywhere —
+    // and the island installs it only while the pointer is over it, to catch the scroll wheel (see IslandWindow.Call.cs).
+    public const int WH_MOUSE_LL = 14, WM_MOUSEWHEEL = 0x020A;
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MSLLHOOKSTRUCT { public POINT Pt; public int MouseData; public int Flags; public int Time; public IntPtr ExtraInfo; }
+    public delegate IntPtr LowLevelMouseProc(int code, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll", SetLastError = true)] public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc fn, IntPtr module, uint threadId);
+    [DllImport("user32.dll")] public static extern bool UnhookWindowsHookEx(IntPtr hook);
+    [DllImport("user32.dll")] public static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr GetModuleHandle(string? name);
     [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
     [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     public delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);

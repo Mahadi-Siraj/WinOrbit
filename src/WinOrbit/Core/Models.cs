@@ -130,6 +130,10 @@ public sealed class IslandSettings
     public bool AudioReactive { get; set; } = true;
     /// <summary>Show a dot while an app uses the microphone or camera, like phones do.</summary>
     public bool PrivacyDot { get; set; } = true;
+    /// <summary>While an app uses the microphone, the capsule shows it with your voice level and a mute button.</summary>
+    public bool CallPill { get; set; } = true;
+    /// <summary>Swipe sideways on the island (two fingers on a touchpad, or tilt the mouse wheel) to skip tracks.</summary>
+    public bool SwipeToSkip { get; set; } = true;
     /// <summary>Show the current lyric line in the capsule while music plays (needs Lyrics in Privacy).</summary>
     public bool LyricsInCapsule { get; set; } = true;
     /// <summary>Keep a history of copied text, links and images in memory. Off by default.</summary>

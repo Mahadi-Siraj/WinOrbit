@@ -169,6 +169,7 @@ public sealed class IslandPage : PageBase
     public override string Subtitle => "A living capsule at the top of your screen. Click it to expand; scroll on it for volume; drag it to move. Press " + Hub.Settings.General.HotkeyIsland + " to open it with the keyboard.";
     private static IslandSettings S => Hub.Settings.Island;
     private static void Save() { Hub.Store.Save(); Hub.Island.Apply(); }
+    private const string GlyphMicRow = "";
 
     private void ImportCalendar()
     {
@@ -285,11 +286,13 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Album colours", "While a song plays, the glass glows with the colours of its artwork and cross-fades when the track changes. The Album rim uses them too. Worked out on this PC from the artwork Windows already has.", S.AlbumTint, v => { S.AlbumTint = v; Save(); }, true, Glyph.Color),
             Kit.ToggleRow("Bars follow the music", "The equaliser in the capsule moves with what's actually playing, tinted by the album art. Reads Windows' output level 20 times a second, only while music plays.", S.AudioReactive, v => { S.AudioReactive = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Privacy dots", "Orange while any app uses your microphone, green for the camera, blue for your location — hover to see which app. Read locally from Windows' own privacy records.", S.PrivacyDot, v => { S.PrivacyDot = v; Save(); }, true, Glyph.Shield),
+            Kit.ToggleRow("Microphone pill", "During a call (or whenever an app uses your microphone) the capsule shows the app, bars that follow your voice and a mute button. Mute is Windows' own microphone mute, so it works in every app. The level is read from Windows' meter; WinOrbit never records or opens the microphone itself.", S.CallPill, v => { S.CallPill = v; Save(); }, true, GlyphMicRow),
+            Kit.ToggleRow("Swipe to skip tracks", "Swipe sideways on the island with two fingers on a touchpad, or tilt the mouse wheel, to go to the next or previous track.", S.SwipeToSkip, v => { S.SwipeToSkip = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Lyrics in the capsule", Hub.Settings.Privacy.LyricsEnabled ? "Shows the line being sung instead of the song title." : "Turn on Synced lyrics in Settings › Privacy & network first.", S.LyricsInCapsule, v => { S.LyricsInCapsule = v; Save(); }, true, Glyph.Note),
             Kit.ToggleRow("Clipboard history", "Keeps the last 40 copied items in memory for the Clipboard tab. Pinned text is saved; everything else is forgotten when WinOrbit quits. Private copies (password managers) are skipped.", S.ClipboardHistory, v => { S.ClipboardHistory = v; Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy),
             Kit.WideRow("Preview", "See what each live activity looks like on your island.", Kit.WrapButtons(
                 Kit.Btn("Charging", () => Hub.Island.Demo("charging")), Kit.Btn("Low battery", () => Hub.Island.Demo("low")),
-                Kit.Btn("Volume", () => Hub.Island.Demo("volume")), Kit.Btn("Microphone", () => Hub.Island.Demo("mic")),
+                Kit.Btn("Volume", () => Hub.Island.Demo("volume")), Kit.Btn("Microphone", () => Hub.Island.Demo("mic")), Kit.Btn("Microphone pill", () => Hub.Island.Demo("call")),
                 Kit.Btn("Caps Lock", () => Hub.Island.Demo("caps")), Kit.Btn("Wi-Fi", () => Hub.Island.Demo("wifi")),
                 Kit.Btn("Bluetooth", () => Hub.Island.Demo("bluetooth")), Kit.Btn("USB", () => Hub.Island.Demo("usb")),
                 Kit.Btn("Wi-Fi off", () => Hub.Island.Demo("wifi-radio")), Kit.Btn("Bluetooth on", () => Hub.Island.Demo("bt-radio")),

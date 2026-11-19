@@ -208,6 +208,8 @@ public partial class IslandWindow : Window
     {
         // Never take focus on a click unless the user asked for keyboard interaction.
         if (msg == Native.WM_MOUSEACTIVATE && !_interactive) { handled = true; return new IntPtr(Native.MA_NOACTIVATE); }
+        // WPF has no sideways-wheel event; the high word of wParam is the signed scroll amount.
+        if (msg == Native.WM_MOUSEHWHEEL && OnSideScroll((short)((wParam.ToInt64() >> 16) & 0xFFFF))) { handled = true; return IntPtr.Zero; }
         return IntPtr.Zero;
     }
 
@@ -466,13 +468,15 @@ public partial class IslandWindow : Window
         var media = Hub.Media;
         var timers = Hub.Timers;
         var showMedia = S.ShowMedia && media.HasTrack;
-        var showTimer = S.ShowTimer && timers.IsActive;
-        var showDownload = S.WatchDownloads && _downloads.Active is not null && !showTimer;
+        var showCall = CallActive;
+        var showTimer = S.ShowTimer && timers.IsActive && !showCall;
+        var showDownload = S.WatchDownloads && _downloads.Active is not null && !showTimer && !showCall;
 
-        // One live activity at a time keeps the pill calm: timer > download > media.
+        // One live activity at a time keeps the pill calm: microphone > timer > download > media.
+        UpdateCall(showCall);
         CTimer.Visibility = showTimer ? Visibility.Visible : Visibility.Collapsed;
         CDownload.Visibility = showDownload ? Visibility.Visible : Visibility.Collapsed;
-        CMedia.Visibility = showMedia && !showTimer && !showDownload ? Visibility.Visible : Visibility.Collapsed;
+        CMedia.Visibility = showMedia && !showTimer && !showDownload && !showCall ? Visibility.Visible : Visibility.Collapsed;
         if (showTimer) CTimerText.Text = $"{timers.Display}";
         if (showDownload) CDownloadText.Text = _downloads.Active!.Value.Name;
         if (CMedia.Visibility == Visibility.Visible)
@@ -486,7 +490,7 @@ public partial class IslandWindow : Window
         CTime.Visibility = S.ShowTime ? Visibility.Visible : Visibility.Collapsed;
         CDate.Visibility = S.ShowDate ? Visibility.Visible : Visibility.Collapsed;
         CSys.Visibility = S.ShowSystem ? Visibility.Visible : Visibility.Collapsed;
-        var activity = showTimer || showDownload || CMedia.Visibility == Visibility.Visible;
+        var activity = showCall || showTimer || showDownload || CMedia.Visibility == Visibility.Visible;
         var trailing = S.ShowTime || S.ShowDate || S.ShowSystem;
         CSep.Visibility = activity && trailing ? Visibility.Visible : Visibility.Collapsed;
         if (!activity && !trailing) { CTime.Visibility = Visibility.Visible; }   // never show an empty pill
@@ -500,7 +504,7 @@ public partial class IslandWindow : Window
     {
         if (_expanded) return;
         // Children that just became visible may not have been measured yet; measure fresh, then re-check once layout settles.
-        foreach (var fe in new FrameworkElement[] { CTitle, CMedia, CTimer, CDownload, CSys, CTime, CDate, CNormal, CPeek, Compact }) fe.InvalidateMeasure();
+        foreach (var fe in new FrameworkElement[] { CTitle, CMedia, CCallText, CCall, CTimer, CDownload, CSys, CTime, CDate, CNormal, CPeek, Compact }) fe.InvalidateMeasure();
         if (!_refitQueued)
         {
             _refitQueued = true;
@@ -656,6 +660,7 @@ public partial class IslandWindow : Window
         _hudTimer?.Stop(); CHud.Visibility = Visibility.Collapsed;
         SetAutoHidden(false);
         UpdateEqualizerDrive();
+        UpdateCallDrive();
         Pill.Cursor = Cursors.Arrow;
         Compact.IsHitTestVisible = false;
         // Fill and lay out the panel BEFORE anything moves. Doing this mid-motion is what made the first frames
@@ -777,6 +782,15 @@ public partial class IslandWindow : Window
     private void OnPillMove(object sender, MouseEventArgs e)
     {
         if (!_pressed) return;
+        // A release that never reached the island (it went to another window) must not leave a drag armed.
+        // (OnPillUp calls this too, with the button already released: that is the normal end, not a lost one.)
+        if (e is not MouseButtonEventArgs && e.LeftButton != MouseButtonState.Pressed)
+        {
+            _pressed = false;
+            if (_dragging) { _dragging = false; Hub.Store.Save(); }
+            Pill.ReleaseMouseCapture();
+            return;
+        }
         Native.GetCursorPos(out var p);
         double dx = p.X - _pressPoint.X, dy = p.Y - _pressPoint.Y;
         if (!_dragging && Math.Abs(dx) + Math.Abs(dy) < 7) return;
@@ -869,15 +883,18 @@ public partial class IslandWindow : Window
         else Expand(false);
     }
 
-    private void OnWheel(object sender, MouseWheelEventArgs e)
+    private void OnWheel(object sender, MouseWheelEventArgs e) { if (OnUpDownScroll(e.Delta)) e.Handled = true; }
+
+    /// <summary>The wheel over the collapsed capsule changes the volume. Returns true when it was used.</summary>
+    private bool OnUpDownScroll(int delta)
     {
-        if (_expanded) return;
+        if (_expanded || delta == 0) return false;
         var v = Audio.GetVolume();
-        if (v is null) return;
-        var nv = Math.Clamp(v.Value + (e.Delta > 0 ? 0.02 : -0.02), 0, 1);
+        if (v is null) return false;
+        var nv = Math.Clamp(v.Value + (delta > 0 ? 0.02 : -0.02), 0, 1);
         Audio.SetVolume(nv);
         if (!S.VolumeHud) Peek(nv <= 0.001 ? Glyph.Mute : Glyph.Volume, $"Volume {nv * 100:0}%", 1.4);   // otherwise the HUD shows it
-        e.Handled = true;
+        return true;
     }
 
     private void ShowMenu()

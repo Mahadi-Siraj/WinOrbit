@@ -79,6 +79,15 @@
                             <Ellipse x:Name="CPrivCam" Width="7" Height="7" Fill="#30D158" Margin="0,0,3,0" Visibility="Collapsed"/>
                             <Ellipse x:Name="CPrivLoc" Width="7" Height="7" Fill="#0A84FF" Visibility="Collapsed"/>
                         </StackPanel>
+                        <!-- Microphone pill: an app is using the mic. A mute button, the app, and bars that follow your voice. -->
+                        <StackPanel x:Name="CCall" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                            <Border x:Name="CCallMute" Width="24" Height="24" CornerRadius="12" Margin="-4,0,8,0" Cursor="Hand" Background="#33FF9F0A"
+                                    ToolTip="Mute the microphone" AutomationProperties.Name="Mute the microphone">
+                                <TextBlock x:Name="CCallGlyph" Text="&#xE720;" Style="{StaticResource Icon}" FontSize="12" Foreground="#FF9F0A"/>
+                            </Border>
+                            <TextBlock x:Name="CCallText" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="170" TextTrimming="CharacterEllipsis"/>
+                            <d:Equalizer x:Name="CCallEq" Margin="9,0,0,0" External="True"/>
+                        </StackPanel>
                         <StackPanel x:Name="CMedia" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                             <Border x:Name="CArt" Width="22" Height="22" CornerRadius="6" Background="{DynamicResource T.AccentSoft}" Margin="0,0,8,0">
                                 <TextBlock x:Name="CArtGlyph" Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="11" Foreground="{DynamicResource T.Accent}"/>

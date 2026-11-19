@@ -60,6 +60,7 @@ public partial class IslandWindow
         Hub.Devices.ModeChanged += OnMode;
 
         InitFiles();
+        InitCall();
         Hub.Island.Rain.RainSoon += OnRainSoon;
         Hub.Island.Language.Changed += OnLanguage;
         Pill.AllowDrop = true;
@@ -72,7 +73,7 @@ public partial class IslandWindow
 
     private void CleanupLive()
     {
-        foreach (var t in new[] { _hudTimer, _levelTimer, _lyricTimer }) t?.Stop();
+        foreach (var t in new[] { _hudTimer, _levelTimer, _lyricTimer, _callTimer }) t?.Stop();
         Hub.Audio.VolumeChanged -= OnVolumeEvent;
         Hub.Privacy.Changed -= UpdatePrivacyDot;
         Hub.Clipboard.Changed -= OnClipboardChanged;
@@ -258,6 +259,7 @@ public partial class IslandWindow
             case "low": ShowHud(Glyph.Warning, 0.18, "Battery low · 18%", Low, 4); break;
             case "volume": ShowHud(Glyph.Volume, 0.42, "42"); break;
             case "mic": Peek(GlyphMic, "Teams is using your microphone", 3); break;
+            case "call": DemoCall(); break;
             case "saver": ShowCard(GlyphLeaf, "Energy saver", "On", Saver, 2.6, toggle: true); break;
             case "dark": ShowCard(Glyph.Moon, "Dark mode", "Apps and Windows", Indigo, 2.6, toggle: true); break;
             case "song":
@@ -349,8 +351,10 @@ public partial class IslandWindow
     private void UpdatePrivacyDot()
     {
         var p = Hub.Privacy;
-        var show = S.PrivacyDot && p.Active;
-        CPrivMic.Visibility = p.Microphone.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        // The microphone pill already says the mic is in use, so its orange dot steps aside while the pill shows.
+        var micDot = p.Microphone.Count > 0 && !S.CallPill;
+        var show = S.PrivacyDot && (micDot || p.Camera.Count > 0 || p.Location.Count > 0);
+        CPrivMic.Visibility = micDot ? Visibility.Visible : Visibility.Collapsed;
         CPrivCam.Visibility = p.Camera.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         CPrivLoc.Visibility = p.Location.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         CPriv.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
@@ -359,7 +363,8 @@ public partial class IslandWindow
         if (p.Camera.Count > 0) parts.Add("Camera: " + string.Join(", ", p.Camera));
         if (p.Location.Count > 0) parts.Add("Location: " + string.Join(", ", p.Location));
         CPriv.ToolTip = parts.Count > 0 ? string.Join("\n", parts) : null;
-        if (show && !_privShown)
+        // Announce a new use once — except the microphone alone when the pill shows it anyway.
+        if (show && !_privShown && (p.Camera.Count > 0 || p.Location.Count > 0 || !S.CallPill))
         {
             var (who, what, glyph) = p.Camera.Count > 0 ? (p.Camera[0], "camera", GlyphCam)
                 : p.Microphone.Count > 0 ? (p.Microphone[0], "microphone", GlyphMic)

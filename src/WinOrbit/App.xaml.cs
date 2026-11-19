@@ -52,7 +52,9 @@ public partial class App : Application
 
         // ---- one instance only: a second launch just opens the existing window ----
         _mutex = new Mutex(true, MutexName, out var first);
-        var requestedPage = e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase) ? "quit" : PageArg(e.Args);
+        var requestedPage = e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase) ? "quit"
+            : ArgAfter(e.Args, "--demo") is { } demo ? "demo:" + demo   // "--demo call" plays an island preview (for testing)
+            : PageArg(e.Args);
         if (first && requestedPage == "quit") { Shutdown(); return; }
         if (!first)
         {
@@ -72,6 +74,7 @@ public partial class App : Application
                 string? page = null;
                 try { if (File.Exists(ActivationFile)) { page = File.ReadAllText(ActivationFile).Trim(); File.Delete(ActivationFile); } } catch { }
                 if (page == "quit") { Dispatcher.BeginInvoke(Quit); continue; }
+                if (page?.StartsWith("demo:") == true) { var what = page[5..]; Dispatcher.BeginInvoke(() => Hub.Island.Demo(what)); continue; }
                 Dispatcher.BeginInvoke(() => ShowMain(string.IsNullOrEmpty(page) ? null : page));
             }
         }) { IsBackground = true, Name = "WinOrbit activation" };
@@ -158,9 +161,11 @@ public partial class App : Application
 
     private static string ActivationFile => Path.Combine(Path.GetTempPath(), "WinOrbit.activate");
 
-    private static string? PageArg(string[] args)
+    private static string? PageArg(string[] args) => ArgAfter(args, "--page");
+
+    private static string? ArgAfter(string[] args, string name)
     {
-        var i = Array.FindIndex(args, a => a.Equals("--page", StringComparison.OrdinalIgnoreCase));
+        var i = Array.FindIndex(args, a => a.Equals(name, StringComparison.OrdinalIgnoreCase));
         return i >= 0 && i + 1 < args.Length ? args[i + 1].ToLowerInvariant() : null;
     }
 

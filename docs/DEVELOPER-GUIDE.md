@@ -17,7 +17,7 @@ src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # sta
 
 Only one copy runs at a time. Stop the running one before rebuilding (`Get-Process WinOrbit | Stop-Process`), or the build cannot overwrite the exe.
 
-Useful command-line switches: `--startup` (tray only), `--page <name>` (open a settings page), `--quit`, `--revert-tweaks`.
+Useful command-line switches: `--startup` (tray only), `--page <name>` (open a settings page), `--demo <name>` (play an island preview in the running copy, e.g. `--demo call`; the names are the cases in `IslandWindow.Demo`), `--quit`, `--revert-tweaks`.
 
 ## 2. Where things live on disk
 
@@ -66,6 +66,7 @@ The class is split into partial files:
 | `IslandWindow.Weather.cs` | Weather page and sky colours |
 | `IslandWindow.Mixer.cs` | Volume by app in the Control Centre (`Services/AppVolume.cs` does the Core Audio work) |
 | `IslandWindow.Files.cs` | File cards: screenshot saved (`Services/ScreenshotWatcher.cs`) and download finished; open, drag out, show in folder |
+| `IslandWindow.Call.cs` | The microphone pill (`Services/MicMeter.cs` reads the level and mute), the scroll-wheel hook that is installed only while the pointer is over the island (Windows' "scroll inactive windows" may be off), and `SwipeGesture` (sideways swipe → one track skip) |
 
 ### Motion
 
