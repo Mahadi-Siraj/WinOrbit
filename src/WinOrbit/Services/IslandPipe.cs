@@ -67,7 +67,8 @@ public sealed class IslandPipe : IDisposable
             NamedPipeServerStream? pipe = null;
             try
             {
-                pipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                // Small buffers rather than none: with none, writing the reply waits until the client reads it.
+                pipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly, MaxBytes + 1, 256);
                 await pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
                 failures = 0;
                 await Handle(pipe, ct).ConfigureAwait(false);
@@ -113,16 +114,15 @@ public sealed class IslandPipe : IDisposable
             }
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { reply = "error: timed out"; }
+        // Reply, then keep the pipe open until the client has read it and hung up (closing first would throw the reply
+        // away) — but never wait on a client that doesn't read: two seconds at most for all of it, so such a client
+        // can't hold the only pipe instance (measured: before, it held it for as long as it lived).
+        using var linger = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        linger.CancelAfter(TimeSpan.FromSeconds(2));
         try
         {
             var bytes = Encoding.UTF8.GetBytes(reply + "\n");
-            await pipe.WriteAsync(bytes, ct).ConfigureAwait(false);
-            await pipe.FlushAsync(ct).ConfigureAwait(false);
-            // Keep the pipe open until the client has read the reply and hung up (closing first would throw the reply
-            // away), but never wait on a client that doesn't read: two seconds at most, and cancellable, unlike
-            // WaitForPipeDrain, which could hold the only pipe instance for as long as such a client lived.
-            using var linger = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            linger.CancelAfter(TimeSpan.FromSeconds(2));
+            await pipe.WriteAsync(bytes, linger.Token).ConfigureAwait(false);
             var rest = new byte[64];
             while (await pipe.ReadAsync(rest, linger.Token).ConfigureAwait(false) > 0) { }
         }
