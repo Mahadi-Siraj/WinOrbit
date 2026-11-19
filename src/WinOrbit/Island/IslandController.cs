@@ -158,7 +158,7 @@ public sealed class IslandController
         (_windows.FirstOrDefault(w => w.Device == device) ?? _windows[0]).Toggle(keyboard);
     }
 
-    public void Expand(string? tab = null) { if (_windows.Count > 0) _windows[0].Expand(false); }
+    public void Expand() { if (_windows.Count > 0) _windows[0].Expand(false); }
     public void CollapseAll() { foreach (var w in _windows) w.Collapse(); }
     public void Peek(string glyph, string text) { foreach (var w in _windows) w.Peek(glyph, text); }
     public void Centre() { foreach (var w in _windows) w.Centre(); }

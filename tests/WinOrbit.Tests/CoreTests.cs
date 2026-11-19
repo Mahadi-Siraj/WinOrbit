@@ -521,7 +521,7 @@ public class WindowPlayerTests
     [InlineData("y2mate.com - Wuys  GOAT Ultra slowed  Reverb", "Memory Reboot", false)]
     [InlineData("ab", "ab", false)]
     public void Vlc_recent_file_matches_the_shown_title(string file, string title, bool expected)
-        => Assert.Equal(expected, WinOrbit.Services.WindowPlayers.NameMatches(file, title, ""));
+        => Assert.Equal(expected, WinOrbit.Services.WindowPlayers.NameMatches(file, title));
 
     [Fact]
     public void Classic_player_link_messages_round_trip()

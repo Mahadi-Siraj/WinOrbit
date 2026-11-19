@@ -22,7 +22,7 @@ public sealed class ProfileService
 
     public ProfileService()
     {
-        _timeRules.Tick += (_, _) => EvaluateTimeRules(true);
+        _timeRules.Tick += (_, _) => EvaluateTimeRules();
     }
 
     public void Load()
@@ -243,7 +243,7 @@ public sealed class ProfileService
         return best;
     }
 
-    private void EvaluateTimeRules(bool fromTimer)
+    private void EvaluateTimeRules()
     {
         var a = Hub.Settings.Automation;
         if (a.Enabled && !_ruleActive && CurrentTimeRule(a.TimeRules, DateTime.Now) is { } r && Find(r.ProfileId) is { } p && p.Id != ActiveId)

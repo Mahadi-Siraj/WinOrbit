@@ -146,7 +146,7 @@ public sealed class MediaService
                 // These players don't share artwork; take the embedded cover from the file being played (what Explorer shows).
                 if (!sameTrack || Art is null)
                 {
-                    var file = wp.File ?? (wp.App == "VLC" ? WindowPlayers.VlcFile(wp.Title, wp.Artist) : null);
+                    var file = wp.File ?? (wp.App == "VLC" ? WindowPlayers.VlcFile(wp.Title) : null);
                     Art = file is not null ? Launcher.AppIcons.Thumbnail(file) : null;
                 }
                 Duration = wp.Duration; _position = wp.Position; _rate = 1;

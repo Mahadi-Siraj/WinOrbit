@@ -129,7 +129,8 @@ public sealed class LiveGlass
             _kept[hwnd] = w;
             w.IsVisibleChanged += OnWindowChanged;
             w.LocationChanged += OnWindowMoved;
-            w.Closed += (_, _) => { _kept.Remove(hwnd); _refused.Remove(hwnd); Reconcile(); };
+            w.Closed -= OnWindowClosed;   // once per window, however often live glass is turned on
+            w.Closed += OnWindowClosed;
             Reconcile();
         }
         return _pictures.TryGetValue(mon.Device, out var pic) ? pic : null;
@@ -137,6 +138,13 @@ public sealed class LiveGlass
 
     private void OnWindowChanged(object? sender, DependencyPropertyChangedEventArgs e) => Reconcile();
     private void OnWindowMoved(object? sender, EventArgs e) => Reconcile();
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        // The handle is gone by now, so find the window's entry by the window itself.
+        foreach (var hwnd in _kept.Where(k => ReferenceEquals(k.Value, sender)).Select(k => k.Key).ToList()) _kept.Remove(hwnd);
+        Reconcile();
+    }
 
     /// <summary>Capture exactly the screens where WinOrbit glass is showing; none while the screen is off.</summary>
     private void Reconcile()
@@ -518,15 +526,17 @@ public sealed class LiveGlass
         }
         public void Dispose()
         {
+            // Mark closed under the gate (Take checks it before touching the pool), but close the capture outside it:
+            // a frame callback may be waiting for the gate, and closing the session can wait for that callback.
             lock (_gpu.Gate)
             {
                 if (_closed) return;
                 _closed = true;
-                _pool.FrameArrived -= OnFrame;
-                _session.Dispose();
-                _pool.Dispose();
-                Release();
             }
+            _pool.FrameArrived -= OnFrame;
+            _session.Dispose();
+            _pool.Dispose();
+            lock (_gpu.Gate) Release();
         }
     }
 }

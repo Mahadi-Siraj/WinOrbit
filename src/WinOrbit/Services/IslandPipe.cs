@@ -118,9 +118,15 @@ public sealed class IslandPipe : IDisposable
             var bytes = Encoding.UTF8.GetBytes(reply + "\n");
             await pipe.WriteAsync(bytes, ct).ConfigureAwait(false);
             await pipe.FlushAsync(ct).ConfigureAwait(false);
-            pipe.WaitForPipeDrain();
+            // Keep the pipe open until the client has read the reply and hung up (closing first would throw the reply
+            // away), but never wait on a client that doesn't read: two seconds at most, and cancellable, unlike
+            // WaitForPipeDrain, which could hold the only pipe instance for as long as such a client lived.
+            using var linger = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            linger.CancelAfter(TimeSpan.FromSeconds(2));
+            var rest = new byte[64];
+            while (await pipe.ReadAsync(rest, linger.Token).ConfigureAwait(false) > 0) { }
         }
-        catch (IOException) { /* the client left without reading the reply */ }
+        catch (Exception ex) when (ex is IOException or OperationCanceledException) { /* the client left, or never read the reply */ }
     }
 
     /// <summary>Reads up to the first newline (or the end of the stream). Null when the message is too long or empty.</summary>

@@ -317,7 +317,6 @@ public sealed class WidgetWindow : Window
 public sealed class WidgetManager
 {
     private readonly Dictionary<string, WidgetWindow> _windows = new();
-    private readonly Dispatcher _ui;
     private bool _paused;
 
     /// <summary>The set of widgets or their layout changed (for the management UI).</summary>
@@ -326,7 +325,6 @@ public sealed class WidgetManager
 
     public WidgetManager(Dispatcher ui)
     {
-        _ui = ui;
         Hub.Foreground.ForegroundChanged += UpdateZOrder;
         Hub.Foreground.FullscreenChanged += OnFullscreen;
         Hub.Shell.DisplayChanged += () => ui.BeginInvoke(DispatcherPriority.Background, () => { foreach (var w in _windows.Values) w.Place(); });

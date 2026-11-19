@@ -278,7 +278,7 @@ public sealed class WindowPlayers : IDisposable
     /// The file VLC is playing, from its own recent-files list (newest first), matched against the title VLC
     /// shows so a stale entry is never used. Null when it can't be matched.
     /// </summary>
-    public static string? VlcFile(string title, string artist)
+    public static string? VlcFile(string title)
     {
         try
         {
@@ -290,14 +290,14 @@ public sealed class WindowPlayers : IDisposable
             {
                 if (!Uri.TryCreate(mrl.Trim(), UriKind.Absolute, out var uri) || !uri.IsFile) continue;
                 var path = uri.LocalPath;
-                if (File.Exists(path) && NameMatches(Path.GetFileNameWithoutExtension(path), title, artist)) return path;
+                if (File.Exists(path) && NameMatches(Path.GetFileNameWithoutExtension(path), title)) return path;
             }
         }
         catch { }
         return null;
     }
 
-    internal static bool NameMatches(string fileName, string title, string artist)
+    internal static bool NameMatches(string fileName, string title)
     {
         static string Norm(string s) => new string(s.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
         var f = Norm(fileName); var t = Norm(title);

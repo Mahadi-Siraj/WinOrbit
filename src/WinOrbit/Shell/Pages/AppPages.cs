@@ -237,7 +237,7 @@ public sealed class SettingsPage : PageBase
         if (latest is not null && Updates.IsNewer(latest, Updates.Current))
         {
             if (Dialogs.Confirm("Update available", message, "Open download page", "Not now", "The release page opens in your browser. Run the new installer there; your settings are kept."))
-                Process.Start(new ProcessStartInfo(Updates.ReleasesUrl) { UseShellExecute = true });
+                Island.IslandWindow.OpenUri(Updates.ReleasesUrl);
         }
         else Dialogs.Message("Check for updates", message);
     }

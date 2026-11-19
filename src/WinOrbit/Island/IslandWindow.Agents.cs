@@ -61,9 +61,10 @@ public partial class IslandWindow
 
     private void RenderAgents()
     {
-        TabAgents.Children.Clear();
         var board = Hub.Island.Agents;
+        // Before clearing: a prune raises Changed, which renders this tab again from the top.
         board.Prune();
+        TabAgents.Children.Clear();
         var root = Ui.Grid("*", "auto,*");
 
         // Header: counts on the left, Clear on the right.
