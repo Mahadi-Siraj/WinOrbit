@@ -379,7 +379,14 @@ public sealed class AppearancePage : PageBase
         var materials = new[] { "acrylic", "mica", "glass" };
         Children.Add(Kit.Section("Glass", null,
             Kit.ToggleRow("Curved glass edges", "The wallpaper bends round the rim of the island, widgets and launcher like thick glass, and the edge catches the light under the pointer. Uses the graphics card; turns itself off if WinOrbit falls back to software rendering.",
-                Hub.Settings.General.CurvedGlass, v => { Hub.Settings.General.CurvedGlass = v; Hub.Store.Save(); Hub.Theme.Apply(); }, false)));
+                Hub.Settings.General.CurvedGlass, v => { Hub.Settings.General.CurvedGlass = v; Hub.Store.Save(); Hub.Theme.Apply(); }, false),
+            Kit.ToggleRow("Live glass", LiveGlass.Supported
+                    ? "The island, widgets and launcher show the windows behind them, blurred, instead of only your wallpaper. WinOrbit watches the screen with Windows' screen-capture API, only while its glass is showing and only when something changes. The picture is shrunk to an eighth on the graphics card and blurred, kept in memory, never saved or sent. "
+                      + "While this is on, WinOrbit's island, widgets and launcher are left out of screenshots, recordings and screen sharing (otherwise the glass would capture itself). Off by default."
+                      + (Hub.LiveGlass?.Problem is { } problem ? " Currently off: " + problem : "")
+                    : "Needs Windows 11: earlier versions mark a captured screen with a yellow frame.",
+                Hub.Settings.General.LiveGlass, v => { Hub.Settings.General.LiveGlass = v; Hub.Store.Save(); Hub.LiveGlass?.Apply(); }, true)
+                .With(r => r.IsEnabled = LiveGlass.Supported)));
         Children.Add(Kit.Section("Window material", "The material behind this settings window.",
             Kit.Row("Backdrop", "Acrylic blurs what is behind the window, Mica tints from the wallpaper, Glass uses WinOrbit's own frosted wallpaper.",
                 Kit.Segmented(new[] { "Acrylic", "Mica", "Glass" }, Math.Max(0, Array.IndexOf(materials, Hub.Settings.General.WindowMaterial)), i =>

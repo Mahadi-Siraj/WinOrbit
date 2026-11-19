@@ -29,7 +29,7 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
 Re-check after adding live activities (volume meter, privacy dot, reactive bars, lyrics, clipboard/shelf), release build, 60 s sampled 20 s after start: **0.113 % CPU, 56 MB average working set (max 65 MB), 18 threads, 0 TCP / 0 UDP**. Short sample, so it includes the tail of start-up, and the reactive bars run while music plays; the 5-minute figure above remains the reference.
 
-## 2. Automated tests — 299 passing (19 Nov 2026; 85 at 1.0)
+## 2. Automated tests — 304 passing (19 Nov 2026; 85 at 1.0)
 
 `dotnet test tests/WinOrbit.Tests` (also run by `tools/build-release.ps1`, in Release):
 
@@ -48,6 +48,7 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Launcher (1.3) | timer phrases (and "5m" staying five metres); reminder phrases and times (bare hours, "tomorrow", passed times); reminders firing only on their minute; world-time places, Windows zone IDs all present, offset wording; clipboard search prefix, filtering and one-line previews |
 | Lyrics and updates (1.3) | video-title clean-up ("(Official Video)", "[4K]", remasters, "feat."), artist/song split, length matching; version-file parsing and comparison |
 | Island and glass (1.3) | sideways swipe → exactly one skip per swipe; microphone-pill label and level; side-bubble placement, width and liquid neck; curved-glass band, bend, corner clamping and light direction, and that the compiled ps_2_0 shader is embedded in the app |
+| Live glass (1.3) | which screens are captured (only those showing glass; none with the screen off or under a fullscreen app), update spacing, change detection that notices a small local change but not a gentle shimmer, picture size and blur |
 | Cards from your apps (1.3) | pipe message parsing and refusals with reasons, plain-text clean-up (control and direction-override characters removed), length limits, per-program and overall rate limits |
 | Live, read-only (always run) | real playback devices with exactly one default; the Bluetooth battery query accepted by Windows |
 
@@ -98,6 +99,7 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Side bubble (19 Nov) | Preview › Side bubble on Top/Capsule, Left/Notch, Bottom/Drop and with Reduce motion | ✅ the bubble splits off ~8 px beside the capsule (below it on the side edges) and merges back; with Reduce motion it appears and leaves without movement |
 | Curved glass edges (19 Nov) | island and launcher captured with the setting on and off; pointer moved over the island | ✅ rim sheen and bent colours at the ends with it on, flat with it off; the rim nearest the pointer brightens (one rim column 57 → 62 → 91) |
 | Cards from your apps (19 Nov) | pipe off; pipe on; cards from PowerShell 7 and Windows PowerShell 5.1 | ✅ off: nothing to connect to. On: `ok` and a card "Build finished / pwsh · All 299 tests passed"; Windows PowerShell's card names "powershell"; bad JSON and a missing title are refused with the reason; the fourth card in a burst gets `busy` |
+| Live glass (19 Nov) | turned on; a red-and-green test window placed behind the island; ordinary screen grab; window affinity read back; CPU measured (Release, 30 s each) | ✅ the island's glass turned red on the left and green on the right, and dark again once the window closed (checked with an in-app snapshot, since captures can't see the island). The island and all five widgets report `WDA_EXCLUDEFROMCAPTURE` and are missing from screen grabs; no yellow capture frame. **Found and fixed** on the way: the graphics device was reset until it was made multithread-protected; the island was skipped because WPF's "main window" was the island. CPU: 1.5 % of one core off, 5.2 % on with Wallpaper Engine animating behind every widget, 4.8 % with a window flashing behind the island; +40–50 MB working set |
 | Check for updates (19 Nov) | Settings › Updates › Check now, network switch on | ✅ one request to raw.githubusercontent.com, "You have the latest version (1.2.0)" |
 
 ## 4. Not verified here (and why)
@@ -111,5 +113,6 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Windows 10 | Not available. The app targets 10 2004+; Mica/Acrylic fall back to WinOrbit's own glass there. |
 | Microphone pill in a real call; swipe-to-skip with music playing | Only the previews and the wheel path were checked (sideways scroll reaches the skip code; nothing was playing). |
 | Pipe cards from another computer | Only one PC. The pipe admits only the current user and WinOrbit hangs up on remote clients, but that branch was not exercised. |
+| Live glass: turning it off without restarting, fullscreen pause, several monitors, Windows 10 | The off switch removes the capture marks and stops capture (code path; checked only by restarting). Fullscreen and screen-off pauses are unit-tested decisions, not watched live. One monitor only. Windows 10 isn't available; the setting is disabled there. |
 | Curved glass under software rendering | The shader is switched off whenever a window renders in software (checked in code, and by the `Switched` event); not forced on this PC. |
 | Long-running stability | 5-minute benchmarks plus ~45 minutes of continuous development sessions without crash or handle growth; no multi-day soak test. |

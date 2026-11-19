@@ -278,6 +278,8 @@ public sealed class GeneralSettings
     public bool ForceSoftwareRendering { get; set; }
     /// <summary>Glass bends the wallpaper round its edges (a pixel shader on the GPU; off by itself under software rendering).</summary>
     public bool CurvedGlass { get; set; } = true;
+    /// <summary>Glass shows the windows behind it (screen capture, Windows 11). Off by default.</summary>
+    public bool LiveGlass { get; set; }
     public bool FirstRunDone { get; set; }
 }
 

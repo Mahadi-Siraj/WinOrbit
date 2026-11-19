@@ -183,6 +183,58 @@ public static class Native
 
     /// <summary>Which process is on the other end of a named pipe (the island's local card pipe names its sender).</summary>
     [DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetNamedPipeClientProcessId(Microsoft.Win32.SafeHandles.SafePipeHandle pipe, out uint processId);
+    // ---- Live window glass: Windows.Graphics.Capture frames, shrunk on the graphics card (Services/LiveGlass.cs) ----
+
+    /// <summary>Keep a window out of screen captures (Windows 10 2004+), so live glass never captures itself.</summary>
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint affinity);
+    public const uint WDA_NONE = 0, WDA_EXCLUDEFROMCAPTURE = 0x11;
+
+    [DllImport("d3d11.dll")] public static extern int D3D11CreateDevice(IntPtr adapter, int driverType, IntPtr software, uint flags, IntPtr featureLevels, uint levels, uint sdkVersion, out IntPtr device, out int featureLevel, out IntPtr context);
+    [DllImport("d3d11.dll")] public static extern int CreateDirect3D11DeviceFromDXGIDevice(IntPtr dxgiDevice, out IntPtr graphicsDevice);
+    public const int D3D_DRIVER_TYPE_HARDWARE = 1;
+    public const uint D3D11_CREATE_DEVICE_BGRA_SUPPORT = 0x20, D3D11_SDK_VERSION = 7;
+    public const uint DXGI_FORMAT_B8G8R8A8_UNORM = 87;
+    public const uint D3D11_USAGE_DEFAULT = 0, D3D11_USAGE_STAGING = 3;
+    public const uint D3D11_BIND_SHADER_RESOURCE = 0x8, D3D11_BIND_RENDER_TARGET = 0x20, D3D11_CPU_ACCESS_READ = 0x20000, D3D11_RESOURCE_MISC_GENERATE_MIPS = 0x1;
+    public const uint D3D11_MAP_READ = 1, D3D11_MAP_FLAG_DO_NOT_WAIT = 0x100000;
+    public const int DXGI_ERROR_WAS_STILL_DRAWING = unchecked((int)0x887A000A);
+    public static readonly Guid IID_IDXGIDevice = new("54ec77fa-1377-44e6-8c32-88fd5f44c84c");
+    /// <summary>ID3D10Multithread: screen capture uses the device from its own threads too, so the device must lock itself.</summary>
+    public static readonly Guid IID_ID3D10Multithread = new("9b7e4e00-342c-4106-a19f-4f2704f689f0");
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate int D3DSetMultithreadProtected(IntPtr multithread, int protect);   // ID3D10Multithread 5
+    public static readonly Guid IID_ID3D11Texture2D = new("6f15aaf2-d208-4e89-9ab4-489535d34f9c");
+    public static readonly Guid IID_IDirect3DDxgiInterfaceAccess = new("a9b3d012-3df2-4ee3-b8d1-8695f457d3c1");
+    public static readonly Guid IID_IGraphicsCaptureItemInterop = new("3628e81b-3cac-4c60-b7f4-23ce0e0c3356");
+    public static readonly Guid IID_IGraphicsCaptureItem = new("79c3f95b-31f7-4ec2-a464-632ef5d30760");
+    /// <summary>IGraphicsCaptureSession3 (Windows 11): IsBorderRequired, so a capture needs no yellow frame round the screen.</summary>
+    public static readonly Guid IID_IGraphicsCaptureSession3 = new("f2cdd966-22ae-5ea1-9596-3a289344c3be");
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct D3D11_TEXTURE2D_DESC { public uint Width, Height, MipLevels, ArraySize, Format, SampleCount, SampleQuality, Usage, BindFlags, CPUAccessFlags, MiscFlags; }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct D3D11_MAPPED_SUBRESOURCE { public IntPtr pData; public uint RowPitch, DepthPitch; }
+
+    // COM methods called by their place in the interface's table (slot numbers from the Windows SDK headers).
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate int D3DCreateTexture2D(IntPtr device, ref D3D11_TEXTURE2D_DESC desc, IntPtr initialData, out IntPtr texture);      // ID3D11Device 5
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate int D3DCreateShaderResourceView(IntPtr device, IntPtr resource, IntPtr desc, out IntPtr view);                 // ID3D11Device 7
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate int D3DMap(IntPtr context, IntPtr resource, uint subresource, uint mapType, uint flags, out D3D11_MAPPED_SUBRESOURCE mapped); // ID3D11DeviceContext 14
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate void D3DUnmap(IntPtr context, IntPtr resource, uint subresource);                                               // ID3D11DeviceContext 15
+    [StructLayout(LayoutKind.Sequential)]
+    public struct D3D11_BOX { public uint Left, Top, Front, Right, Bottom, Back; }
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate void D3DCopySubresourceRegion(IntPtr context, IntPtr dst, uint dstSub, uint x, uint y, uint z, IntPtr src, uint srcSub, ref D3D11_BOX box); // 46
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate void D3DGenerateMips(IntPtr context, IntPtr view);                                                             // ID3D11DeviceContext 54
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate int DxgiGetInterface(IntPtr access, ref Guid iid, out IntPtr result);                                         // IDirect3DDxgiInterfaceAccess 3
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate int CaptureItemForMonitor(IntPtr interop, IntPtr monitor, ref Guid iid, out IntPtr item);                      // IGraphicsCaptureItemInterop 4
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] public delegate int WinRtPutBool(IntPtr self, byte value);                                                                     // IGraphicsCaptureSession3 put_IsBorderRequired 7
+
+    [DllImport("combase.dll", CharSet = CharSet.Unicode)] public static extern int WindowsCreateString(string source, int length, out IntPtr hstring);
+    [DllImport("combase.dll")] public static extern int WindowsDeleteString(IntPtr hstring);
+    [DllImport("combase.dll")] public static extern int RoGetActivationFactory(IntPtr classId, ref Guid iid, out IntPtr factory);
+
+    /// <summary>The method in slot <paramref name="slot"/> of a COM object's interface table.</summary>
+    public static T ComSlot<T>(IntPtr com, int slot) where T : Delegate =>
+        Marshal.GetDelegateForFunctionPointer<T>(Marshal.ReadIntPtr(Marshal.ReadIntPtr(com), slot * IntPtr.Size));
+
     /// <summary>Succeeds only for a client on another computer (a local client fails with ERROR_PIPE_LOCAL), so the pipe can refuse it.</summary>
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool GetNamedPipeClientComputerName(Microsoft.Win32.SafeHandles.SafePipeHandle pipe, System.Text.StringBuilder name, uint size);
     [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);

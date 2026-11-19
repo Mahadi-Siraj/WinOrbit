@@ -111,6 +111,7 @@ public partial class App : Application
         Hub.Clipboard = new ClipboardHistory(store, () => Hub.Settings.Island);
         Hub.Power = new PowerEvents();
         Hub.Devices = new DeviceEvents(Dispatcher, () => Hub.Settings.Island);
+        Hub.LiveGlass = new LiveGlass(Dispatcher);
         Hub.Ready = true;
 
         Hub.Theme.Load();
@@ -147,6 +148,7 @@ public partial class App : Application
         Hub.Theme.Apply();
         Hub.Island.Apply();
         Hub.Widgets.Apply();
+        Hub.LiveGlass?.Apply();
         RegisterHotkeys();
         Hub.Shell.AddTray("WinOrbit");
         Hub.Shell.TrayLeftClick += () => ShowMain(null);

@@ -257,7 +257,8 @@ public class GlassSurface : ContentControl
         var topLeft = visual.PointToScreen(area.TopLeft);
         var bottomRight = visual.PointToScreen(area.BottomRight);
         var mon = Monitors.FromPoint((int)((topLeft.X + bottomRight.X) / 2), (int)((topLeft.Y + bottomRight.Y) / 2));
-        if (Hub.Wallpaper.Backdrop(mon.Device) is not { } image) return null;
+        // Live window glass (opt-in) when it has a picture of this screen; otherwise the blurred wallpaper.
+        if ((Hub.LiveGlass?.ImageFor(visual, mon) ?? Hub.Wallpaper.Backdrop(mon.Device)) is not { } image) return null;
         double mw = mon.Bounds.Width, mh = mon.Bounds.Height;
         var x = (topLeft.X - mon.Bounds.Left) / mw;
         var y = (topLeft.Y - mon.Bounds.Top) / mh;

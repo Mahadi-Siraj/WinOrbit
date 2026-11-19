@@ -73,6 +73,11 @@ public sealed class WallpaperEngine
     }
 
     public BitmapSource? Backdrop(string device) => _blurred.TryGetValue(device, out var b) ? b : _blurred.Values.FirstOrDefault();
+    /// <summary>The theme's blur (pixels at full size) and saturation, which live window glass applies too.</summary>
+    public double Blur => _blur;
+    public double Saturation => _saturation;
+    /// <summary>Tell every glass surface to look again for its backdrop (live window glass started, stopped or got its first picture).</summary>
+    public void NotifyBackdrops() => BackdropsChanged?.Invoke();
     public BitmapSource? Preview(string device) => _sharp.TryGetValue(device, out var b) ? b : _sharp.Values.FirstOrDefault();
 
     /// <summary>Start watching. Windows broadcasts a setting change and rewrites TranscodedWallpaper when the wallpaper changes.</summary>

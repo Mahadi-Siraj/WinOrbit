@@ -33,6 +33,8 @@ public static class Hub
     public static ClipboardHistory Clipboard { get; set; } = null!;
     public static PowerEvents Power { get; set; } = null!;
     public static DeviceEvents Devices { get; set; } = null!;
+    /// <summary>Opt-in: glass shows the windows behind it instead of the wallpaper.</summary>
+    public static LiveGlass? LiveGlass { get; set; }
 
     /// <summary>Re-apply everything from settings (after a profile switch or import).</summary>
     public static void ApplyAll()

@@ -20,7 +20,7 @@ Everything lives in one folder: `%APPDATA%\WinOrbit` (or `Data\` beside the exe 
 
 WinOrbit also writes, **only when you ask it to**, per-user Windows values: the `WinOrbit` entry under `HKCU\…\Run` (start with Windows), and the appearance values listed on the Windows Tweaks page. All are under `HKEY_CURRENT_USER`; nothing machine-wide is changed.
 
-Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing data, window titles, keystrokes, screenshots, lyrics. The live-wallpaper snapshot (see §4) is kept in memory only.
+Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing data, window titles, keystrokes, screenshots, lyrics, the small blurred screen pictures used by the opt-in Live glass (memory only, see §4b). The live-wallpaper snapshot (see §4) is kept in memory only.
 
 ## 2. What WinOrbit reads on your PC
 
@@ -83,6 +83,15 @@ There is **no** automatic update checker. **Settings › Privacy & network › U
 ## 4. Live wallpaper snapshots
 
 When Wallpaper Engine or Lively Wallpaper draws your desktop, the real wallpaper is not a file Windows knows about. If **Match live wallpapers** is on (default), WinOrbit calls `PrintWindow` on the desktop's wallpaper host window — not on any application window — every 3 minutes, paused while a fullscreen app runs. The image is downscaled, blurred and kept in memory only. Desktop icons may be included in the snapshot (Windows composes them into that layer); they are reduced to soft blurs and excluded from colour extraction. Turn it off on **Wallpaper & Gradients**.
+
+## 4b. Live glass (screen capture, off by default)
+
+**Live glass** (Appearance › Glass, **off by default**) makes the glass show the windows behind it. While it is on, WinOrbit captures the screens on which its glass is showing, through Windows' own screen-capture API (`Windows.Graphics.Capture`, without the cursor):
+
+* Each frame stays on the graphics card, which shrinks it to an eighth of its width and height (240 × 135 for a 1080p screen). Only that small picture reaches WinOrbit's memory, where it is blurred like the wallpaper glass and drawn behind the glass. Each picture replaces the last; none is saved to disk, logged or sent anywhere.
+* Capture runs only while WinOrbit glass is visible on that screen, never during a fullscreen app on it or while the screen is off, and Windows delivers a frame only when something changed. At most 10 pictures a second are taken.
+* WinOrbit's island, widgets and launcher are marked to be left out of every screen capture (`SetWindowDisplayAffinity` with `WDA_EXCLUDEFROMCAPTURE`) so the glass doesn't capture itself. That also leaves them out of **your** screenshots, recordings and screen sharing while the setting is on. Turning it off removes the mark. The settings window is never marked.
+* Windows shows no capture frame for it on Windows 11; on Windows 10 (which would draw a yellow frame round the screen) the setting is unavailable.
 
 ## 5. Verification performed
 
