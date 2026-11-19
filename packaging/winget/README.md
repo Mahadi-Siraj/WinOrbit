@@ -1,6 +1,6 @@
 # winget manifest (prepared, not submitted)
 
-These files describe the published **v1.2.0** release for the Windows Package Manager, so people could install WinOrbit with:
+These files describe the published **v1.3.1** release for the Windows Package Manager, so people could install WinOrbit with:
 
 ```powershell
 winget install Mahadi-Siraj.WinOrbit
@@ -11,14 +11,14 @@ winget install Mahadi-Siraj.WinOrbit
 ## Check them locally
 
 ```powershell
-winget validate --manifest packaging\winget\1.2.0
-winget install --manifest packaging\winget\1.2.0     # needs: winget settings --enable LocalManifestFiles (admin, once)
+winget validate --manifest packaging\winget\1.3.1
+winget install --manifest packaging\winget\1.3.1     # needs: winget settings --enable LocalManifestFiles (admin, once)
 ```
 
 ## Submit (when the owner decides to)
 
 1. Fork `microsoft/winget-pkgs`.
-2. Copy the `1.2.0` folder to `manifests/m/Mahadi-Siraj/WinOrbit/1.2.0/`.
+2. Copy the `1.3.1` folder to `manifests/m/Mahadi-Siraj/WinOrbit/1.3.1/`.
 3. Open a pull request. Microsoft's bots download the installer and check the SHA-256 against `InstallerSha256`.
 
 ## For each new release
