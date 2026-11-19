@@ -20,6 +20,10 @@
   <img alt="Zero telemetry" src="https://img.shields.io/badge/telemetry-none-black">
 </p>
 
+<p align="center">
+  <img src="docs/assets/island.gif" alt="The Dynamic Island showing a song, a Wi-Fi card, a side bubble next to a call, then opening into the Control Centre" width="720">
+</p>
+
 ---
 
 ## Why WinOrbit
@@ -54,6 +58,27 @@ A liquid-glass capsule at the top of your screen that comes alive:
 * **Any screen edge** — top, bottom (just above the taskbar) or either side; it opens away from its edge, and a notch or drop shape turns to face it. Drag it right up to another edge to move it there.
 * **Out of the way** — hides within about a tenth of a second when a game, video or presentation goes fullscreen, and drops back in after. Choose apps it keeps showing over, and apps it always hides for even in a window.
 
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/island-cards.png" alt="Island cards: a song, Wi-Fi connected, Bluetooth headphones with their battery, charging, a side bubble beside a call, and a coding agent waiting for permission"></td>
+    <td width="50%"><img src="docs/assets/island-controls.png" alt="The Control Centre tab: volume and brightness sliders and twelve tiles"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Live activities and the side bubble</sub></td>
+    <td align="center"><sub>Control Centre</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/island-system.png" alt="The system tab: CPU, memory, GPU, network, disk and uptime"></td>
+    <td><img src="docs/assets/island-agents.png" alt="The Agents tab: one session needs you, two are working"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>System monitor</sub></td>
+    <td align="center"><sub>Coding agents (opt-in)</sub></td>
+  </tr>
+</table>
+
+<sub>Taken from WinOrbit's built-in previews (Settings › Dynamic Island › Preview) on the default Windows 11 wallpaper; the song is a sample.</sub>
+
 ### 🔎 Launcher — <kbd>Alt</kbd>+<kbd>Space</kbd>
 Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (dark mode, lock, focus, profiles…), recent files, a calculator (`12*7`, `200*15%`), unit conversion (`10 km to mi`), timers (`timer 5 min`, `focus 50`, `stopwatch`) that count down in the island, reminders (`remind me in 20 min to stretch`, `remind me at 6pm to call mom`), world time (`time in Tokyo`, offline) and your clipboard history (`clip invoice`). Learns your favourites — on your PC only.
 
@@ -64,6 +89,11 @@ Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (da
 * **Profiles** (Study, Gaming, Productivity, Minimal, Night) with optional automation.
 * **Windows tweaks** with full backup and one-click **Revert all**.
 * **Rainmeter manager** — appears only if you use Rainmeter.
+
+<p align="center">
+  <img src="docs/assets/widgets.png" alt="Desktop widgets: an ambient greeting card, a date clock, a month calendar, a system monitor and a focus timer" width="100%">
+  <br><sub>A few of the widgets: ambient card, clock, calendar, system monitor and focus timer</sub>
+</p>
 
 ## Install
 

@@ -17,7 +17,7 @@ src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # sta
 
 Only one copy runs at a time. Stop the running one before rebuilding (`Get-Process WinOrbit | Stop-Process`), or the build cannot overwrite the exe.
 
-Useful command-line switches: `--startup` (tray only), `--page <name>` (open a settings page), `--demo <name>` (play an island preview in the running copy, e.g. `--demo call`; the names are the cases in `IslandWindow.Demo`), `--quit`, `--revert-tweaks`.
+Useful command-line switches: `--startup` (tray only), `--page <name>` (open a settings page), `--demo <name>` (play an island preview in the running copy, e.g. `--demo call`; the names are the cases in `IslandWindow.Demo`, and `--demo open:<tab>` opens the panel on one tab, e.g. `open:controls`, for screenshots), `--quit`, `--revert-tweaks`.
 
 ## 2. Where things live on disk
 

@@ -291,6 +291,9 @@ public partial class IslandWindow
             case "rain": ShowCard(Glyph.Cloud, RainAlerts.Title(40, "Showers"), "70% chance", RainBlue, 4); break;
             case "agent": DemoAgents(); break;
             case "open": Expand(false); break;   // opens the panel (closes again on its own); for testing the morph
+            case { } page when page.StartsWith("open:", StringComparison.Ordinal)
+                && page[5..] is "media" or "system" or "controls" or "focus" or "calendar" or "weather" or "notes" or "clipboard" or "shelf" or "agents":
+                Expand(false); ShowTab(page[5..]); break;   // "open:controls": the panel on that page
             case "download": ShowCard(Glyph.Download, "report.pdf", "Downloaded · click to open", Connected, 4,
                 actions: new (string, string, Action)[] { (Glyph.Folder, "Show in folder", () => { }) }); break;
         }
