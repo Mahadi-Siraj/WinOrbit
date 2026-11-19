@@ -22,6 +22,9 @@ public static class RenderGuard
     /// <summary>Whether any window had to fall back this session (shown in Diagnostics).</summary>
     public static bool FellBack { get; private set; }
 
+    /// <summary>A window was just switched to software rendering (effects that need a GPU turn themselves off).</summary>
+    public static event Action<Window>? Switched;
+
     /// <summary>Adds the sentinel to a window's root grid and schedules the check.</summary>
     public static void Attach(Window window, System.Windows.Controls.Panel root, Action? onSoftware = null)
     {
@@ -114,6 +117,7 @@ public static class RenderGuard
         FellBack = true;
         Log.Warn($"Switched '{window.Title}' to software rendering: {reason}");
         onSoftware?.Invoke();
+        Switched?.Invoke(window);
         window.InvalidateVisual();
     }
 

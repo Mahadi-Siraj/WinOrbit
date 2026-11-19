@@ -274,6 +274,8 @@ public sealed class GeneralSettings
     public string WindowMaterial { get; set; } = "acrylic";
     /// <summary>Render the settings window on the CPU. Only needed when a graphics driver misbehaves; WinOrbit also detects that itself.</summary>
     public bool ForceSoftwareRendering { get; set; }
+    /// <summary>Glass bends the wallpaper round its edges (a pixel shader on the GPU; off by itself under software rendering).</summary>
+    public bool CurvedGlass { get; set; } = true;
     public bool FirstRunDone { get; set; }
 }
 

@@ -17,8 +17,12 @@ namespace WinOrbit.Design;
 public class GlassSurface : ContentControl
 {
     public static readonly DependencyProperty CornerRadiusProperty = DependencyProperty.Register(nameof(CornerRadius), typeof(CornerRadius), typeof(GlassSurface),
-        new FrameworkPropertyMetadata(new CornerRadius(22), FrameworkPropertyMetadataOptions.AffectsRender, (d, _) => ((GlassSurface)d).UpdateShadowClip()));
-    public static readonly DependencyProperty BackdropProperty = DependencyProperty.Register(nameof(Backdrop), typeof(Brush), typeof(GlassSurface));
+        new FrameworkPropertyMetadata(new CornerRadius(22), FrameworkPropertyMetadataOptions.AffectsRender, (d, _) => { ((GlassSurface)d).UpdateShadowClip(); ((GlassSurface)d).UpdateLens(); }));
+    public static readonly DependencyProperty BackdropProperty = DependencyProperty.Register(nameof(Backdrop), typeof(Brush), typeof(GlassSurface),
+        new PropertyMetadata(null, (d, e) => { if (e.OldValue is null != e.NewValue is null) ((GlassSurface)d).UpdateLens(); }));
+    /// <summary>How brightly the rim catches the light (0..1). Follows the pointer; <see cref="Flare"/> lifts it briefly.</summary>
+    private static readonly DependencyProperty ShineProperty = DependencyProperty.Register("Shine", typeof(double), typeof(GlassSurface),
+        new PropertyMetadata(0.0, (d, _) => ((GlassSurface)d).UpdateLight()));
     public static readonly DependencyProperty TintProperty = DependencyProperty.Register(nameof(Tint), typeof(Brush), typeof(GlassSurface));
     public static readonly DependencyProperty WashOpacityProperty = DependencyProperty.Register(nameof(WashOpacity), typeof(double), typeof(GlassSurface), new PropertyMetadata(1.0));
     public static readonly DependencyProperty SampleWallpaperProperty = DependencyProperty.Register(nameof(SampleWallpaper), typeof(bool), typeof(GlassSurface),
@@ -37,6 +41,10 @@ public class GlassSurface : ContentControl
     public double ShadowSize { get => (double)GetValue(ShadowSizeProperty); set => SetValue(ShadowSizeProperty, value); }
 
     private Border? _shadow;
+    private Border? _backdrop;
+    private LiquidGlassEffect? _lens;
+    private Point? _pointer;   // where the pointer is over the glass, in pixels (null: not over it)
+    private bool _over;
     private Window? _window;
     private ImageBrush? _brush;
     private bool _hooked;
@@ -46,16 +54,93 @@ public class GlassSurface : ContentControl
         Focusable = false;
         Loaded += (_, _) => Hook();
         Unloaded += (_, _) => Unhook();
-        SizeChanged += (_, _) => { UpdateShadowClip(); UpdateBackdrop(); };
+        SizeChanged += (_, _) => { UpdateShadowClip(); UpdateBackdrop(); UpdateLensShape(); };
     }
 
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
         _shadow = GetTemplateChild("PART_Shadow") as Border;
+        _backdrop = GetTemplateChild("PART_Backdrop") as Border;
+        _lens = null;
         UpdateShadow();
         UpdateShadowClip();
         UpdateBackdrop();
+        UpdateLens();
+    }
+
+    // ---- Curved glass edges (LiquidGlassEffect on the backdrop layer) ----
+
+    /// <summary>
+    /// Puts the curved-edge shader on the backdrop, or takes it off: only when there is a wallpaper backdrop to bend,
+    /// the setting is on, and the window is drawn by a GPU that can run it (never under the software fallback).
+    /// </summary>
+    internal void UpdateLens()
+    {
+        if (_backdrop is null) return;
+        var want = Backdrop is not null && IsLoaded && Hub.Ready && Hub.Settings.General.CurvedGlass && LiquidGlassEffect.Usable(this);
+        if (!want)
+        {
+            if (_lens is not null) { _backdrop.Effect = null; _lens = null; }
+            return;
+        }
+        _lens ??= new LiquidGlassEffect();
+        if (!ReferenceEquals(_backdrop.Effect, _lens)) _backdrop.Effect = _lens;
+        UpdateLensShape();
+        UpdateLight();
+    }
+
+    private void UpdateLensShape()
+    {
+        if (_lens is null || ActualWidth < 1 || ActualHeight < 1) return;
+        var refraction = Application.Current?.TryFindResource("G.Refraction") as double? ?? 0.05;
+        var (band, bend) = LiquidGlassEffect.Profile(ActualWidth, ActualHeight, refraction);
+        _lens.Shape = new System.Windows.Media.Media3D.Point4D(ActualWidth, ActualHeight, band, bend);
+        _lens.Radii = LiquidGlassEffect.Corners(CornerRadius, ActualWidth, ActualHeight);
+    }
+
+    private void UpdateLight()
+    {
+        if (_lens is null) return;
+        var shine = (double)GetValue(ShineProperty);
+        var toward = LiquidGlassEffect.Toward(_pointer ?? new Point(ActualWidth / 2, ActualHeight / 2), ActualWidth, ActualHeight);
+        _lens.Light = new System.Windows.Media.Media3D.Point4D(toward.X, toward.Y, shine, 0.12);
+    }
+
+    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (_lens is null || Motion.Intensity <= 0 || ActualWidth < 1 || ActualHeight < 1) return;
+        _pointer = e.GetPosition(this);
+        if (!_over) { _over = true; Glow(0.8, 220); }
+        else UpdateLight();
+    }
+
+    protected override void OnMouseLeave(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        if (!_over) return;
+        _over = false;
+        _pointer = null;
+        Glow(0, 420);
+    }
+
+    /// <summary>A brief brighter glint round the rim — when the glass changes shape (a drop splitting off, merging back).</summary>
+    public void Flare()
+    {
+        if (_lens is null || Motion.Intensity <= 0) return;
+        var rest = _over ? 0.8 : 0;
+        var a = new System.Windows.Media.Animation.DoubleAnimation(1.4, rest, TimeSpan.FromMilliseconds(650 / Math.Max(0.5, Motion.Intensity)))
+        { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }, FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
+        a.Completed += (_, _) => SetValue(ShineProperty, rest);
+        BeginAnimation(ShineProperty, a);
+    }
+
+    private void Glow(double to, double ms)
+    {
+        var a = new System.Windows.Media.Animation.DoubleAnimation(to, TimeSpan.FromMilliseconds(ms)) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
+        a.Completed += (_, _) => SetValue(ShineProperty, to);
+        BeginAnimation(ShineProperty, a);
     }
 
     private void Hook()
@@ -69,8 +154,10 @@ public class GlassSurface : ContentControl
             Hub.Wallpaper.BackdropsChanged += UpdateBackdrop;
             Hub.Theme.Applied += OnTheme;
         }
+        RenderGuard.Switched += OnRenderSwitched;
         UpdateShadow();
         UpdateBackdrop();
+        UpdateLens();
     }
 
     private void Unhook()
@@ -83,10 +170,12 @@ public class GlassSurface : ContentControl
             Hub.Wallpaper.BackdropsChanged -= UpdateBackdrop;
             Hub.Theme.Applied -= OnTheme;
         }
+        RenderGuard.Switched -= OnRenderSwitched;
     }
 
     private void OnMoved(object? sender, EventArgs e) => UpdateBackdrop();
-    private void OnTheme() { UpdateShadow(); UpdateBackdrop(); }
+    private void OnTheme() { UpdateShadow(); UpdateBackdrop(); UpdateLens(); }
+    private void OnRenderSwitched(Window w) { if (ReferenceEquals(w, _window)) UpdateLens(); }
 
     private void UpdateShadow()
     {

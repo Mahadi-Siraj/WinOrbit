@@ -92,7 +92,7 @@
                 <ControlTemplate TargetType="{x:Type d:GlassSurface}">
                     <Grid>
                         <Border x:Name="PART_Shadow" CornerRadius="{TemplateBinding CornerRadius}" Background="Black" IsHitTestVisible="False"/>
-                        <Border CornerRadius="{TemplateBinding CornerRadius}" Background="{TemplateBinding Backdrop}"/>
+                        <Border x:Name="PART_Backdrop" CornerRadius="{TemplateBinding CornerRadius}" Background="{TemplateBinding Backdrop}"/>
                         <Border CornerRadius="{TemplateBinding CornerRadius}" Background="{TemplateBinding Tint}"/>
                         <Border CornerRadius="{TemplateBinding CornerRadius}" Background="{DynamicResource T.Wash}" Opacity="{TemplateBinding WashOpacity}" IsHitTestVisible="False"/>
                         <Border CornerRadius="{TemplateBinding CornerRadius}" Background="{DynamicResource G.Glow}" IsHitTestVisible="False"/>

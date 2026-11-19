@@ -69,6 +69,7 @@ Closing the main window keeps the island and widgets running from the tray (turn
 * Pick a theme in **Appearance**. Edits never change the built-in themes: the first edit creates "*Name* (custom)", saved automatically.
 * **Liquid Glass Editor** has independent dark and light glass. **Reset** returns to the built-in values; **More** has rename, duplicate, import/export (`.glasstheme` JSON) and delete.
 * **Mode**: Auto follows Windows; Scheduled switches at the times you set.
+* **Curved glass edges** (**Appearance › Glass**, on by default): the wallpaper bends round the rim of the island, widgets and launcher like thick glass, the rim has a faint sheen, and the edge nearest the pointer catches the light. The island's rim also glints when it wobbles (a bubble splitting off or merging back). It runs on the graphics card and turns itself off when WinOrbit falls back to software rendering. With **Reduce motion** on, the curve and sheen stay but the light no longer follows the pointer or glints. Turn it off for flat glass.
 
 ## Wallpaper & gradients
 

@@ -593,6 +593,7 @@ public partial class IslandWindow : Window
         var (outwards, along) = SideEdge ? (ScaleTransform.ScaleXProperty, ScaleTransform.ScaleYProperty) : (ScaleTransform.ScaleYProperty, ScaleTransform.ScaleXProperty);
         Springs.Kick(PillScale, outwards, 1.15 * strength, _restScale, 0.36, 0.42);
         Springs.Kick(PillScale, along, -0.32 * strength, _restScale, 0.36, 0.5);
+        Pill.Flare();   // the rim glints as the glass wobbles (curved glass edges; nothing under Reduced Motion)
     }
 
     /// <summary>Content materialises: grows from slightly small with a soft bounce while fading in.</summary>

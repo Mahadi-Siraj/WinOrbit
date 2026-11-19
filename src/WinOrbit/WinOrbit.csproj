@@ -29,6 +29,9 @@
 
   <ItemGroup>
     <Resource Include="Assets\winorbit.ico" />
+    <!-- Compiled pixel shader (source: the .fx beside it; rebuild with tools\compile-shader.ps1). -->
+    <Resource Include="Design\Shaders\LiquidGlass.ps" />
+    <None Include="Design\Shaders\LiquidGlass.fx" />
     <InternalsVisibleTo Include="WinOrbit.Tests" />
     <!-- Keep WPF names unambiguous: Windows Forms is used in one file only, fully qualified. -->
     <Using Remove="System.Windows.Forms" />
