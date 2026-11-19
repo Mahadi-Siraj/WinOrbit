@@ -346,6 +346,15 @@ public partial class IslandWindow : Window
 
     private void ApplyRim()
     {
+        if (AgentsWaiting)
+        {
+            // A coding session is waiting for your answer: an orange rim and glow until it moves on, whatever rim is chosen.
+            var wait = new SolidColorBrush(AgentWaiting);
+            wait.Freeze();
+            PillRim.BorderBrush = PillGlow.BorderBrush = wait;
+            PillRim.Visibility = PillGlow.Visibility = Visibility.Visible;
+            return;
+        }
         var rim = Rims.FirstOrDefault(r => r.Id == S.Rim);
         if (rim.Id is null or "Glass") { PillRim.Visibility = PillGlow.Visibility = Visibility.Collapsed; return; }
         Color[] colors;
@@ -672,6 +681,7 @@ public partial class IslandWindow : Window
         // of opening late (25–50 ms); now the motion starts only once the heavy work is done.
         Expanded.Opacity = 0;
         Expanded.Visibility = Visibility.Visible;
+        if (AgentsWaiting && ActiveTabs().Contains("agents")) _tab = "agents";   // open where the waiting session is
         Expanded.Height = HeightFor(_tab) - 24;
         ShowTab(_tab);
         Expanded.UpdateLayout();

@@ -26,8 +26,12 @@ public partial class IslandWindow
         _ => (GlyphDone, AgentOk, "Done"),
     };
 
+    /// <summary>Whether a coding session is waiting for your answer (the island then keeps an orange rim).</summary>
+    private bool AgentsWaiting => S.CodingAgents && Hub.Island?.Agents.Sessions.Any(x => x.State == AgentState.NeedsYou) == true;
+
     public void OnAgentsChanged()
     {
+        ApplyRim();
         if (_expanded && _tab == "agents") RenderAgents();
     }
 

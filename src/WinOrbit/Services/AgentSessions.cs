@@ -270,7 +270,9 @@ internal static class AgentSetup
         object Entry() => new[] { new Dictionary<string, object> { ["hooks"] = new[] { Hook() } } };
         var hooks = new Dictionary<string, object>
         {
-            ["UserPromptSubmit"] = Entry(), ["PostToolUse"] = Entry(), ["Notification"] = Entry(), ["Stop"] = Entry(), ["SessionEnd"] = Entry(),
+            // PermissionRequest is the moment Claude asks to run something (in the desktop app as well as the terminal);
+            // Notification also covers questions and terminal alerts. Async, so neither can answer the request.
+            ["UserPromptSubmit"] = Entry(), ["PostToolUse"] = Entry(), ["PermissionRequest"] = Entry(), ["Notification"] = Entry(), ["Stop"] = Entry(), ["SessionEnd"] = Entry(),
         };
         return JsonSerializer.Serialize(new Dictionary<string, object> { ["hooks"] = hooks }, new JsonSerializerOptions { WriteIndented = true });
     }

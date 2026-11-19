@@ -149,7 +149,7 @@ public class AgentTests
         var json = AgentSetup.ClaudeCode(@"C:\Users\SOMEON~1\AppData\Local\Programs\WinOrbit\WinOrbit.exe");
         using var doc = JsonDocument.Parse(json);
         var hooks = doc.RootElement.GetProperty("hooks");
-        foreach (var name in new[] { "UserPromptSubmit", "PostToolUse", "Notification", "Stop", "SessionEnd" })
+        foreach (var name in new[] { "UserPromptSubmit", "PostToolUse", "PermissionRequest", "Notification", "Stop", "SessionEnd" })
         {
             var h = hooks.GetProperty(name)[0].GetProperty("hooks")[0];
             Assert.Equal("command", h.GetProperty("type").GetString());
