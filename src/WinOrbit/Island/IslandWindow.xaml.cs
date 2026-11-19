@@ -110,7 +110,18 @@ public partial class IslandWindow : Window
         Pill.CornerRadius = c; PillRim.CornerRadius = c; PillGlow.CornerRadius = c;
         ArtWashA.CornerRadius = c; ArtWashB.CornerRadius = c;
     }
-    private const double MorphResponse = 0.5, MorphDamping = 0.82;
+    private const double MorphResponse = 0.46, MorphDamping = 0.82;
+
+    /// <summary>
+    /// The capsule's own motion, shared by every change of size so the island always moves the same way: grows
+    /// with a hint of overshoot, shrinks without any (a capsule that dips below its size looks unsure of itself).
+    /// </summary>
+    internal static class Shape
+    {
+        // Close 0.9 rather than 1: a fully damped spring crawls over its last few pixels (half a second for the
+        // panel), while 0.9 lands in about half the time with an overshoot under half a pixel.
+        public const double Response = 0.4, Open = 0.8, Close = 0.9, Fit = 0.88, CloseResponse = 0.36;
+    }
 
     /// <summary>The Control Centre tab is taller (three rows of tiles); the others share one height.</summary>
     private double HeightFor(string tab) => tab == "controls" ? ControlsHeight : ExpandedHeight;
@@ -326,9 +337,48 @@ public partial class IslandWindow : Window
         {
             case "Smoked": Pill.SampleWallpaper = false; Pill.SetResourceReference(GlassSurface.TintProperty, "G.TintSmoked"); break;
             case "Solid": Pill.SampleWallpaper = false; Pill.SetResourceReference(GlassSurface.TintProperty, "G.TintSolid"); break;
+            case "Black": Pill.SampleWallpaper = false; Pill.Tint = Brushes.Black; break;
             default: Pill.SampleWallpaper = true; Pill.SetResourceReference(GlassSurface.TintProperty, "G.Tint"); break;
         }
+        MatchLook(Pill);
         ApplyRim();
+    }
+
+    /// <summary>
+    /// Black: true black with one fine light edge and nothing else (no wallpaper colour, glow or highlight), and
+    /// always light text, in light mode too. The other materials keep the theme's own look.
+    /// </summary>
+    private void MatchLook(GlassSurface g)
+    {
+        var black = S.Material == "Black";
+        if (!ReferenceEquals(g, Pill)) { g.SampleWallpaper = Pill.SampleWallpaper; g.Tint = Pill.Tint; }
+        g.WashOpacity = black ? 0 : 1;
+        g.OrnamentOpacity = black ? 0 : 1;
+        var merged = g.Resources.MergedDictionaries;
+        if (black && !merged.Contains(BlackInk)) merged.Add(BlackInk);
+        else if (!black) merged.Remove(BlackInk);
+    }
+
+    /// <summary>The dark-mode colours for content on the Black material, whatever the app's own mode.</summary>
+    private static readonly ResourceDictionary BlackInk = MakeBlackInk();
+
+    private static ResourceDictionary MakeBlackInk()
+    {
+        var d = new ResourceDictionary();
+        void B(string key, byte a, byte v = 0xFF) { var b = new SolidColorBrush(Color.FromArgb(a, v, v, v)); b.Freeze(); d[key] = b; }
+        B("T.Text", 0xFF, 0xF5);
+        B("T.Text2", 0xB3, 0xF5);
+        B("T.Text3", 0x75, 0xF5);
+        B("T.Card", 0x0E);
+        B("T.CardHover", 0x18);
+        B("T.Input", 0x12);
+        B("T.Stroke", 0x17);
+        B("T.StrokeStrong", 0x2E);
+        B("T.Divider", 0x12);
+        B("T.Track", 0x24);
+        B("G.Border", 0x24);   // the one fine light edge
+        B("G.Stroke", 0x00);   // no dark outline: black needs no extra contrast line
+        return d;
     }
 
     /// <summary>Coloured rim presets. "Glass" keeps the material's own illuminated edge.</summary>
@@ -531,7 +581,7 @@ public partial class IslandWindow : Window
         var target = EvenWidth(Compact.DesiredSize.Width + 4, 96, 500);
         // Morph the width on a lively spring; retargeting mid-flight keeps the motion continuous.
         var heading = Springs.TargetOf(Pill, WidthProperty) ?? Pill.Width;
-        if (Math.Abs(target - heading) > 1.5) Springs.To(Pill, WidthProperty, target, 0.4, 0.72);
+        if (Math.Abs(target - heading) > 1.5) Springs.To(Pill, WidthProperty, target, Shape.Response, Shape.Fit);
     }
 
     /// <summary>Briefly show a message in the collapsed pill (track change, timer finished, download done).</summary>
@@ -585,7 +635,7 @@ public partial class IslandWindow : Window
     private double _restScale = 1;
 
     /// <summary>The scale the pill settles at: 1, or slightly lifted while the pointer is over it.</summary>
-    private void SetPillScale(double scale, double response = 0.34, double damping = 0.6)
+    private void SetPillScale(double scale, double response = 0.32, double damping = 0.75)
     {
         _restScale = scale;
         Springs.To(PillScale, ScaleTransform.ScaleXProperty, scale, response, damping);
@@ -601,14 +651,15 @@ public partial class IslandWindow : Window
         if (_expanded) return;
         // It swells away from its edge (down from the top, sideways from a side) and narrows along it.
         var (outwards, along) = SideEdge ? (ScaleTransform.ScaleXProperty, ScaleTransform.ScaleYProperty) : (ScaleTransform.ScaleYProperty, ScaleTransform.ScaleXProperty);
-        Springs.Kick(PillScale, outwards, 1.15 * strength, _restScale, 0.36, 0.42);
-        Springs.Kick(PillScale, along, -0.32 * strength, _restScale, 0.36, 0.5);
+        // One soft swell that settles in about a third of a second, rather than a wobble that rings on.
+        Springs.Kick(PillScale, outwards, 0.8 * strength, _restScale, 0.34, 0.58);
+        Springs.Kick(PillScale, along, -0.22 * strength, _restScale, 0.34, 0.65);
         Pill.Flare();   // the rim glints as the glass wobbles (curved glass edges; nothing under Reduced Motion)
     }
 
     /// <summary>Content materialises: grows from slightly small with a soft bounce while fading in.</summary>
     /// <param name="cache">Render the content once as a bitmap while it scales (big panels), then go back to crisp live rendering.</param>
-    private static void Pop(FrameworkElement el, double from = 0.82, double originY = 0.5, bool cache = false, double response = 0.38, double damping = 0.6, double originX = 0.5)
+    private static void Pop(FrameworkElement el, double from = 0.88, double originY = 0.5, bool cache = false, double response = 0.34, double damping = 0.74, double originX = 0.5)
     {
         if (Motion.Intensity <= 0.01) { el.Opacity = 1; return; }
         var st = new ScaleTransform(from, from);
@@ -713,16 +764,16 @@ public partial class IslandWindow : Window
         SetInteractive(false);
         Pill.Cursor = Cursors.Hand;
         Compact.IsHitTestVisible = true;
-        // Drawing back in: critically damped height and corners, so the capsule lands exactly on its size and
-        // never dips below it (a dip squeezed the clock for a few frames at the very end). Width keeps a hint of give.
-        var response = immediate ? 0 : 0.4;
+        // Drawing back in: nearly critically damped, so the capsule lands on its size without a visible dip (a dip
+        // squeezed the clock for a few frames at the very end) and without crawling over the last pixels.
+        var response = immediate ? 0 : Shape.CloseResponse;
         Motion.To(Expanded, OpacityProperty, 0, immediate ? 0 : 120, null, () => { if (!_expanded) Expanded.Visibility = Visibility.Hidden; });   // Hidden keeps it laid out for the next open
-        Springs.To(Pill, HeightProperty, CollapsedHeight, response, 1.0);
-        Springs.To(this, RadiusProperty, CollapsedRadius, response, 1.0);
+        Springs.To(Pill, HeightProperty, CollapsedHeight, response, Shape.Close);
+        Springs.To(this, RadiusProperty, CollapsedRadius, response, Shape.Close);
         Motion.To(Compact, OpacityProperty, 1, immediate ? 0 : 260);
         RefreshCompact();
         Compact.Measure(new Size(double.PositiveInfinity, CollapsedHeight));
-        Springs.To(Pill, WidthProperty, EvenWidth(Compact.DesiredSize.Width + 4, 96, 500), response, 0.9);
+        Springs.To(Pill, WidthProperty, EvenWidth(Compact.DesiredSize.Width + 4, 96, 500), response, Shape.Close);
         if (!immediate && !Pill.IsMouseOver) SetPillScale(1);
     }
 

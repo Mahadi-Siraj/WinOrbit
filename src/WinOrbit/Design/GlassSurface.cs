@@ -25,6 +25,8 @@ public class GlassSurface : ContentControl
         new PropertyMetadata(0.0, (d, _) => ((GlassSurface)d).UpdateLight()));
     public static readonly DependencyProperty TintProperty = DependencyProperty.Register(nameof(Tint), typeof(Brush), typeof(GlassSurface));
     public static readonly DependencyProperty WashOpacityProperty = DependencyProperty.Register(nameof(WashOpacity), typeof(double), typeof(GlassSurface), new PropertyMetadata(1.0));
+    /// <summary>How much of the glass's light play (accent glow and top highlight) shows: 0 for a plain, solid surface.</summary>
+    public static readonly DependencyProperty OrnamentOpacityProperty = DependencyProperty.Register(nameof(OrnamentOpacity), typeof(double), typeof(GlassSurface), new PropertyMetadata(1.0));
     public static readonly DependencyProperty SampleWallpaperProperty = DependencyProperty.Register(nameof(SampleWallpaper), typeof(bool), typeof(GlassSurface),
         new PropertyMetadata(false, (d, _) => ((GlassSurface)d).UpdateBackdrop()));
     public static readonly DependencyProperty CastShadowProperty = DependencyProperty.Register(nameof(CastShadow), typeof(bool), typeof(GlassSurface),
@@ -36,6 +38,7 @@ public class GlassSurface : ContentControl
     public Brush? Backdrop { get => (Brush?)GetValue(BackdropProperty); set => SetValue(BackdropProperty, value); }
     public Brush? Tint { get => (Brush?)GetValue(TintProperty); set => SetValue(TintProperty, value); }
     public double WashOpacity { get => (double)GetValue(WashOpacityProperty); set => SetValue(WashOpacityProperty, value); }
+    public double OrnamentOpacity { get => (double)GetValue(OrnamentOpacityProperty); set => SetValue(OrnamentOpacityProperty, value); }
     public bool SampleWallpaper { get => (bool)GetValue(SampleWallpaperProperty); set => SetValue(SampleWallpaperProperty, value); }
     public bool CastShadow { get => (bool)GetValue(CastShadowProperty); set => SetValue(CastShadowProperty, value); }
     public double ShadowSize { get => (double)GetValue(ShadowSizeProperty); set => SetValue(ShadowSizeProperty, value); }

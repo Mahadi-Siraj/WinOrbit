@@ -74,13 +74,29 @@ public class MotionAndDeviceTests
         Assert.Equal("audio", DeviceEvents.BtKind("Car", props));
     }
 
+    private static readonly double R = WinOrbit.Island.IslandWindow.Shape.Response, CloseR = WinOrbit.Island.IslandWindow.Shape.CloseResponse;
+    private static readonly double Open = WinOrbit.Island.IslandWindow.Shape.Open, Close = WinOrbit.Island.IslandWindow.Shape.Close;
+
     [Fact]
-    public void Collapse_spring_never_dips_below_the_capsule()
+    public void Collapse_spring_never_visibly_dips_below_the_capsule()
     {
-        // Critically damped: from the open panel back to 38 px, the height must not undershoot (it used to squeeze the clock).
-        var (x, _, min) = Run(290, 38, 0.4, 1.0, 2);
-        Assert.True(min >= 37.999, $"dipped to {min}");
-        Assert.InRange(x, 37.7, 38.3);
+        // From the open panel back to 38 px the height may not dip visibly (a dip squeezed the clock), but must not
+        // crawl either: within half a pixel after 0.45 s.
+        var (x, _, min) = Run(290, 38, CloseR, Close, 2);
+        Assert.True(min >= 37.5, $"dipped to {min}");
+        Assert.InRange(x, 37.9, 38.1);
+        var (soon, _, _) = Run(290, 38, CloseR, Close, 0.45);
+        Assert.InRange(soon, 37.5, 38.5);
+    }
+
+    [Fact]
+    public void Card_grows_with_a_small_overshoot_and_no_long_creep()
+    {
+        // Capsule 220 px to a 300 px card: at most ~2 % past the target, and within half a pixel after 0.6 s.
+        var (_, peak, _) = Run(220, 300, R, Open, 2);
+        Assert.InRange(peak, 300.5, 302);
+        var (soon, _, _) = Run(220, 300, R, Open, 0.6);
+        Assert.InRange(soon, 299.5, 300.5);
     }
 
     [Fact]

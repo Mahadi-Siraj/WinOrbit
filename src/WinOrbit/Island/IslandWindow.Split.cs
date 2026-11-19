@@ -62,8 +62,7 @@ public partial class IslandWindow
         Satellite.VerticalAlignment = Pill.VerticalAlignment;
         Satellite.Margin = Pill.Margin;
         Satellite.RenderTransformOrigin = new Point(0.5, 0.5);
-        Satellite.SampleWallpaper = Pill.SampleWallpaper;
-        Satellite.Tint = Pill.Tint;
+        MatchLook(Satellite);
         var h = CollapsedHeight;
         Satellite.Height = h;
         Satellite.CornerRadius = ShapeCorners(S.Shape, h / 2, Edge);
@@ -118,14 +117,14 @@ public partial class IslandWindow
         if (fresh)
         {
             // Pulls out on a lively spring: a little overshoot, like a drop of liquid separating.
-            Springs.To(this, SplitGapProperty, GapAtRest, 0.5, 0.6);
+            Springs.To(this, SplitGapProperty, GapAtRest, 0.46, 0.72);
             Droplet(0.5);
         }
         else
         {
             Pop(SatContent, 0.8);
-            Springs.Kick(SatScale, ScaleTransform.ScaleXProperty, 0.9, 1, 0.3, 0.45);
-            Springs.Kick(SatScale, ScaleTransform.ScaleYProperty, 0.9, 1, 0.3, 0.45);
+            Springs.Kick(SatScale, ScaleTransform.ScaleXProperty, 0.7, 1, 0.3, 0.6);
+            Springs.Kick(SatScale, ScaleTransform.ScaleYProperty, 0.7, 1, 0.3, 0.6);
         }
         LayoutSplit();
         _satTimer!.Stop();

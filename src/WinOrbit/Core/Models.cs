@@ -152,7 +152,7 @@ public sealed class IslandSettings
     public Dictionary<string, double[]> PerMonitorOffset { get; set; } = new();
     public double Scale { get; set; } = 1.0;
     public double Opacity { get; set; } = 1.0;
-    /// <summary>"Glass" (wallpaper-sampled), "Smoked" (dense tint) or "Solid".</summary>
+    /// <summary>"Glass" (wallpaper-sampled), "Smoked" (dense tint), "Solid" (opaque theme colour) or "Black" (plain true black).</summary>
     public string Material { get; set; } = "Glass";
     public bool AutoHide { get; set; }
     public bool HideInFullscreen { get; set; } = true;

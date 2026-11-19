@@ -105,7 +105,9 @@ public static class Springs
         s.Omega = 2 * Math.PI / Math.Max(0.05, period);
         s.Zeta = Math.Clamp(damping, 0.05, 1.0);
         var span = Math.Max(Math.Abs(s.To), Math.Abs(s.X - s.To));
-        s.Rest = span <= 2.5 ? 0.0015 : 0.3;   // opacity/scale settle finer than pixel sizes; sub-pixel tails are invisible
+        // Opacity/scale settle finer than pixel sizes. Sizes stop within 0.4 px: below that the tail is invisible but
+        // would keep the island redrawing for another few hundred milliseconds.
+        s.Rest = span <= 2.5 ? 0.002 : 0.4;
     }
 
     private static void Hook()

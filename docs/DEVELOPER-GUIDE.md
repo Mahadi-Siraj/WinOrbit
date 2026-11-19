@@ -10,7 +10,7 @@ Requirements: Windows 10 2004+ or 11, the .NET 8 SDK. Optional: Inno Setup 6 for
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 319 unit tests, under a second
+dotnet test tests\WinOrbit.Tests                  # 320 unit tests, under a second
 src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
@@ -73,6 +73,8 @@ The class is split into partial files:
 ### Motion
 
 * `Springs.To(target, property, value, response, damping)` moves a value on a spring and keeps its current speed, so a motion can be redirected mid-way without a jump. `Springs.Kick` gives a value a push that wobbles back to rest. The engine runs only while something is moving.
+* The capsule's size always moves on `IslandWindow.Shape` (grow: response 0.4, damping 0.8; shrink: 0.36, 0.9). Use it for any new size change instead of new numbers: low damping looks lively in one place but rings on for a second, and every extra frame costs CPU on WPF's drawing thread. `MotionAndDeviceTests` checks the overshoot and settle time.
+* To measure motion, start the app with `WINORBIT_FRAMES=1` (logs how evenly frames arrived for each motion, and how many) and use `--demo open` / `--demo agent` to trigger it without clicking.
 * `Motion.To` is a plain timed ease for things that should not bounce (fades, tucking away).
 * Expanding and collapsing use `MorphResponse` 0.5 / `MorphDamping` 0.82 for width, height and corner radius together.
 * Reduced Motion (`Motion.Intensity` = 0) makes both snap straight to the end.
@@ -115,7 +117,7 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 319 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 320 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.
 * Never toggle someone's real Wi-Fi, Bluetooth, dark mode or night light in a test without asking; use the `Demo()` previews instead.

@@ -21,7 +21,19 @@ Dates: 17 November 2026 (1.0), 18 November (1.2 and the idle re-measure), 18–1
 Notes:
 * *Private bytes* includes reserved-but-idle .NET heap; *working set* is the physical RAM actually in use. Both are inside the target.
 * WinOrbit's numbers exclude Rainmeter and Wallpaper Engine, which are separate processes (About & Diagnostics shows Rainmeter's usage separately when it runs).
-* Animation smoothness: expand/collapse and page transitions are 280–430 ms `DoubleAnimation`s on WPF's composition thread; they were observed smooth at 60 Hz in hardware mode. No frame-time instrumentation was run, so no FPS figure is claimed. While the GPU fallback (below) is active, the settings window animates in software; the island and widgets are unaffected.
+* Animation smoothness: see **Island motion, measured** below. While the GPU fallback (below) is active, the settings window animates in software; the island and widgets are unaffected.
+
+**Island motion, measured (19 Nov 2026).** A small capture tool (Windows Graphics Capture of the island window, outside the app) records every frame the island actually puts on screen and the island's width in it, so a frame that was *skipped while moving* can be told apart from the slow end of a motion, where pixels only change every few refreshes. Test: a coding-agent "needs you" card followed by a "finished" note, three times, release build, 60 Hz screen.
+
+| | Before the polish pass | After |
+|---|---|---|
+| Moving frames shown on time | 89–97 % | 91–97 % (unchanged: the island already ran at 60 fps here) |
+| Frames drawn for three card + note cycles | 924 | **545 (−41 %)** |
+| CPU per card + note cycle (2nd and 3rd runs) | 0.98–1.33 s | **0.81–0.83 s** |
+| Panel close, start to within 2 px of the capsule | ~1.1 s (last 10 px crawled for ~0.5 s) | **0.63 s**, no visible dip |
+| Card growing: overshoot, then creep back | ~8 px, creeping for ~0.8 s | ≤ 2 % past, settled within 0.6 s (unit-tested) |
+
+What was found and changed: frame *rate* was never the problem on this PC; the springs were. Bouncy springs (damping 0.52–0.68) rang on for 1–1.5 s after a motion looked finished, redrawing the window each frame, and the drawing thread is where most of the CPU goes (≈ 75 % of the cost of a card). The capsule's size now uses one shared set of springs (`IslandWindow.Shape`): a hint of overshoot when growing, none visible when shrinking; the droplet swell and tile pop are calmer; springs stop within 0.4 px. Switching off the shadow, curved-glass shader, wallpaper backdrop or glow, or a third of the window's size, made no measurable difference to frames or CPU, so those were left alone. Still true: the first frame of a motion is usually one refresh late (33–47 ms), and WinOrbit's memory is mostly WPF's drawing engine and the graphics driver; non-concurrent GC and GC conserve-memory settings were tried and measured no better, so they were not kept.
 
 Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
@@ -29,7 +41,7 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
 Re-check after adding live activities (volume meter, privacy dot, reactive bars, lyrics, clipboard/shelf), release build, 60 s sampled 20 s after start: **0.113 % CPU, 56 MB average working set (max 65 MB), 18 threads, 0 TCP / 0 UDP**. Short sample, so it includes the tail of start-up, and the reactive bars run while music plays; the 5-minute figure above remains the reference.
 
-## 2. Automated tests — 319 passing (19 Nov 2026; 85 at 1.0)
+## 2. Automated tests — 320 passing (19 Nov 2026; 85 at 1.0)
 
 `dotnet test tests/WinOrbit.Tests` (also run by `tools/build-release.ps1`, in Release):
 

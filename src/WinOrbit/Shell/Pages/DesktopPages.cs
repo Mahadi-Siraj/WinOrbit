@@ -262,9 +262,9 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Keep centred", "Dragging only changes the distance from the edge.", S.KeepCentred, v => { S.KeepCentred = v; if (v) Hub.Island.Centre(); Save(); Rebuild(); }),
             Kit.Row("Reset position", "Back to the top centre on every display.", Kit.Btn("Reset", () => { S.Edge = "Top"; S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Save(); Rebuild(); }, Glyph.Refresh))));
 
-        var materials = new[] { "Glass", "Smoked", "Solid" };
+        var materials = new[] { "Glass", "Smoked", "Solid", "Black" };
         Children.Add(Kit.Section("Appearance", null,
-            Kit.Row("Material", "Glass frosts your wallpaper, Smoked is a deep tint, Solid is fully opaque.", Kit.Segmented(materials, Math.Max(0, Array.IndexOf(materials, S.Material)), i => { S.Material = materials[i]; Save(); }), false),
+            Kit.Row("Material", "Glass frosts your wallpaper, Smoked is a deep tint, Solid is fully opaque in the theme's colour, Black is plain true black with a fine edge (the cleanest and cheapest to draw).", Kit.Segmented(materials, Math.Max(0, Array.IndexOf(materials, S.Material)), i => { S.Material = materials[i]; Save(); }), false),
             Kit.SliderRow("Size", null, 0.8, 1.4, S.Scale, v => { S.Scale = Math.Round(v, 2); Save(); }, v => $"{v * 100:0}%"),
             Kit.SliderRow("Opacity", null, 0.3, 1, S.Opacity, v => { S.Opacity = Math.Round(v, 2); Save(); }, v => $"{v * 100:0}%"),
             Kit.Row("Rim", "A coloured edge around the island. Glass keeps the material's own light rim.",

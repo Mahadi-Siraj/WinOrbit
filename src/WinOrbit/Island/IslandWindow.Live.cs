@@ -290,6 +290,7 @@ public partial class IslandWindow
             case "language": OnLanguageDemo(); break;
             case "rain": ShowCard(Glyph.Cloud, RainAlerts.Title(40, "Showers"), "70% chance", RainBlue, 4); break;
             case "agent": DemoAgents(); break;
+            case "open": Expand(false); break;   // opens the panel (closes again on its own); for testing the morph
             case "download": ShowCard(Glyph.Download, "report.pdf", "Downloaded · click to open", Connected, 4,
                 actions: new (string, string, Action)[] { (Glyph.Folder, "Show in folder", () => { }) }); break;
         }

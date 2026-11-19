@@ -80,18 +80,19 @@ public partial class IslandWindow
 
         SetAutoHidden(false);
         Motion.To(Compact, OpacityProperty, 0, 90);
-        // The capsule grows into the card on one spring, with a soft overshoot, like the island making room.
-        Springs.To(Pill, WidthProperty, width, 0.46, 0.68);
-        Springs.To(Pill, HeightProperty, CardHeight, 0.46, 0.68);
-        Springs.To(this, RadiusProperty, CardHeight / 2, 0.46, 0.68);
+        // The capsule grows into the card as one body: width, height and corners on the same spring, with just a
+        // hint of overshoot (damping 0.8, ~1.5 %) and no slow creep back afterwards.
+        Springs.To(Pill, WidthProperty, width, Shape.Response, Shape.Open);
+        Springs.To(Pill, HeightProperty, CardHeight, Shape.Response, Shape.Open);
+        Springs.To(this, RadiusProperty, CardHeight / 2, Shape.Response, Shape.Open);
 
         if (Motion.Intensity > 0.01)
         {
-            if (fresh) { Card.Opacity = 0; Motion.To(Card, OpacityProperty, 1, 160); }
-            // The tile lands first with a bounce; the title and subtitle glide in a beat behind it.
-            CardTileScale.ScaleX = CardTileScale.ScaleY = fresh ? 0.35 : 0.8;
-            Springs.To(CardTileScale, ScaleTransform.ScaleXProperty, 1, 0.42, 0.52);
-            Springs.To(CardTileScale, ScaleTransform.ScaleYProperty, 1, 0.42, 0.52);
+            if (fresh) { Card.Opacity = 0; Motion.To(Card, OpacityProperty, 1, 180); }
+            // The tile lands first with a small bounce; the title and subtitle glide in a beat behind it.
+            CardTileScale.ScaleX = CardTileScale.ScaleY = fresh ? 0.6 : 0.88;
+            Springs.To(CardTileScale, ScaleTransform.ScaleXProperty, 1, 0.36, 0.7);
+            Springs.To(CardTileScale, ScaleTransform.ScaleYProperty, 1, 0.36, 0.7);
             CardTitleShift.X = 12; CardSubShift.X = 20;
             Springs.To(CardTitleShift, TranslateTransform.XProperty, 0, 0.42, 0.85);
             Springs.To(CardSubShift, TranslateTransform.XProperty, 0, 0.52, 0.85);
@@ -193,9 +194,10 @@ public partial class IslandWindow
         Motion.To(Card, OpacityProperty, 0, 120, null, () => { if (!_card) Card.Visibility = Visibility.Collapsed; });
         if (_expanded) return;   // opening the panel takes over the size
         Motion.To(Compact, OpacityProperty, 1, 240);
-        Springs.To(Pill, HeightProperty, CollapsedHeight, 0.42, 0.8);
-        Springs.To(this, RadiusProperty, CollapsedRadius, 0.42, 0.8);
-        Pop(CNormal, 0.92);
+        // Back to the capsule without dipping below its size (a dip reads as a wobble, and squeezes the text).
+        Springs.To(Pill, HeightProperty, CollapsedHeight, Shape.CloseResponse, Shape.Close);
+        Springs.To(this, RadiusProperty, CollapsedRadius, Shape.CloseResponse, Shape.Close);
+        Pop(CNormal, 0.94);
         RefreshCompact();   // springs the width back to the capsule's content
     }
 }
