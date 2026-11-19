@@ -44,17 +44,21 @@ A liquid-glass capsule at the top of your screen that comes alive:
 * **Privacy dots** — 🟠 microphone, 🟢 camera, 🔵 location in use, with the app's name. Your security, at a glance.
 * **Control Centre** — 12 liquid-glass tiles that switch the real setting: Wi-Fi, Bluetooth, Night light, Dark mode, Power mode, Microphone, Keep awake, Focus, Widgets, plus Airplane mode, Do not disturb and Energy saver shortcuts; volume and monitor brightness sliders, and **volume by app** — a slider and mute for each app playing sound — plus a one-click **output device** switch (speakers, headphones, HDMI).
 * **Clipboard history** (opt-in, memory-only, skips password-manager copies) and a **file shelf** — drop files on the island, drag them out later.
-* **Calendar with events** — pick a day, type "9:30 Stand-up" and press Enter; the island grows into a reminder card ten minutes before and when it starts. Events stay on this PC.
+* **Calendar with events** — pick a day, type "9:30 Stand-up" and press Enter; the island grows into a reminder card ten minutes before and when it starts. Import your Google or Outlook calendar from an `.ics` file, repeating events included. Events stay on this PC.
+* **Side bubble** — while the capsule shows music, a call, a timer or a download, short alerts (Caps Lock, keyboard language, "copied") split off into a small bubble beside it instead of replacing it.
+* **Microphone pill** — during a call, the app's name, a live level and Windows' own mute button.
+* **Coding agents** (opt-in) — an Agents tab showing what Claude Code, Codex or your own tools are doing; the island keeps an orange rim while a session waits for your OK and turns green for a moment when one finishes. Uses the tools' own hooks, which you paste in yourself.
+* **Cards from your scripts** (opt-in) — a local pipe, open only to your own Windows account, that lets your scripts show "Build finished" or "Backup done".
 * **Weather** (optional, off until you turn it on) — now, the next twelve hours and three days, while the glass takes on the sky's colours: blue on a clear day, slate in rain, indigo at night.
 * Quick notes, system monitor. Drag it anywhere — it clicks into the exact centre.
 * **Any screen edge** — top, bottom (just above the taskbar) or either side; it opens away from its edge, and a notch or drop shape turns to face it. Drag it right up to another edge to move it there.
 * **Out of the way** — hides within about a tenth of a second when a game, video or presentation goes fullscreen, and drops back in after. Choose apps it keeps showing over, and apps it always hides for even in a window.
 
 ### 🔎 Launcher — <kbd>Alt</kbd>+<kbd>Space</kbd>
-Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (dark mode, lock, focus, profiles…), recent files, a calculator (`12*7`, `200*15%`), unit conversion (`10 km to mi`) timers (`timer 5 min`, `focus 50`, `stopwatch`) that count down in the island, reminders (`remind me in 20 min to stretch`, `remind me at 6pm to call mom`) world time (`time in Tokyo`) and your clipboard history (`clip invoice`). Learns your favourites — on your PC only.
+Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (dark mode, lock, focus, profiles…), recent files, a calculator (`12*7`, `200*15%`), unit conversion (`10 km to mi`), timers (`timer 5 min`, `focus 50`, `stopwatch`) that count down in the island, reminders (`remind me in 20 min to stretch`, `remind me at 6pm to call mom`), world time (`time in Tokyo`, offline) and your clipboard history (`clip invoice`). Learns your favourites — on your PC only.
 
 ### 🧊 Liquid-glass desktop
-* **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers.
+* **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers. Optional **Live glass** (Windows 11) shows the windows behind it instead, and **curved edges** bend the light at the rim. Island materials: Glass, Smoked, Solid or **Black**.
 * **13 widgets** — clocks, calendar, world clock, system monitor, now playing, focus, notes, tasks, launcher, recycle bin, weather and more; drag, snap, resize.
 * **10 themes**, a live **Liquid Glass Editor**, dark / light / auto / scheduled modes, wallpaper-generated gradients.
 * **Profiles** (Study, Gaming, Productivity, Minimal, Night) with optional automation.
@@ -93,8 +97,8 @@ All changeable in Settings.
 
 | Area | Status |
 |---|---|
-| Island, live activities, media (incl. VLC detection), seek, lyrics, launcher, Control Centre, widgets, themes, profiles, privacy gate, installer | ✅ |
-| Multiple monitors, display scaling above 100 %, laptops (battery/brightness), Windows 10, Bluetooth headphone battery (no Bluetooth headset on the test PC; checked with the preview) | 🧪 |
+| Island, live activities, media (incl. VLC detection), seek, lyrics, launcher, Control Centre, volume by app, widgets, themes, profiles, privacy gate, installer, screenshot and download cards, side bubble, calendar import, cards from scripts, coding agents with Claude Code, Live glass on one monitor | ✅ |
+| Multiple monitors, display scaling above 100 %, laptops (battery/brightness), Windows 10, Bluetooth headphone battery (no Bluetooth headset on the test PC; checked with the preview), Codex, the microphone pill in a real call, a second keyboard layout or sound device | 🧪 |
 | VLC can only be *controlled* (not just shown) after switching on its global media keys — see the [user guide](docs/USER-GUIDE.md) | ⚠️ |
 | Night light uses an undocumented Windows setting (format-checked, falls back to Settings) | ⚠️ |
 | Switching the output device uses an undocumented Windows interface (`IPolicyConfig`, the one Sound settings uses; falls back to Settings) | ⚠️ |

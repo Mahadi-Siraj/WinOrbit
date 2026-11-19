@@ -11,6 +11,11 @@ Free, open source (GPL-3.0), about 45–80 MB of RAM and ~0.1 % CPU at idle, zer
 
 Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScreen warns, choose *More info → Run anyway*.
 
+### New in 1.3.1
+- 🪄 Island cards show longer second lines in full (they were cut off at about 40 characters, e.g. a coding agent's permission request)
+- 🩺 About & Diagnostics no longer calls software rendering a driver problem when you switched it on yourself in Settings
+- 📖 README lists every 1.3 feature; the user guide explains the local pipe's reply
+
 ### New in 1.3
 - 🤖 **Coding agents** (opt-in) — an Agents tab that shows what Claude Code, Codex or your own tools are doing: working, needs you, done. The island keeps an orange rim while a session waits for your OK and flashes green when one finishes. Setup is copy-and-paste from Settings; WinOrbit never edits those tools' settings, and only a short title, the folder name and a few words of status are kept (in memory)
 - 🎚️ **Volume by app** and an **output device switch** (speakers, headphones, HDMI) in the Control Centre

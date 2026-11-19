@@ -30,7 +30,7 @@ public static class RenderGuard
     {
         if (Hub.Ready && Hub.Settings.General.ForceSoftwareRendering)
         {
-            window.SourceInitialized += (_, _) => UseSoftware(window, onSoftware, "set in Settings");
+            window.SourceInitialized += (_, _) => UseSoftware(window, onSoftware, "set in Settings", automatic: false);
             return;
         }
         var dot = new Rectangle { Width = 2, Height = 2, Fill = new SolidColorBrush(Sentinel), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
@@ -109,12 +109,13 @@ public static class RenderGuard
         return misses + 1 >= 3 ? Step.Software : Step.Look;
     }
 
-    public static void UseSoftware(Window window, Action? onSoftware, string reason)
+    /// <param name="automatic">False when the user asked for it in Settings: then it isn't a driver fallback.</param>
+    public static void UseSoftware(Window window, Action? onSoftware, string reason, bool automatic = true)
     {
         if (PresentationSource.FromVisual(window) is not HwndSource src || src.CompositionTarget is null) return;
         if (src.CompositionTarget.RenderMode == RenderMode.SoftwareOnly) return;
         src.CompositionTarget.RenderMode = RenderMode.SoftwareOnly;
-        FellBack = true;
+        if (automatic) FellBack = true;
         Log.Warn($"Switched '{window.Title}' to software rendering: {reason}");
         onSoftware?.Invoke();
         Switched?.Invoke(window);

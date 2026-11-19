@@ -167,10 +167,10 @@
                         <TextBlock x:Name="CardCap" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
                     </Grid>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,14,0">
-                        <TextBlock x:Name="CardTitle" FontSize="14.5" FontWeight="SemiBold" MaxWidth="250" TextTrimming="CharacterEllipsis">
+                        <TextBlock x:Name="CardTitle" FontSize="14.5" FontWeight="SemiBold" MaxWidth="300" TextTrimming="CharacterEllipsis">
                             <TextBlock.RenderTransform><TranslateTransform x:Name="CardTitleShift"/></TextBlock.RenderTransform>
                         </TextBlock>
-                        <TextBlock x:Name="CardSub" FontSize="12" Foreground="{DynamicResource T.Text2}" Margin="0,1,0,0" MaxWidth="250" TextTrimming="CharacterEllipsis">
+                        <TextBlock x:Name="CardSub" FontSize="12" Foreground="{DynamicResource T.Text2}" Margin="0,1,0,0" MaxWidth="300" TextTrimming="CharacterEllipsis">
                             <TextBlock.RenderTransform><TranslateTransform x:Name="CardSubShift"/></TextBlock.RenderTransform>
                         </TextBlock>
                     </StackPanel>

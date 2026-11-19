@@ -17,7 +17,7 @@
     <RootNamespace>WinOrbit</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\winorbit.ico</ApplicationIcon>
-    <Version>1.3.0</Version>
+    <Version>1.3.1</Version>
     <Product>WinOrbit</Product>
     <Description>Liquid Glass desktop customisation suite for Windows</Description>
     <Copyright>Local-first. No telemetry.</Copyright>
