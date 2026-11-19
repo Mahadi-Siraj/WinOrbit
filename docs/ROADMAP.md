@@ -80,4 +80,4 @@ Still open:
 Deliberately not planned:
 * **"Eyes that follow the cursor" / desktop pets** — in the Dyno thread, most replies said it's the first thing they'd turn off.
 * **A built-in AI chatbot** — needs API keys or large local models. That's against "light", and it's a different product.
-* **A built-in Rainmeter engine** — see STATUS-REPORT §4.
+* **A built-in Rainmeter engine** — Rainmeter's skin format is large and its plugins are native code; WinOrbit manages a real Rainmeter install instead (read-only file access, documented bangs only).

@@ -2,7 +2,7 @@
 
 How WinOrbit is built, how the pieces fit, and how to change it safely. Read [ARCHITECTURE.md](ARCHITECTURE.md) for *why* it is built this way (technology choice, how the glass works); this guide is the *how*.
 
-Last updated for version 1.2.0 (18 November 2026).
+Last updated 19 November 2026: version 1.2.0 plus the unreleased 1.3 work committed on `main` (see [ROADMAP.md](ROADMAP.md) and [TEST-REPORT.md](TEST-REPORT.md)).
 
 ## 1. Get it running
 
@@ -40,10 +40,10 @@ Useful command-line switches: `--startup` (tray only), `--page <name>` (open a s
 | `Interop/Native.cs` | **Every** P/Invoke and COM interface, in one file you can audit |
 | `Design/` | Theme engine, glass surface, `Controls.xaml` styles, `Motion` (timed easing), `Springs` (spring physics), `RenderGuard` (GPU fallback; it waits while the screen is off, no monitor is connected or the PC is locked, because every window looks blank then), `Visuals` (month view, sparkline, equaliser), dialogs, line icons |
 | `Island/` | The Dynamic Island (see §4) and Control Centre tiles |
-| `Launcher/` | Alt+Space launcher: app index, icons, calculator, unit conversion |
+| `Launcher/` | Alt+Space launcher: app index, icons, calculator, unit conversion (`LauncherIndex.cs`), and typed commands, each a small parser with tests: `TimerCommand` (timers), `ReminderCommand` (reminders saved as calendar events with `AtTimeOnly`), `WorldTime` (offline time zones), `ClipSearch` (clipboard history behind the `clip` prefix). A command returns a `LauncherItem` with `Score = 10_000` so it lists first; use `ItemKind.Calc` when its key must not be counted in `data.json` |
 | `Widgets/` | Desktop widget host (drag, snap, resize) and the 13 widget kinds |
 | `Wallpaper/` | Wallpaper sampling and blur, palette extraction, Wallpaper Engine / Lively detection |
-| `Services/` | Everything that watches Windows: media sessions, audio, power, devices and radios, foreground/fullscreen, clipboard, privacy dots, profiles, network gate and weather, running apps |
+| `Services/` | Everything that watches Windows: media sessions, audio, power, devices and radios, foreground/fullscreen, clipboard, privacy dots, profiles, network gate, weather and lyrics (`Network.cs`), the click-only update check (`Updates.cs`), screenshot and rain watchers, keyboard language, output devices, `.ics` import, running apps |
 | `WindowsIntegration/` | Reversible Windows tweaks and the quick controls (Wi-Fi, Bluetooth, night light…) |
 | `Rainmeter/` | Optional Rainmeter manager (read-only file access, documented bangs only) |
 | `Shell/` | The main settings window and its pages (`Pages/*.cs`, built in code with the `Kit` helpers in `PageKit.cs`) |

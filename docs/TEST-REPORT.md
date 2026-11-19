@@ -1,8 +1,8 @@
-# Test & performance report — WinOrbit 1.0.0
+# Test & performance report — WinOrbit 1.0 → 1.2, plus the unreleased 1.3 work
 
 **Test machine:** Windows 11 Home build 26300 · Intel Core i5-12400F (6C/12T) · NVIDIA GeForce GTX 1660 SUPER (driver 32.0.16.1047) · 16 GB RAM · NVMe SSD · one 1920×1080 display at 100 % scaling, 60 Hz · Wallpaper Engine running a black-and-white live wallpaper · Rainmeter tested with a throw-away **portable** Rainmeter 4.5.28 (official signed release) in a temporary folder, removed afterwards.
 
-Date: 17 November 2026.
+Dates: 17 November 2026 (1.0), 18 November (1.2 and the idle re-measure), 18–19 November overnight (the 1.3 work, rows marked "19 Nov" or "18 Nov" in §3). Since the night of 18 November the monitor was switched off for part of the testing; window captures used `PrintWindow`, which draws a window's content even then.
 
 ## 1. Performance (measured)
 
@@ -29,7 +29,7 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
 Re-check after adding live activities (volume meter, privacy dot, reactive bars, lyrics, clipboard/shelf), release build, 60 s sampled 20 s after start: **0.113 % CPU, 56 MB average working set (max 65 MB), 18 threads, 0 TCP / 0 UDP**. Short sample, so it includes the tail of start-up, and the reactive bars run while music plays; the 5-minute figure above remains the reference.
 
-## 2. Automated tests — 85 passing
+## 2. Automated tests — 267 passing (19 Nov 2026; 85 at 1.0)
 
 `dotnet test tests/WinOrbit.Tests` (also run by `tools/build-release.ps1`, in Release):
 
@@ -42,6 +42,12 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Rainmeter, live (`LiveRainmeterTests`, opt-in with `WINORBIT_RM_LIVE=1`; otherwise they return immediately) | detects the running portable install; lists the stock illustro skins with state and variants; activate, variant switch, refresh, refresh-all and deactivate take effect in Rainmeter; SHA-256 of every skin file identical before and after |
 | Settings | JSON round-trip; privacy and automation default to off; atomic write; corrupt file preserved as `.corrupt`; presets complete and unique; scheduled dark/light boundaries; time-rule selection; hotkey parsing |
 | Privacy | network gate refuses when off; refuses plain HTTP; **static scan proves no file other than `Network.cs` creates an HttpClient/WebClient/Socket/TcpClient/WebRequest**; weather parser |
+| Island (1.2) | shape corners on every edge, window placement, edge snapping, fullscreen-hide rules, event parsing and reminder timing, sky colours, spring motion |
+| Live activities (1.3) | screenshot file filter; which files are safe to open from a card; rain-soon decision and wording; keyboard-layout names; output-device ordering; Bluetooth battery value; render check waiting while the screen is off |
+| Calendar import (1.3) | `.ics` parsing: UTC / time-zone / floating times, all-day spans, daily-weekly-monthly-yearly repeats with COUNT/UNTIL/EXDATE, moved and cancelled occurrences, re-import replacing by UID |
+| Launcher (1.3) | timer phrases (and "5m" staying five metres); reminder phrases and times (bare hours, "tomorrow", passed times); reminders firing only on their minute; world-time places, Windows zone IDs all present, offset wording; clipboard search prefix, filtering and one-line previews |
+| Lyrics and updates (1.3) | video-title clean-up ("(Official Video)", "[4K]", remasters, "feat."), artist/song split, length matching; version-file parsing and comparison |
+| Live, read-only (always run) | real playback devices with exactly one default; the Bluetooth battery query accepted by Windows |
 
 ## 3. Functional tests on the real desktop
 
