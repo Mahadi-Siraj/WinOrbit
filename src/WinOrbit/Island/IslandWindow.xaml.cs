@@ -346,10 +346,11 @@ public partial class IslandWindow : Window
 
     private void ApplyRim()
     {
-        if (AgentsWaiting)
+        if (AgentsWaiting || _agentDoneFlash)
         {
-            // A coding session is waiting for your answer: an orange rim and glow until it moves on, whatever rim is chosen.
-            var wait = new SolidColorBrush(AgentWaiting);
+            // A coding session is waiting for your answer: an orange rim and glow until it moves on, whatever rim is
+            // chosen. A session that just finished: green for a moment.
+            var wait = new SolidColorBrush(AgentsWaiting ? AgentWaiting : AgentOk);
             wait.Freeze();
             PillRim.BorderBrush = PillGlow.BorderBrush = wait;
             PillRim.Visibility = PillGlow.Visibility = Visibility.Visible;

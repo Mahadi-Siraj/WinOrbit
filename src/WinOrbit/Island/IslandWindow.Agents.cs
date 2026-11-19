@@ -48,7 +48,16 @@ public partial class IslandWindow
     {
         if (!S.CodingAgents || _expanded) return;
         Peek(GlyphDone, s.Folder.Length > 0 ? $"{s.AgentName} finished · {s.Folder}" : $"{s.AgentName} finished", 3, AgentOk);
+        // A green rim for as long as the note shows (unless another session is still waiting: that stays orange).
+        _agentDoneFlash = true;
+        ApplyRim();
+        _agentFlashTimer ??= new DispatcherTimer(TimeSpan.FromSeconds(3), DispatcherPriority.Normal, (_, _) => { _agentFlashTimer!.Stop(); _agentDoneFlash = false; ApplyRim(); }, Dispatcher);
+        _agentFlashTimer.Stop();
+        _agentFlashTimer.Start();
     }
+
+    private bool _agentDoneFlash;
+    private DispatcherTimer? _agentFlashTimer;
 
     private void RenderAgents()
     {
