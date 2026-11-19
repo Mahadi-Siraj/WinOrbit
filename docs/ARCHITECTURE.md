@@ -24,6 +24,7 @@ Because widgets live on the desktop, the backdrop is exactly what is behind them
 
 ```
 src/WinOrbit
+├─ Program.cs             Entry point: `--agent` (coding-agent hooks) is answered here and exits before WPF loads
 ├─ App.xaml(.cs)          Application shell: single instance, start-up order, tray, hotkeys, CLI (--page, --quit, --revert-tweaks)
 ├─ Hub.cs                 Service locator for long-lived services
 ├─ Core/                  Models (settings, themes, profiles, widgets) + Store (atomic JSON, debounced saves, local log)
@@ -38,7 +39,8 @@ src/WinOrbit
 ├─ Rainmeter/             Detection, read-only INI/skin scanning, documented bangs, .rmskin inspection
 ├─ WindowsIntegration/    Per-user appearance tweaks with backup/revert, accent colour, start-up entry, third-party info
 ├─ Services/              System monitor (PDH + NVML), media sessions, audio, brightness (DDC/CI), timers,
-│                         foreground/fullscreen watcher, profiles & automation, network gate & weather
+│                         foreground/fullscreen watcher, profiles & automation, network gate & weather,
+│                         the opt-in local pipe (app cards, coding-agent sessions)
 └─ Shell/                 Main window and the 11 pages
 ```
 
