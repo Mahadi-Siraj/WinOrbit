@@ -40,7 +40,17 @@ public sealed class MediaService
     private DateTimeOffset _positionAt;
     private double _rate = 1;
     private string _trackKey = "";
-    private int _refreshVersion;
+    // Bumped only by refreshes that write the track details (title, artist, cover), so a pending fetch of
+    // those details is dropped when newer details arrive, but not by the timeline and play/pause updates
+    // that keep coming while the cover is still loading.
+    private int _detailsVersion;
+
+    /// <summary>
+    /// The details version a refresh starts with. Only a refresh that writes details (a details fetch, a
+    /// window-title player, or "nothing playing") supersedes a fetch still in flight; a timeline or play/pause
+    /// refresh must not, or the island keeps the previous app's title or loses the new cover.
+    /// </summary>
+    internal static int NextDetailsVersion(int current, bool writesDetails) => writesDetails ? current + 1 : current;
 
     public MediaService(Dispatcher ui) => _ui = ui;
 
@@ -133,12 +143,12 @@ public sealed class MediaService
 
     private async Task RefreshAsync(bool properties)
     {
-        var version = ++_refreshVersion;
         var session = _session;
         try
         {
             if (UseWindowPlayer(session, out var wp))
             {
+                _detailsVersion = NextDetailsVersion(_detailsVersion, true);
                 var wasWindow = _usingWindow;
                 _usingWindow = true;
                 var sameTrack = Title == wp.Title && Artist == wp.Artist && wasWindow;
@@ -163,6 +173,7 @@ public sealed class MediaService
 
             if (session is null)
             {
+                _detailsVersion = NextDetailsVersion(_detailsVersion, true);
                 HasSession = false; IsPlaying = false; Title = Artist = Album = Source = ""; Art = null; _trackKey = "";
                 Changed?.Invoke();
                 return;
@@ -182,8 +193,9 @@ public sealed class MediaService
 
             if (properties)
             {
+                var version = _detailsVersion = NextDetailsVersion(_detailsVersion, true);
                 var props = await session.TryGetMediaPropertiesAsync();
-                if (version != _refreshVersion) return;
+                if (version != _detailsVersion) return;
                 Title = props?.Title ?? "";
                 Artist = props?.Artist ?? "";
                 Album = props?.AlbumTitle ?? "";
@@ -208,7 +220,7 @@ public sealed class MediaService
                     }
                     catch { art = null; }
                 }
-                if (version != _refreshVersion) return;
+                if (version != _detailsVersion) return;
                 Art = art;
             }
 
