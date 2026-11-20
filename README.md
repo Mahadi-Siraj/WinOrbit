@@ -25,6 +25,11 @@
   <img src="docs/assets/island.gif" alt="The Dynamic Island showing a song, a Wi-Fi card, a side bubble next to a call, then opening into the Control Centre" width="720">
 </p>
 
+<p align="center">
+  <a href="https://github.com/Mahadi-Siraj/WinOrbit/releases/download/v1.3.2/WinOrbit-demo.mp4"><img src="docs/assets/demo-poster.png" alt="Play the 39-second demo video: the island on anime wallpapers, glowing with each song's colours, live cards, widgets and the WinOrbit logo" width="720"></a>
+  <br><sub>▶ <a href="https://github.com/Mahadi-Siraj/WinOrbit/releases/download/v1.3.2/WinOrbit-demo.mp4">Watch the 39-second demo</a> (vertical, with music)</sub>
+</p>
+
 ## Screenshots
 
 <table>
@@ -43,6 +48,26 @@
     <td colspan="2"><b>Live activities</b><br><sub>Songs, Wi-Fi, Bluetooth with battery, charging, reminders, downloads, calls, lock keys and your coding agents, each arriving within a moment.</sub></td>
   </tr>
   <tr>
+    <td colspan="2" align="center"><img src="docs/assets/cards.gif" alt="Cards morphing out of the capsule in real time: Wi-Fi connected, headphones connected with battery, a USB drive plugged in, Caps Lock on and charging" width="760"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>In motion</b><br><sub>Wi-Fi, headphones, a USB drive, Caps Lock and charging, recorded live at real speed.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/assets/shot-colours.png" alt="The now-playing panel four times, each tinted by its album cover: violet and pink, deep red, teal and blue, and sunset rose"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>It glows with your music</b><br><sub>The glass and rim pick up each cover's colours and change with every song.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/shot-weather.png" alt="Weather tab: current conditions, today's high and low, and the next hours and days"></td>
+    <td><img src="docs/assets/shot-calendar.png" alt="Calendar tab: today's events beside a month view"></td>
+  </tr>
+  <tr>
+    <td><b>Weather</b> <sub>(opt-in)</sub><br><sub>Now, the next hours and the week, with a "rain soon" heads-up.</sub></td>
+    <td><b>Calendar</b><br><sub>Your day at a glance, with reminders in the island and <code>.ics</code> import.</sub></td>
+  </tr>
+  <tr>
     <td><img src="docs/assets/shot-system.png" alt="System monitor: CPU, memory, GPU with temperature, network, disk and uptime, each with a small graph"></td>
     <td><img src="docs/assets/shot-focus.png" alt="Focus timer: a 25-minute ring with Focus, Countdown and Stopwatch modes"></td>
   </tr>
@@ -58,6 +83,12 @@
     <td><b>Coding agents</b> <sub>(opt-in)</sub><br><sub>See what Claude Code and Codex are doing. The island glows orange while one waits for you.</sub></td>
     <td><b>Desktop widgets</b><br><sub>13 widgets that snap, resize and follow your theme.</sub></td>
   </tr>
+  <tr>
+    <td colspan="2"><img src="docs/assets/shot-desktop.png" alt="A real desktop: the island at the top, with clock, weather, system rings, now playing and calendar widgets over a Cyberpunk city wallpaper"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>On a real desktop</b><br><sub>The island with clock, weather, system, music and calendar widgets over a live wallpaper.</sub></td>
+  </tr>
 </table>
 
 ### Make it yours
@@ -67,7 +98,7 @@
   <br><sub>10 themes, 8 rim colours, 5 shapes, 4 materials and 3 sizes. Six of the combinations, over Wallpaper Engine wallpapers.</sub>
 </p>
 
-<sub>Screenshots: the island at 1.4× size with the Black material and Midnight theme, using WinOrbit's built-in previews. The song is a silent demo track.</sub>
+<sub>Screenshots: the island at 1.4× size with the Black material and Midnight theme, using WinOrbit's built-in previews. The songs are silent demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are from Wallpaper Engine; credit to their creators.</sub>
 
 ---
 

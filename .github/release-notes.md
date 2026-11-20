@@ -11,6 +11,11 @@ Free, open source (GPL-3.0), about 45–80 MB of RAM and ~0.1 % CPU at idle, zer
 
 Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScreen warns, choose *More info → Run anyway*. [Code signing policy](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/CODE_SIGNING_POLICY.md)
 
+### New in 1.3.2
+- 🎵 **Now playing shows the right song sooner.** When a player started (or another one took over) while WinOrbit was still loading the title and cover, a progress or play/pause update could cancel that load, leaving the previous app's title or no cover. Fixed, with tests
+- 🎬 **A 39-second demo video** is attached to this release (`WinOrbit-demo.mp4`)
+- 🖼️ **More to see in the README:** cards in motion, the island glowing with each song's colours, weather and calendar tabs, and widgets on a real desktop
+
 ### New in 1.3.1
 - 🪄 Island cards show longer second lines in full (they were cut off at about 40 characters, e.g. a coding agent's permission request)
 - 🩺 About & Diagnostics no longer calls software rendering a driver problem when you switched it on yourself in Settings

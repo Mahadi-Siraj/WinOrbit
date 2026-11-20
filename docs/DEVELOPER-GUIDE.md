@@ -2,7 +2,7 @@
 
 How WinOrbit is built, how the pieces fit, and how to change it safely. Read [ARCHITECTURE.md](ARCHITECTURE.md) for *why* it is built this way (technology choice, how the glass works); this guide is the *how*.
 
-Last updated 19 November 2026: version 1.3.1 (see [ROADMAP.md](ROADMAP.md) and [TEST-REPORT.md](TEST-REPORT.md)).
+Last updated 20 November 2026: version 1.3.2 (see [ROADMAP.md](ROADMAP.md) and [TEST-REPORT.md](TEST-REPORT.md)).
 
 ## 1. Get it running
 

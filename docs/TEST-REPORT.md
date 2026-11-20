@@ -1,4 +1,4 @@
-# Test & performance report — WinOrbit 1.0 → 1.3
+# Test & performance report — WinOrbit 1.0 → 1.3.2
 
 **Test machine:** Windows 11 Home build 26300 · Intel Core i5-12400F (6C/12T) · NVIDIA GeForce GTX 1660 SUPER (driver 32.0.16.1047) · 16 GB RAM · NVMe SSD · one 1920×1080 display at 100 % scaling, 60 Hz · Wallpaper Engine running a black-and-white live wallpaper · Rainmeter tested with a throw-away **portable** Rainmeter 4.5.28 (official signed release) in a temporary folder, removed afterwards.
 
@@ -41,7 +41,7 @@ Raw data: `docs/bench-idle-release.json`, `docs/bench-idle-debug.json`.
 
 Re-check after adding live activities (volume meter, privacy dot, reactive bars, lyrics, clipboard/shelf), release build, 60 s sampled 20 s after start: **0.113 % CPU, 56 MB average working set (max 65 MB), 18 threads, 0 TCP / 0 UDP**. Short sample, so it includes the tail of start-up, and the reactive bars run while music plays; the 5-minute figure above remains the reference.
 
-## 2. Automated tests — 320 passing (19 Nov 2026; 85 at 1.0)
+## 2. Automated tests — 322 passing (20 Nov 2026; 85 at 1.0)
 
 `dotnet test tests/WinOrbit.Tests` (also run by `tools/build-release.ps1`, in Release):
 
@@ -117,6 +117,7 @@ Re-check after adding live activities (volume meter, privacy dot, reactive bars,
 | Check for updates (19 Nov) | Settings › Updates › Check now, network switch on | ✅ one request to raw.githubusercontent.com, "You have the latest version (1.2.0)" |
 | Code review before 1.3 (19 Nov) | every change since 1.2 read for bugs; unused-code analyzers (IDE0051/52/59/60) run once | ✅ **Found and fixed:** a script that sent a card but never read the reply held the pipe — the only one — for as long as it ran, because the pipe had no buffer, so even writing the reply waited for it. Measured with a client that never reads: the next client used to time out after 7 s; now it connects after 2.0 s, a slow reader still gets its "ok", and ten `--agent` hook calls in a row still work. Also fixed: turning Live glass off closed the screen capture while holding the lock a capture callback could be waiting on (a possible freeze, not seen); the Agents tab could draw its list twice when a 3-hour-old session dropped off while it was open; "Open download page" could throw if no browser opens the link; four unused parameters and a field removed. 320 tests pass; the installed 1.3.0 build showed the agent card and the open island normally |
 | Final recheck (19 Nov) | the published 1.3.0 files against GitHub's own checksums; every island preview (card, side bubble, open island) on all four edges, all five shapes, Glass / Smoked / Solid / Black, with Reduced Motion on and off; all 11 settings pages; the log; one minute idle | ✅ checksums match the build log; every combination drew correctly; idle 0.09 % CPU, 60 MB working set; no errors in the log. **Found and fixed:** card second lines were cut at 250 px although the card can grow to 460 (the agent card read "…Bash · st…"); About & Diagnostics called software rendering a driver fallback when it was switched on in Settings. **Noted, not a bug:** with the monitor switched off (a DisplayPort monitor vanishes from Windows), the settings window stays blank and the render check correctly waits; the pages were checked with software rendering instead. Smoked lets about 11 % of what is behind show through by design (Glass about 2 %) |
+| Media details race (20 Nov) | a demo player started after WinOrbit, then a second player swapped in while the first was still loading; 16 runs of a stress script that starts players at random moments | **Found and fixed:** a progress or play/pause update arriving while the title and cover were still loading cancelled that load, so the island kept the previous app's title or showed no cover. Only refreshes that write the title and cover now replace one in flight (two new unit tests). After the fix the right title and cover appeared in 16 of 16 runs |
 
 ## 4. Not verified here (and why)
 
