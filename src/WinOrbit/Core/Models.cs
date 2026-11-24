@@ -44,6 +44,11 @@ public sealed class GlassParams
     public double Glow { get; set; } = 0.2;
     public double ShadowIntensity { get; set; } = 0.45;
     public double Refraction { get; set; } = 0.05;
+    /// <summary>
+    /// The liquid lens (0..1): 0 keeps the classic curved edge; above it, a thick rounded rim that gathers in and bends
+    /// what lies beyond the glass (the Liquid looks). Older settings files have none, so they load as 0.
+    /// </summary>
+    public double Liquid { get; set; } = 0;
 
     public GlassParams Clone() => (GlassParams)MemberwiseClone();
 }

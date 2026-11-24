@@ -43,22 +43,37 @@ public class GlassSurface : ContentControl
     public bool CastShadow { get => (bool)GetValue(CastShadowProperty); set => SetValue(CastShadowProperty, value); }
     public double ShadowSize { get => (double)GetValue(ShadowSizeProperty); set => SetValue(ShadowSizeProperty, value); }
 
+    /// <summary>Motion in the liquid lens: 0 at rest; it deepens while the glass changes size and wobbles back after.</summary>
+    private static readonly DependencyProperty FlexProperty = DependencyProperty.Register("Flex", typeof(double), typeof(GlassSurface),
+        new PropertyMetadata(0.0, (d, _) => ((GlassSurface)d).UpdateLensShape()));
+    /// <summary>How far the resting light is turned (radians): a sweep across the rim while the glass changes shape.</summary>
+    private static readonly DependencyProperty TurnProperty = DependencyProperty.Register("Turn", typeof(double), typeof(GlassSurface),
+        new PropertyMetadata(0.0, (d, _) => ((GlassSurface)d).UpdateLight()));
+
     private Border? _shadow;
     private Border? _backdrop;
-    private LiquidGlassEffect? _lens;
+    private LiquidGlassEffect? _lens;     // curved edges (every other look, and the fallback)
+    private LiquidLensEffect? _liquid;    // the liquid lens (Liquid looks, pixel shader 3.0)
     private Point? _pointer;   // where the pointer is over the glass, in pixels (null: not over it)
     private bool _over;
     private Window? _window;
     private ImageBrush? _brush;
     private bool _hooked;
+    private Size _lastSize;
+    private long _lastSizeAt;
+    private System.Windows.Threading.DispatcherTimer? _settle;
 
     public GlassSurface()
     {
         Focusable = false;
         Loaded += (_, _) => Hook();
         Unloaded += (_, _) => Unhook();
-        SizeChanged += (_, _) => { UpdateShadowClip(); UpdateBackdrop(); UpdateLensShape(); };
+        SizeChanged += (_, e) => { UpdateShadowClip(); UpdateBackdrop(); UpdateLensShape(); FlexWithSize(e.NewSize); };
     }
+
+    /// <summary>The liquid lens is on for this surface.</summary>
+    public bool IsLiquid => _liquid is not null;
+    private bool HasLens => _lens is not null || _liquid is not null;
 
     public override void OnApplyTemplate()
     {
@@ -75,27 +90,57 @@ public class GlassSurface : ContentControl
     // ---- Curved glass edges (LiquidGlassEffect on the backdrop layer) ----
 
     /// <summary>
-    /// Puts the curved-edge shader on the backdrop, or takes it off: only when there is a wallpaper backdrop to bend,
-    /// the setting is on, and the window is drawn by a GPU that can run it (never under the software fallback).
+    /// Puts a lens on the backdrop, or takes it off. Only when there is a backdrop to bend, the curved-edges setting
+    /// is on, and the window is drawn by a GPU that can run it (never under the software fallback). Looks with a
+    /// "liquid" strength get the liquid lens when pixel shader 3.0 is there; everything else gets the curved edges.
     /// </summary>
     internal void UpdateLens()
     {
         if (_backdrop is null) return;
-        var want = Backdrop is not null && IsLoaded && Hub.Ready && Hub.Settings.General.CurvedGlass && LiquidGlassEffect.Usable(this);
-        if (!want)
+        var wasLiquid = _liquid is not null;
+        var curved = Backdrop is not null && IsLoaded && Hub.Ready && Hub.Settings.General.CurvedGlass && LiquidGlassEffect.Usable(this);
+        var liquid = curved && LiquidStrength > 0.01 && LiquidLensEffect.Usable(this);
+        if (liquid)
         {
-            if (_lens is not null) { _backdrop.Effect = null; _lens = null; }
-            return;
+            _lens = null;
+            _liquid ??= new LiquidLensEffect();
+            if (!ReferenceEquals(_backdrop.Effect, _liquid)) _backdrop.Effect = _liquid;
         }
-        _lens ??= new LiquidGlassEffect();
-        if (!ReferenceEquals(_backdrop.Effect, _lens)) _backdrop.Effect = _lens;
+        else if (curved)
+        {
+            _liquid = null;
+            _lens ??= new LiquidGlassEffect();
+            if (!ReferenceEquals(_backdrop.Effect, _lens)) _backdrop.Effect = _lens;
+        }
+        else
+        {
+            if (HasLens) { _backdrop.Effect = null; _lens = null; _liquid = null; }
+        }
+        // The liquid lens cuts its own anti-aliased outline from a plain rectangle that also holds what lies beyond the edge.
+        _backdrop.CornerRadius = _liquid is not null ? new CornerRadius(0) : CornerRadius;
+        if (wasLiquid != (_liquid is not null) && SampleWallpaper) UpdateBackdrop();   // with or without the margin beyond the edge
+        if (!HasLens) return;
         UpdateLensShape();
         UpdateLight();
     }
 
+    /// <summary>The theme's liquid strength (0 = the classic curved edge).</summary>
+    private static double LiquidStrength => Application.Current?.TryFindResource("G.Liquid") as double? ?? 0;
+
     private void UpdateLensShape()
     {
-        if (_lens is null || ActualWidth < 1 || ActualHeight < 1) return;
+        if (ActualWidth < 1 || ActualHeight < 1) return;
+        if (_liquid is not null)
+        {
+            var liquid = LiquidStrength;
+            var (bevel, reach, _, rim) = LiquidLensEffect.Profile(ActualWidth, ActualHeight, liquid);
+            var flex = Math.Clamp((double)GetValue(FlexProperty), -0.8, LiquidLensEffect.MaxFlex);
+            _liquid.Shape = new System.Windows.Media.Media3D.Point4D(ActualWidth, ActualHeight, bevel, 0);
+            _liquid.Radii = LiquidGlassEffect.Corners(CornerRadius, ActualWidth, ActualHeight);
+            _liquid.Lens = new System.Windows.Media.Media3D.Point4D(reach, flex, rim, LiquidLensEffect.Readability(liquid, !Hub.Ready || Hub.Theme.IsDark));
+            return;
+        }
+        if (_lens is null) return;
         var refraction = Application.Current?.TryFindResource("G.Refraction") as double? ?? 0.05;
         var (band, bend) = LiquidGlassEffect.Profile(ActualWidth, ActualHeight, refraction);
         _lens.Shape = new System.Windows.Media.Media3D.Point4D(ActualWidth, ActualHeight, band, bend);
@@ -104,8 +149,17 @@ public class GlassSurface : ContentControl
 
     private void UpdateLight()
     {
-        if (_lens is null) return;
         var shine = (double)GetValue(ShineProperty);
+        if (_liquid is not null)
+        {
+            // The light rests at the upper left; the pointer, while it is over the glass, pulls it round to its side.
+            var rest = LiquidLensEffect.RestingLight((double)GetValue(TurnProperty));
+            var dir = _pointer is { } at ? LiquidGlassEffect.Toward(at, ActualWidth, ActualHeight) : rest;
+            var split = LiquidLensEffect.Profile(ActualWidth, ActualHeight, LiquidStrength).Split;
+            _liquid.Light = new System.Windows.Media.Media3D.Point4D(dir.X, dir.Y, shine, split);
+            return;
+        }
+        if (_lens is null) return;
         var toward = LiquidGlassEffect.Toward(_pointer ?? new Point(ActualWidth / 2, ActualHeight / 2), ActualWidth, ActualHeight);
         _lens.Light = new System.Windows.Media.Media3D.Point4D(toward.X, toward.Y, shine, 0.12);
     }
@@ -113,7 +167,7 @@ public class GlassSurface : ContentControl
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (_lens is null || Motion.Intensity <= 0 || ActualWidth < 1 || ActualHeight < 1) return;
+        if (!HasLens || Motion.Intensity <= 0 || ActualWidth < 1 || ActualHeight < 1) return;
         _pointer = e.GetPosition(this);
         if (!_over) { _over = true; Glow(0.8, 220); }
         else UpdateLight();
@@ -128,15 +182,59 @@ public class GlassSurface : ContentControl
         Glow(0, 420);
     }
 
-    /// <summary>A brief brighter glint round the rim — when the glass changes shape (a drop splitting off, merging back).</summary>
+    /// <summary>
+    /// A brief brighter glint round the rim — when the glass changes shape (a drop splitting off, merging back). The
+    /// liquid lens also flexes and wobbles back, and its light sweeps across, as if the glass were a body of liquid.
+    /// </summary>
     public void Flare()
     {
-        if (_lens is null || Motion.Intensity <= 0) return;
+        if (!HasLens || Motion.Intensity <= 0) return;
         var rest = _over ? 0.8 : 0;
         var a = new System.Windows.Media.Animation.DoubleAnimation(1.4, rest, TimeSpan.FromMilliseconds(650 / Math.Max(0.5, Motion.Intensity)))
         { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }, FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
         a.Completed += (_, _) => SetValue(ShineProperty, rest);
         BeginAnimation(ShineProperty, a);
+        Sweep(0.7);
+    }
+
+    /// <summary>
+    /// Liquid lens only: the light sweeps across the rim and the lens gives a soft wobble — used when the glass opens
+    /// into a panel or closes back. <paramref name="strength"/> 1 is a full sweep. Nothing under Reduced Motion.
+    /// </summary>
+    public void Sweep(double strength = 1)
+    {
+        if (_liquid is null || Motion.Intensity <= 0.01) return;
+        Springs.Kick(this, FlexProperty, 2.6 * strength, 0, 0.42, 0.4);
+        var turn = new System.Windows.Media.Animation.DoubleAnimation(-1.1 * strength, 0, TimeSpan.FromMilliseconds(760 / Math.Max(0.5, Motion.Intensity)))
+        { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }, FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
+        turn.Completed += (_, _) => SetValue(TurnProperty, 0.0);
+        BeginAnimation(TurnProperty, turn);
+    }
+
+    /// <summary>
+    /// Liquid lens only: while the glass grows or shrinks, the lens deepens with the speed of the change; when it
+    /// stops, it springs back with a small wobble, like liquid settling.
+    /// </summary>
+    private void FlexWithSize(Size size)
+    {
+        var now = Environment.TickCount64;
+        var last = _lastSize; var lastAt = _lastSizeAt;
+        _lastSize = size; _lastSizeAt = now;
+        if (_liquid is null || Motion.Intensity <= 0.01 || last.Width < 1 || now - lastAt > 120) return;
+        var target = FlexForSpeed(Math.Max(Math.Abs(size.Width - last.Width), Math.Abs(size.Height - last.Height)), Math.Max(1, now - lastAt));
+        if (target <= 0.01) return;
+        Springs.To(this, FlexProperty, target, 0.12, 1);
+        _settle ??= new System.Windows.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(90), System.Windows.Threading.DispatcherPriority.Render,
+            (_, _) => { _settle!.Stop(); Springs.To(this, FlexProperty, 0, 0.44, 0.36); }, Dispatcher);
+        _settle.Stop();
+        _settle.Start();
+    }
+
+    /// <summary>The lens flex for a size change of <paramref name="pixels"/> in <paramref name="ms"/> milliseconds: 0 when slow, up to <see cref="LiquidLensEffect.MaxFlex"/> when fast.</summary>
+    internal static double FlexForSpeed(double pixels, double ms)
+    {
+        var speed = pixels / Math.Max(1, ms) * 1000;   // pixels per second
+        return Math.Clamp((speed - 150) / 2400, 0, LiquidLensEffect.MaxFlex);
     }
 
     private void Glow(double to, double ms)
@@ -238,7 +336,9 @@ public class GlassSurface : ContentControl
         if (!SampleWallpaper || !Hub.Ready || !IsLoaded || ActualWidth < 1 || ActualHeight < 1) { if (!SampleWallpaper && Backdrop is not null) Backdrop = null; return; }
         try
         {
-            if (Slice(this, new Rect(0, 0, ActualWidth, ActualHeight), true) is not { } slice) { Backdrop = null; return; }
+            // The liquid lens bends in what lies beyond the edge, so it gets a margin of backdrop all round.
+            var pad = _liquid is not null ? LiquidLensEffect.PadFor(ActualWidth, ActualHeight, LiquidStrength) : 0;
+            if (Slice(this, new Rect(0, 0, ActualWidth, ActualHeight), true, pad) is not { } slice) { Backdrop = null; return; }
             if (_brush is null || !ReferenceEquals(_brush.ImageSource, slice.Image))
             {
                 _brush = new ImageBrush(slice.Image) { ViewboxUnits = BrushMappingMode.RelativeToBoundingBox, Stretch = Stretch.Fill };
@@ -246,6 +346,7 @@ public class GlassSurface : ContentControl
                 Backdrop = _brush;
             }
             _brush.Viewbox = slice.Viewbox;
+            if (_liquid is not null) _liquid.Pad = new System.Windows.Media.Media3D.Point4D(slice.Pad.Left, slice.Pad.Top, slice.Pad.Right, slice.Pad.Bottom);
         }
         catch { /* not connected to a presentation source yet */ }
     }
@@ -253,8 +354,10 @@ public class GlassSurface : ContentControl
     /// <summary>
     /// The blurred wallpaper under <paramref name="area"/> (in <paramref name="visual"/>'s coordinates): the image and the
     /// part of it to show. <paramref name="refract"/> samples a slightly smaller area, so it looks gently magnified.
+    /// <paramref name="pad"/> widens the part shown by that much on every side (in <paramref name="visual"/>'s units) as
+    /// far as the screen goes; <c>Pad</c> says how much each side actually got (less at a screen edge).
     /// </summary>
-    internal static (ImageSource Image, Rect Viewbox)? Slice(Visual visual, Rect area, bool refract)
+    internal static (ImageSource Image, Rect Viewbox, Thickness Pad)? Slice(Visual visual, Rect area, bool refract, double pad = 0)
     {
         if (!Hub.Ready || PresentationSource.FromVisual(visual) is null || area.Width < 1 || area.Height < 1) return null;
         var topLeft = visual.PointToScreen(area.TopLeft);
@@ -267,12 +370,27 @@ public class GlassSurface : ContentControl
         var y = (topLeft.Y - mon.Bounds.Top) / mh;
         var w = (bottomRight.X - topLeft.X) / mw;
         var h = (bottomRight.Y - topLeft.Y) / mh;
-        if (refract)
-        {
-            var refraction = Application.Current.TryFindResource("G.Refraction") as double? ?? 0;
-            x += w * refraction / 2; y += h * refraction / 2; w *= 1 - refraction; h *= 1 - refraction;
-        }
-        return (image, new Rect(x, y, Math.Max(0.0005, w), Math.Max(0.0005, h)));
+        var refraction = refract ? Application.Current.TryFindResource("G.Refraction") as double? ?? 0 : 0;
+        var (view, got) = PaddedView(new Rect(x, y, w, h), refraction, pad / area.Width, pad / area.Height);
+        return (image, view, new Thickness(got.Left * area.Width, got.Top * area.Height, got.Right * area.Width, got.Bottom * area.Height));
+    }
+
+    /// <summary>
+    /// The part of the screen's picture to show for a surface at <paramref name="screen"/> (fractions of the screen):
+    /// shrunk by <paramref name="refraction"/> about its centre (a gentle magnification), then widened by
+    /// <paramref name="padX"/>/<paramref name="padY"/> of the surface's own size on each side, as far as the picture
+    /// goes. Returns that view and how much padding each side got, as fractions of the surface's size.
+    /// </summary>
+    internal static (Rect View, Thickness Got) PaddedView(Rect screen, double refraction, double padX, double padY)
+    {
+        double x = screen.X, y = screen.Y, w = screen.Width, h = screen.Height;
+        x += w * refraction / 2; y += h * refraction / 2; w *= 1 - refraction; h *= 1 - refraction;
+        // One surface pixel covers w / width of the picture after magnification, so the padding scales the same way.
+        double px = Math.Max(0, padX) * w, py = Math.Max(0, padY) * h;
+        double left = Math.Clamp(x, 0, px), top = Math.Clamp(y, 0, py);
+        double right = Math.Clamp(1 - (x + w), 0, px), bottom = Math.Clamp(1 - (y + h), 0, py);
+        var view = new Rect(x - left, y - top, Math.Max(0.0005, w + left + right), Math.Max(0.0005, h + top + bottom));
+        return (view, new Thickness(w > 0 ? left / w : 0, h > 0 ? top / h : 0, w > 0 ? right / w : 0, h > 0 ? bottom / h : 0));
     }
 }
 

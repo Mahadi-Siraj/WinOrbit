@@ -20,8 +20,9 @@ namespace WinOrbit.Services;
 /// How: Windows' screen-capture API (Windows.Graphics.Capture) hands over a frame only when something on that screen
 /// changed. The frame stays on the graphics card, which shrinks it to an eighth of its size (mipmaps); only that small
 /// picture — 240 × 135 for a 1080p screen — comes back to the CPU, where it gets the theme's blur and saturation and
-/// replaces the backdrop in place. At most 10 updates a second; nothing at all while the screen is still. Nothing
-/// is saved or sent anywhere.
+/// replaces the backdrop in place. At most 10 updates a second; nothing at all while the screen is still. Nearly clear
+/// looks (little blur, such as Liquid Clear) take a quarter-size picture instead (480 × 270) up to 20 times a second,
+/// so what moves behind the glass stays sharp and smooth. Nothing is saved or sent anywhere.
 ///
 /// WinOrbit's own glass windows are kept out of captures (<c>WDA_EXCLUDEFROMCAPTURE</c>), or the glass would see
 /// itself. That also leaves them out of screenshots, recordings and screen sharing while this is on — the setting says
@@ -32,8 +33,17 @@ public sealed class LiveGlass
 {
     /// <summary>Mipmap level brought back to the CPU: 3 = an eighth of the screen's width and height.</summary>
     internal const int Level = 3;
+    /// <summary>The level for nearly clear looks: 2 = a quarter of the screen's width and height.</summary>
+    internal const int SharpLevel = 2;
     /// <summary>Shortest time between two updates of one screen's picture (10 a second).</summary>
     internal const int MinGapMs = 100;
+    /// <summary>The same for nearly clear looks (20 a second), where movement behind the glass is plain to see.</summary>
+    internal const int SharpGapMs = 50;
+
+    /// <summary>Which mipmap level to bring back for the theme's blur: sharper for nearly clear looks.</summary>
+    internal static int LevelFor(double themeBlur) => themeBlur < WallpaperEngine.SharpBelowBlur ? SharpLevel : Level;
+    /// <summary>Shortest time between two updates for the theme's blur.</summary>
+    internal static int GapFor(double themeBlur) => themeBlur < WallpaperEngine.SharpBelowBlur ? SharpGapMs : MinGapMs;
 
     private readonly Dispatcher _ui;
     private readonly Dictionary<string, Feed> _feeds = new(StringComparer.OrdinalIgnoreCase);
@@ -179,8 +189,8 @@ public sealed class LiveGlass
         return want;
     }
 
-    /// <summary>Blur radius at the captured size that matches the wallpaper backdrop's blur.</summary>
-    internal static int BlurRadius(double themeBlur) => Math.Max(1, (int)Math.Round(themeBlur / (1 << Level) / 1.6));
+    /// <summary>Blur radius at the captured size (mipmap <paramref name="level"/>) that matches the wallpaper backdrop's blur.</summary>
+    internal static int BlurRadius(double themeBlur, int level = Level) => Math.Max(1, (int)Math.Round(themeBlur / (1 << level) / 1.6));
 
 /// <summary>Shortest time between looks while the screen behind only changes a little (about 3 a second).</summary>
     internal const int CalmGapMs = 300;
@@ -188,7 +198,7 @@ public sealed class LiveGlass
     internal const double ChangeThreshold = 3;
 
     /// <summary>How long until the next frame may be taken.</summary>
-    internal static long Due(long lastTaken, long now, bool calm) => Math.Max(0, (calm ? CalmGapMs : MinGapMs) - (now - lastTaken));
+    internal static long Due(long lastTaken, long now, bool calm, int gap = MinGapMs) => Math.Max(0, (calm ? CalmGapMs : gap) - (now - lastTaken));
 
     /// <summary>
     /// How much two pictures differ where they differ most: the largest average colour change over any 8 × 8 patch.
@@ -213,8 +223,8 @@ public sealed class LiveGlass
         return worst;
     }
 
-    /// <summary>The size of mipmap level <see cref="Level"/> for a screen of this size.</summary>
-    internal static (int Width, int Height) Shrunk(int width, int height) => (Math.Max(1, width >> Level), Math.Max(1, height >> Level));
+    /// <summary>The size of mipmap <paramref name="level"/> for a screen of this size.</summary>
+    internal static (int Width, int Height) Shrunk(int width, int height, int level = Level) => (Math.Max(1, width >> level), Math.Max(1, height >> level));
 
     // A new picture for one screen, on the UI thread.
     private void Show(string device, byte[] px, int w, int h, Action done)
@@ -309,7 +319,7 @@ public sealed class LiveGlass
         private readonly Direct3D11CaptureFramePool _pool;
         private readonly GraphicsCaptureSession _session;
         private IntPtr _mips, _view, _staging;
-        private int _w, _h, _sw, _sh;
+        private int _w, _h, _sw, _sh, _level = Level;
         private const int Buffers = 1;   // one waiting frame at most: Windows holds the next until it is taken
         private bool _scheduled, _reading, _closed, _calm, _first = true;
         private byte[] _shown = Array.Empty<byte>();
@@ -327,7 +337,7 @@ public sealed class LiveGlass
             {
                 _session.IsCursorCaptureEnabled = false;
                 NoBorder(_session);
-                lock (_gpu.Gate) Allocate(_item.Size.Width, _item.Size.Height);
+                lock (_gpu.Gate) Allocate(_item.Size.Width, _item.Size.Height, LevelFor(Hub.Wallpaper.Blur));
                 _pool.FrameArrived += OnFrame;
                 _session.StartCapture();
             }
@@ -366,12 +376,12 @@ public sealed class LiveGlass
             finally { Marshal.Release(s3); }
         }
 
-        // Called under the GPU gate.
-        private void Allocate(int w, int h)
+        // Called under the GPU gate. The mip chain always reaches the softest level, so either level can be read from it.
+        private void Allocate(int w, int h, int level)
         {
             Release();
-            _w = w; _h = h;
-            (_sw, _sh) = Shrunk(w, h);
+            _w = w; _h = h; _level = level;
+            (_sw, _sh) = Shrunk(w, h, level);
             var desc = new Native.D3D11_TEXTURE2D_DESC
             {
                 Width = (uint)w, Height = (uint)h, MipLevels = Level + 1, ArraySize = 1, Format = Native.DXGI_FORMAT_B8G8R8A8_UNORM, SampleCount = 1,
@@ -408,7 +418,7 @@ public sealed class LiveGlass
             {
                 if (_closed || _scheduled) return;
                 _scheduled = true;
-                wait = Due(_lastTaken, Environment.TickCount64, _calm);
+                wait = Due(_lastTaken, Environment.TickCount64, _calm, GapFor(Hub.Wallpaper.Blur));
             }
             if (wait > 0) _ = Task.Delay((int)wait).ContinueWith(_ => Take());
             else _ = Task.Run(Take);
@@ -417,7 +427,7 @@ public sealed class LiveGlass
         private void Retry()
         {
             lock (_gpu.Gate) { if (_closed || _scheduled) return; _scheduled = true; }
-            _ = Task.Delay(MinGapMs).ContinueWith(_ => Take());
+            _ = Task.Delay(GapFor(Hub.Wallpaper.Blur)).ContinueWith(_ => Take());
         }
 
         // Take the waiting frame: shrink it on the card, read the small picture back, blur it, hand it to the UI thread.
@@ -426,7 +436,7 @@ public sealed class LiveGlass
             var slot = -1;
             try
             {
-                int w, h;
+                int w, h, level;
                 lock (_gpu.Gate)
                 {
                     _scheduled = false;
@@ -441,10 +451,13 @@ public sealed class LiveGlass
                     {
                         // The screen's resolution changed: resize everything and wait for the next frame.
                         _pool.Recreate(_gpu.WinRt, DirectXPixelFormat.B8G8R8A8UIntNormalized, Buffers, size);
-                        Allocate(size.Width, size.Height);
+                        Allocate(size.Width, size.Height, LevelFor(Hub.Wallpaper.Blur));
                         slot = -1;
                         return;
                     }
+                    // The look switched between nearly clear and frosted: take this frame at the new picture size.
+                    var want = LevelFor(Hub.Wallpaper.Blur);
+                    if (want != _level) Allocate(_w, _h, want);
                     _busy[slot] = true;
                     _reading = true;
                     var texture = TextureOf(frame.Surface);
@@ -456,8 +469,8 @@ public sealed class LiveGlass
                     finally { Marshal.Release(texture); }
                     _gpu.GenerateMips(_gpu.Context, _view);
                     var small = new Native.D3D11_BOX { Right = (uint)_sw, Bottom = (uint)_sh, Back = 1 };
-                    _gpu.Copy(_gpu.Context, _staging, 0, 0, 0, 0, _mips, Level, ref small);
-                    w = _sw; h = _sh;
+                    _gpu.Copy(_gpu.Context, _staging, 0, 0, 0, 0, _mips, (uint)_level, ref small);
+                    w = _sw; h = _sh; level = _level;
                 }   // the frame goes back to Windows here, ready for the next change
 
                 // Read back once the card has finished, instead of spinning in Map while it works.
@@ -484,7 +497,7 @@ public sealed class LiveGlass
                     await Task.Delay(2).ConfigureAwait(false);
                 }
                 WallpaperEngine.Adjust(px, Hub.Wallpaper.Saturation);
-                WallpaperEngine.BoxBlur(px, w, h, BlurRadius(Hub.Wallpaper.Blur));
+                WallpaperEngine.BoxBlur(px, w, h, BlurRadius(Hub.Wallpaper.Blur, level));
                 // Skip pictures that barely differ from what the glass already shows (a gently animated wallpaper):
                 // no redraw, and the next look comes later. A real change anywhere — a window moving behind — shows.
                 lock (_gpu.Gate)

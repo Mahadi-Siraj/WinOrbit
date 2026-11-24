@@ -30,7 +30,12 @@ public sealed class WallpaperFrame
 /// </summary>
 public sealed class WallpaperEngine
 {
+    /// <summary>Backdrops are this many times smaller than the screen: blur hides the difference.</summary>
     public const int Downscale = 4;
+    /// <summary>Nearly clear looks (little blur) need a sharper backdrop: half the screen's size.</summary>
+    public const int SharpDownscale = 2;
+    /// <summary>Below this blur (px at full size) the backdrop is built at <see cref="SharpDownscale"/>.</summary>
+    internal const double SharpBelowBlur = 20;
 
     public string CurrentPath { get; private set; } = "";
     public WallpaperFit Fit { get; private set; } = WallpaperFit.Fill;
@@ -121,9 +126,21 @@ public sealed class WallpaperEngine
     public void SetGlass(double blur, double saturation)
     {
         if (Math.Abs(blur - _blur) < 0.5 && Math.Abs(saturation - _saturation) < 0.01) return;
+        var sharper = DownscaleFor(blur) != DownscaleFor(_blur);
         _blur = blur; _saturation = saturation;
-        _ = RebuildBackdropsAsync();
+        // A switch between sharp and soft backdrops needs the wallpaper decoded at another size first.
+        _ = sharper ? RefreshAsync(true) : RebuildBackdropsAsync();
     }
+
+    /// <summary>How many times smaller than the screen the backdrops are for this much blur.</summary>
+    internal static int DownscaleFor(double blur) => blur < SharpBelowBlur ? SharpDownscale : Downscale;
+
+    /// <summary>
+    /// How wide to decode the wallpaper: 720 px is plenty under a deep blur; a sharp backdrop gets one image pixel per
+    /// backdrop pixel on the widest screen (at most 1920, to keep memory small).
+    /// </summary>
+    internal static int DecodeWidthFor(int widestScreen, int downscale) =>
+        downscale >= Downscale ? 720 : Math.Clamp(widestScreen / Math.Max(1, downscale), 720, 1920);
 
     public async Task RefreshAsync(bool force)
     {
@@ -148,7 +165,10 @@ public sealed class WallpaperEngine
             else
             {
                 var files = _monitorPath.Values.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                frames = await Task.Run(() => files.Select(Decode).Where(f => f is not null).ToDictionary(f => f!.Path, f => f!, StringComparer.OrdinalIgnoreCase));
+                var down = DownscaleFor(_blur);
+                var width = DecodeWidthFor(Monitors.All().Select(m => m.Bounds.Width).DefaultIfEmpty(1920).Max(), down);
+                frames = await Task.Run(() => files.Select(f => Decode(f, width)).Where(f => f is not null).ToDictionary(f => f!.Path, f => f!, StringComparer.OrdinalIgnoreCase));
+                if (DownscaleFor(_blur) != down) return;   // the look changed meanwhile; SetGlass started a fresh decode at the new size
             }
             ArmLiveTimer(live);
             var paths = _monitorPath.Values.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -253,7 +273,7 @@ public sealed class WallpaperEngine
         BackgroundColor = bg;
     }
 
-    private static WallpaperFrame? Decode(string path)
+    private static WallpaperFrame? Decode(string path, int maxWidth)
     {
         try
         {
@@ -262,7 +282,7 @@ public sealed class WallpaperEngine
             var frame = decoder.Frames[0];
             int sw = frame.PixelWidth, sh = frame.PixelHeight;
             if (sw < 2 || sh < 2) return null;
-            var scale = Math.Min(1.0, 720.0 / sw);
+            var scale = Math.Min(1.0, (double)maxWidth / sw);
             BitmapSource src = frame;
             if (scale < 1) src = new TransformedBitmap(frame, new ScaleTransform(scale, scale));
             var conv = new FormatConvertedBitmap(src, PixelFormats.Bgra32, null, 0);
@@ -295,14 +315,15 @@ public sealed class WallpaperEngine
         {
             var blurred = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
             var sharp = new Dictionary<string, BitmapSource>(StringComparer.OrdinalIgnoreCase);
+            var down = DownscaleFor(blur);
             foreach (var (mon, frame) in jobs)
             {
-                var tw = Math.Max(32, mon.Bounds.Width / Downscale);
-                var th = Math.Max(32, mon.Bounds.Height / Downscale);
+                var tw = Math.Max(32, mon.Bounds.Width / down);
+                var th = Math.Max(32, mon.Bounds.Height / down);
                 var px = Compose(frame, mon, virtualBounds, fit, bg, tw, th);
                 sharp[mon.Device] = ToBitmap((byte[])px.Clone(), tw, th);
                 Adjust(px, sat);
-                BoxBlur(px, tw, th, (int)Math.Round(blur / Downscale / 1.6));
+                BoxBlur(px, tw, th, (int)Math.Round(blur / down / 1.6));
                 blurred[mon.Device] = ToBitmap(px, tw, th);
             }
             return (blurred, sharp);

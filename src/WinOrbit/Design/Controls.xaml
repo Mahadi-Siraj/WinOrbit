@@ -92,7 +92,8 @@
                 <ControlTemplate TargetType="{x:Type d:GlassSurface}">
                     <Grid>
                         <Border x:Name="PART_Shadow" CornerRadius="{TemplateBinding CornerRadius}" Background="Black" IsHitTestVisible="False"/>
-                        <Border x:Name="PART_Backdrop" CornerRadius="{TemplateBinding CornerRadius}" Background="{TemplateBinding Backdrop}"/>
+                        <!-- Rounded by GlassSurface.UpdateLens: a plain rectangle under the liquid lens, which cuts its own outline -->
+                        <Border x:Name="PART_Backdrop" Background="{TemplateBinding Backdrop}"/>
                         <Border CornerRadius="{TemplateBinding CornerRadius}" Background="{TemplateBinding Tint}"/>
                         <Border CornerRadius="{TemplateBinding CornerRadius}" Background="{DynamicResource T.Wash}" Opacity="{TemplateBinding WashOpacity}" IsHitTestVisible="False"/>
                         <Border CornerRadius="{TemplateBinding CornerRadius}" Background="{DynamicResource G.Glow}" Opacity="{TemplateBinding OrnamentOpacity}" IsHitTestVisible="False"/>

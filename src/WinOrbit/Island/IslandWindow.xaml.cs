@@ -673,6 +673,21 @@ public partial class IslandWindow : Window
     }
 
     /// <summary>
+    /// Blurs <paramref name="el"/> from one radius to another over <paramref name="ms"/>, then takes the blur off again
+    /// (it costs a pass on the graphics card only while it moves). Nothing under Reduced Motion.
+    /// </summary>
+    private static void BlurPass(UIElement el, double from, double to, double ms)
+    {
+        if (Motion.Intensity <= 0.01) return;
+        var fx = new System.Windows.Media.Effects.BlurEffect { Radius = from, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance };
+        el.Effect = fx;
+        var a = new System.Windows.Media.Animation.DoubleAnimation(from, to, TimeSpan.FromMilliseconds(ms / Math.Max(0.5, Motion.Intensity)))
+        { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } };
+        a.Completed += (_, _) => { if (ReferenceEquals(el.Effect, fx)) el.Effect = null; };
+        fx.BeginAnimation(System.Windows.Media.Effects.BlurEffect.RadiusProperty, a);
+    }
+
+    /// <summary>
     /// The glass moves in sub-pixel steps (no snapping, so slow motion stays smooth), but it must come to rest on
     /// whole pixels or centred text would sit half a pixel off and look soft. An even width centres exactly.
     /// </summary>
@@ -748,6 +763,12 @@ public partial class IslandWindow : Window
         Springs.To(Pill, HeightProperty, HeightFor(_tab), MorphResponse, MorphDamping);
         Springs.To(this, RadiusProperty, 30, MorphResponse, MorphDamping);
         Pop(Expanded, 0.94, EdgeOrigin.Y, cache: true, response: MorphResponse, damping: MorphDamping, originX: EdgeOrigin.X);   // the content grows out of the capsule as it opens
+        if (Pill.IsLiquid)
+        {
+            // Liquid glass: light runs round the rim as the drop swells, and the content comes into focus through it.
+            Pill.Sweep();
+            BlurPass(Expanded, 9, 0, 280);
+        }
         if (keyboard) SetInteractive(true);
         ArmCollapse();   // the short count applies only once the pointer has been inside and left
     }
@@ -768,6 +789,11 @@ public partial class IslandWindow : Window
         // squeezed the clock for a few frames at the very end) and without crawling over the last pixels.
         var response = immediate ? 0 : Shape.CloseResponse;
         Motion.To(Expanded, OpacityProperty, 0, immediate ? 0 : 120, null, () => { if (!_expanded) Expanded.Visibility = Visibility.Hidden; });   // Hidden keeps it laid out for the next open
+        if (Pill.IsLiquid && !immediate)
+        {
+            Pill.Sweep(0.6);
+            BlurPass(Expanded, 0, 6, 120);   // the content melts into the glass as it draws back
+        }
         Springs.To(Pill, HeightProperty, CollapsedHeight, response, Shape.Close);
         Springs.To(this, RadiusProperty, CollapsedRadius, response, Shape.Close);
         Motion.To(Compact, OpacityProperty, 1, immediate ? 0 : 260);

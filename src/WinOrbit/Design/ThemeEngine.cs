@@ -124,14 +124,8 @@ public sealed class ThemeEngine
         // Readability guard: if the wallpaper is too bright (dark mode) or too dark (light mode) for the
         // chosen translucency, quietly thicken the tint until text contrast is safe.
         var tint = ColorMath.Parse(g.Tint, dark ? Color.FromRgb(0x12, 0x15, 0x1C) : Color.FromRgb(0xF6, 0xF8, 0xFC));
-        var tintOpacity = Math.Clamp(g.TintOpacity, 0.05, 1);
-        var wallLum = _wallpaper.Palette.AverageLuminance;
-        for (var i = 0; i < 12; i++)
-        {
-            var effective = wallLum * (1 - tintOpacity) + ColorMath.Luminance(tint) * tintOpacity;
-            if (dark ? effective <= 0.16 : effective >= 0.55) break;
-            tintOpacity = Math.Min(1, tintOpacity + 0.05);
-        }
+        var liquid = Math.Clamp(g.Liquid, 0, 1);
+        var tintOpacity = ReadableTintOpacity(_wallpaper.Palette.AverageLuminance, ColorMath.Luminance(tint), g.TintOpacity, dark, liquid);
 
         var r = Application.Current.Resources;
         void B(string key, Color c) { var b = new SolidColorBrush(c); b.Freeze(); r[key] = b; }
@@ -190,6 +184,7 @@ public sealed class ThemeEngine
 
         r["G.ShadowOpacity"] = Math.Clamp(g.ShadowIntensity, 0, 1) * (dark ? 0.75 : 0.42);
         r["G.Refraction"] = Math.Clamp(g.Refraction, 0, 0.25);
+        r["G.Liquid"] = liquid;
 
         // Wallpaper wash
         var stops = t.Gradient.FromWallpaper || t.Gradient.Stops.Count < 2 ? palette.ToGradientStops() : t.Gradient.Stops;
@@ -217,6 +212,26 @@ public sealed class ThemeEngine
 
         _wallpaper.SetGlass(g.Blur, g.BackdropSaturation);
         Applied?.Invoke();
+    }
+
+    /// <summary>
+    /// Readability guard: if the wallpaper is too bright (dark looks) or too dark (light looks) for the chosen
+    /// translucency, thicken the tint in steps until text on it stays readable. The liquid lens (<paramref name="liquid"/>
+    /// above 0) calms bright patches (or lifts dark ones) itself, right where the text sits, so it needs less help and
+    /// the glass can stay clear.
+    /// </summary>
+    internal static double ReadableTintOpacity(double wallLum, double tintLum, double opacity, bool dark, double liquid)
+    {
+        liquid = Math.Clamp(liquid, 0, 1);
+        var limit = dark ? 0.16 + 0.12 * liquid : 0.55 - 0.12 * liquid;
+        opacity = Math.Clamp(opacity, 0.05, 1);
+        for (var i = 0; i < 12; i++)
+        {
+            var effective = wallLum * (1 - opacity) + tintLum * opacity;
+            if (dark ? effective <= limit : effective >= limit) break;
+            opacity = Math.Min(1, opacity + 0.05);
+        }
+        return opacity;
     }
 
     public static Brush BuildGradient(GradientDef def, IList<GradientStopDef> stops, double opacity)
@@ -430,6 +445,18 @@ public static class Presets
         {
             t.Dark = new GlassParams { Tint = "#11141B", TintOpacity = 0.44, Blur = 44, BackdropSaturation = 1.35, BorderIntensity = 0.6, HighlightIntensity = 0.55, Glow = 0.22, ShadowIntensity = 0.45, Refraction = 0.06 };
             t.Light = new GlassParams { Tint = "#F7F9FD", TintOpacity = 0.52, Blur = 44, BackdropSaturation = 1.25, BorderIntensity = 0.8, HighlightIntensity = 0.75, Glow = 0.12, ShadowIntensity = 0.3, Refraction = 0.06 };
+        }),
+        T("liquid-clear", "Liquid Clear", "Nearly clear liquid glass: a thick rounded rim that bends the wallpaper round its edges, and moves when the glass does.", ThemeMode.Auto, t =>
+        {
+            t.Dark = new GlassParams { Tint = "#0C0F15", TintOpacity = 0.12, Blur = 4, BackdropSaturation = 1.2, BorderIntensity = 0.22, HighlightIntensity = 0.2, Glow = 0.06, ShadowIntensity = 0.38, Refraction = 0.02, Liquid = 1 };
+            t.Light = new GlassParams { Tint = "#FFFFFF", TintOpacity = 0.16, Blur = 4, BackdropSaturation = 1.15, BorderIntensity = 0.35, HighlightIntensity = 0.3, Glow = 0.04, ShadowIntensity = 0.22, Refraction = 0.02, Liquid = 1 };
+            t.Gradient.Opacity = 0.2;
+        }),
+        T("liquid-frosted", "Liquid Frosted", "Liquid glass with a soft frost: the same living rim, with calmer, easier-to-read middles.", ThemeMode.Auto, t =>
+        {
+            t.Dark = new GlassParams { Tint = "#10131A", TintOpacity = 0.3, Blur = 18, BackdropSaturation = 1.3, BorderIntensity = 0.3, HighlightIntensity = 0.3, Glow = 0.12, ShadowIntensity = 0.42, Refraction = 0.03, Liquid = 0.8 };
+            t.Light = new GlassParams { Tint = "#F8FAFE", TintOpacity = 0.38, Blur = 18, BackdropSaturation = 1.2, BorderIntensity = 0.45, HighlightIntensity = 0.45, Glow = 0.08, ShadowIntensity = 0.26, Refraction = 0.03, Liquid = 0.8 };
+            t.Gradient.Opacity = 0.35;
         }),
         T("wallpaper-adaptive", "Wallpaper Adaptive", "Lets the wallpaper lead: thinner tint, stronger wash and vivid extracted accents.", ThemeMode.Auto, t =>
         {

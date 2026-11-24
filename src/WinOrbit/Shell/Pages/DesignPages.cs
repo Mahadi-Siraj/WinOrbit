@@ -381,7 +381,7 @@ public sealed class AppearancePage : PageBase
             Kit.ToggleRow("Curved glass edges", "The wallpaper bends round the rim of the island, widgets and launcher like thick glass, and the edge catches the light under the pointer. Uses the graphics card; turns itself off if WinOrbit falls back to software rendering.",
                 Hub.Settings.General.CurvedGlass, v => { Hub.Settings.General.CurvedGlass = v; Hub.Store.Save(); Hub.Theme.Apply(); }, false),
             Kit.ToggleRow("Live glass", LiveGlass.Supported
-                    ? "The island, widgets and launcher show the windows behind them, blurred, instead of only your wallpaper. WinOrbit watches the screen with Windows' screen-capture API, only while its glass is showing and only when something changes. The picture is shrunk to an eighth on the graphics card and blurred, kept in memory, never saved or sent. "
+                    ? "The island, widgets and launcher show the windows behind them, blurred, instead of only your wallpaper. WinOrbit watches the screen with Windows' screen-capture API, only while its glass is showing and only when something changes. The picture is shrunk to an eighth on the graphics card (a quarter for nearly clear looks such as Liquid Clear) and blurred, kept in memory, never saved or sent. "
                       + "While this is on, WinOrbit's island, widgets and launcher are left out of screenshots, recordings and screen sharing (otherwise the glass would capture itself). Off by default."
                       + (Hub.LiveGlass?.Problem is { } problem ? " Currently off: " + problem : "")
                     : "Needs Windows 11: earlier versions mark a captured screen with a yellow frame.",
@@ -562,6 +562,7 @@ public sealed class StudioPage : PageBase
         material.Children.Add(S("Blur", "How strongly the wallpaper behind the glass is diffused.", 0, 90, g.Blur, v => E(p => p.Blur = v), v => $"{v:0}"));
         material.Children.Add(S("Backdrop saturation", "Colour intensity of what shows through the glass.", 0.5, 2, g.BackdropSaturation, v => E(p => p.BackdropSaturation = v), v => $"{v * 100:0}%"));
         material.Children.Add(S("Refraction", "A subtle lens magnification of the backdrop.", 0, 0.2, g.Refraction, v => E(p => p.Refraction = v), v => $"{v * 100:0}%"));
+        material.Children.Add(S("Liquid lens", "A thick, rounded rim that bends the wallpaper round the glass's edges and moves when the glass does. Off (0%) keeps the classic thin curved edge. Needs Curved glass edges on and a graphics card with pixel shader 3.0.", 0, 1, g.Liquid, v => E(p => p.Liquid = v), v => v < 0.01 ? "Off" : $"{v * 100:0}%"));
         _sliders.Children.Add(Kit.Section("Material", null, material));
 
         var light = new StackPanel();
@@ -662,7 +663,7 @@ public static class ThemeIO
         {
             g.TintOpacity = Math.Clamp(g.TintOpacity, 0.05, 1); g.Blur = Math.Clamp(g.Blur, 0, 90); g.BackdropSaturation = Math.Clamp(g.BackdropSaturation, 0.5, 2);
             g.BorderIntensity = Math.Clamp(g.BorderIntensity, 0, 1.2); g.HighlightIntensity = Math.Clamp(g.HighlightIntensity, 0, 1.2); g.Glow = Math.Clamp(g.Glow, 0, 1);
-            g.ShadowIntensity = Math.Clamp(g.ShadowIntensity, 0, 1); g.Refraction = Math.Clamp(g.Refraction, 0, 0.2);
+            g.ShadowIntensity = Math.Clamp(g.ShadowIntensity, 0, 1); g.Refraction = Math.Clamp(g.Refraction, 0, 0.2); g.Liquid = Math.Clamp(g.Liquid, 0, 1);
         }
         t.CornerRadius = Math.Clamp(t.CornerRadius, 0, 36); t.FontScale = Math.Clamp(t.FontScale, 0.85, 1.3); t.Animation = Math.Clamp(t.Animation, 0, 1.5);
         t.Gradient ??= new GradientDef();
