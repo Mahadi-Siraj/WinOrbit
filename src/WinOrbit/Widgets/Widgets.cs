@@ -462,8 +462,12 @@ internal sealed partial class ClockWidget : WidgetView
         _timer.Interval = TicksEverySecond ? TimeSpan.FromMilliseconds(1000 - now.Millisecond + 5) : TimeSpan.FromSeconds(60 - now.Second) + TimeSpan.FromMilliseconds(30);
     }
 
-    protected override void OnStart() { Tick(); _timer.Start(); }
-    protected override void OnStop() => _timer.Stop();
+    /// <summary>Re-colours what a style paints from the accent itself (Story's gradient month); the rest follows the theme by resource.</summary>
+    private Action _retint = () => { };
+    private void OnThemeApplied() => _retint();
+
+    protected override void OnStart() { Tick(); _timer.Start(); if (Hub.Ready) Hub.Theme.Applied += OnThemeApplied; }
+    protected override void OnStop() { _timer.Stop(); if (Hub.Ready) Hub.Theme.Applied -= OnThemeApplied; }
 
     public override void BuildMenu(ItemCollection items)
     {
@@ -1020,17 +1024,18 @@ internal sealed class LauncherWidget : WidgetView
         {
             var name = Path.GetFileNameWithoutExtension(path);
             if (string.IsNullOrEmpty(name)) name = path;
-            var icon = ShellIcon(path);
             var b = new Button { Margin = new Thickness(2), ToolTip = IconRow ? name : path };
             b.SetResourceReference(StyleProperty, "Button.Ghost");
             if (IconRow)
             {
-                // The icon row, for desktop skins: monochrome icons and no names, so every app sits in the same tone.
-                b.Width = 48; b.Height = 48; b.Padding = new Thickness(8);
-                b.Content = icon is not null ? new Image { Source = Monochrome(icon), Width = 28, Height = 28, Opacity = 0.92 } : Ui.Icon(Glyph.Page, 22);
+                // The icon row, for desktop skins: each app drawn as a glyph in the text colour, no names, like the white
+                // icon rows of the skins people share. A 64 px icon drawn at 26 stays sharp, also on scaled screens.
+                b.Width = 46; b.Height = 46; b.Padding = new Thickness(10);
+                b.Content = InkIcon(path) is { } mask ? InkGlyph(mask, 26) : Ui.Icon(Glyph.Page, 22);
             }
             else
             {
+                var icon = ShellIcon(path);
                 b.Width = 76; b.Padding = new Thickness(4, 8, 4, 6);
                 var sp = new StackPanel();
                 sp.Children.Add(icon is not null ? new Image { Source = icon, Width = 32, Height = 32 } : Ui.Icon(Glyph.Page, 26));
@@ -1050,31 +1055,65 @@ internal sealed class LauncherWidget : WidgetView
         _empty.Visibility = paths.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>The icon in grey tones, transparency kept: what the icon row shows.</summary>
-    private static ImageSource Monochrome(ImageSource icon)
+    /// <summary>The icon row's glyph: the theme's text colour seen through the icon's ink mask, so it follows light and dark themes and bare text.</summary>
+    private static FrameworkElement InkGlyph(ImageSource mask, double size)
     {
-        if (icon is not BitmapSource src) return icon;
+        var glyph = new Shapes.Rectangle { Width = size, Height = size, OpacityMask = new ImageBrush(mask) { Stretch = Stretch.Uniform } };
+        glyph.SetResourceReference(Shapes.Shape.FillProperty, "T.Text");
+        RenderOptions.SetBitmapScalingMode(glyph, BitmapScalingMode.HighQuality);
+        return glyph;
+    }
+
+    /// <summary>A file's icon (64 px from the shell, or the 32 px one) turned into an ink mask by <see cref="Ink"/>, or null.</summary>
+    private static ImageSource? InkIcon(string path)
+    {
+        if ((Launcher.AppIcons.ForFile(path, 64) ?? ShellIcon(path)) is not BitmapSource src) return null;
         try
         {
-            var bgra = src.Format == PixelFormats.Bgra32 || src.Format == PixelFormats.Pbgra32 ? src : new FormatConvertedBitmap(src, PixelFormats.Bgra32, null, 0);
+            var premultiplied = src.Format == PixelFormats.Pbgra32;
+            var bgra = premultiplied || src.Format == PixelFormats.Bgra32 ? src : new FormatConvertedBitmap(src, PixelFormats.Bgra32, null, 0);
             var stride = bgra.PixelWidth * 4;
             var px = new byte[stride * bgra.PixelHeight];
             bgra.CopyPixels(px, stride, 0);
-            Grey(px);
-            var grey = BitmapSource.Create(bgra.PixelWidth, bgra.PixelHeight, bgra.DpiX, bgra.DpiY, bgra.Format, null, px, stride);
-            grey.Freeze();
-            return grey;
+            Ink(px, premultiplied);
+            var mask = BitmapSource.Create(bgra.PixelWidth, bgra.PixelHeight, 96, 96, PixelFormats.Pbgra32, null, px, stride);
+            mask.Freeze();
+            return mask;
         }
-        catch { return icon; }
+        catch { return null; }
     }
 
-    /// <summary>Turns BGRA pixels grey in place (Rec. 601 weights), keeping alpha. Works on premultiplied pixels too.</summary>
-    internal static void Grey(byte[] bgra)
+    /// <summary>How much ink the darkest part of an icon keeps, so a dark tile still shows its outline.</summary>
+    internal const double InkFloor = 0.28;
+
+    /// <summary>
+    /// Turns icon pixels (BGRA) into an ink mask in place: white, premultiplied, with the alpha saying how much ink each
+    /// pixel gets. The icon's lightest colour gets full ink and its darkest <see cref="InkFloor"/>, stretched over the
+    /// icon's own range, so a logo stays visible inside its tile the way a glyph would, and an icon in one flat colour
+    /// becomes a solid silhouette. Transparency is kept. <paramref name="premultiplied"/> pixels are un-premultiplied first.
+    /// </summary>
+    internal static void Ink(byte[] bgra, bool premultiplied)
     {
-        for (var k = 0; k + 3 < bgra.Length; k += 4)
+        var count = bgra.Length / 4;
+        var light = new double[count];
+        double lo = 255, hi = 0;
+        for (var i = 0; i < count; i++)
         {
-            var y = (byte)Math.Round(0.114 * bgra[k] + 0.587 * bgra[k + 1] + 0.299 * bgra[k + 2]);
-            bgra[k] = bgra[k + 1] = bgra[k + 2] = y;
+            var k = i * 4;
+            var a = bgra[k + 3];
+            if (a == 0) continue;
+            double b = bgra[k], g = bgra[k + 1], r = bgra[k + 2];
+            if (premultiplied) { var s = 255.0 / a; b *= s; g *= s; r *= s; }
+            light[i] = Math.Min(255, 0.114 * b + 0.587 * g + 0.299 * r);
+            if (a >= 128) { lo = Math.Min(lo, light[i]); hi = Math.Max(hi, light[i]); }   // soft edges don't set the range
+        }
+        var range = hi - lo;
+        for (var i = 0; i < count; i++)
+        {
+            var k = i * 4;
+            var t = range < 24 ? 1 : Math.Clamp((light[i] - lo) / range, 0, 1);
+            var ink = (byte)Math.Round(bgra[k + 3] * (InkFloor + (1 - InkFloor) * t));
+            bgra[k] = bgra[k + 1] = bgra[k + 2] = bgra[k + 3] = ink;
         }
     }
 
@@ -1163,7 +1202,12 @@ internal sealed class RecycleBinWidget : WidgetView
     private void Refresh()
     {
         var info = new Native.SHQUERYRBINFO { cbSize = Marshal.SizeOf<Native.SHQUERYRBINFO>() };
-        if (Native.SHQueryRecycleBin(null, ref info) != 0) { _value.Text = "—"; _detail.Text = "unavailable"; return; }
+        if (Native.SHQueryRecycleBin(null, ref info) != 0)
+        {
+            _value.Text = "—"; _detail.Text = "unavailable";
+            if (_files is not null && _size is not null) { WidgetLook.SetCaps(_files, "Unavailable"); WidgetLook.SetCaps(_size, ""); }
+            return;
+        }
         var (count, detail) = Describe(info.i64NumItems, info.i64Size);
         _value.Text = count; _detail.Text = detail;
         if (_files is not null && _size is not null)
@@ -1295,6 +1339,11 @@ internal sealed class WeatherWidget : WidgetView
     {
         Children.Add(_body);
         _timer.Tick += async (_, _) => await Refresh(false);
+        if (Line)
+        {
+            Background = Brushes.Transparent;   // the whole line answers the pointer, not only its letters
+            MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2 && !Hub.Weather.Enabled) { App.Current.ShowMain("settings"); e.Handled = true; } };
+        }
     }
 
     private async Task Refresh(bool force)
@@ -1303,6 +1352,12 @@ internal sealed class WeatherWidget : WidgetView
         var p = Hub.Settings.Privacy;
         if (!Hub.Weather.Enabled)
         {
+            if (Line)
+            {
+                // Still one quiet line on the wallpaper while weather is off, not a paragraph; a double-click leads to the switch.
+                _body.Children.Add(LineRow(LineIcons.Cloud, "Weather", "Off · double-click to turn on", "T.Text3"));
+                return;
+            }
             _body.Children.Add(WidgetLook.Head("Weather", WidgetLook.Data("off", 10.5, "T.Text3")));
             _body.Children.Add(Ui.Text("It needs the internet, so it waits until you turn it on and choose a place.", "Text.Caption", 12.5));
             _body.Children.Add(Ui.Button("Turn on in Privacy ›", () => App.Current.ShowMain("settings"), "Button.Ghost").With(b => { b.HorizontalAlignment = HorizontalAlignment.Left; b.Margin = new Thickness(-8, 6, 0, 0); b.FontSize = 12; b.Padding = new Thickness(8, 4, 8, 4); }));
@@ -1316,16 +1371,10 @@ internal sealed class WeatherWidget : WidgetView
             var unit = p.WeatherFahrenheit ? "°F" : "°C";
             var (text, icon) = WeatherService.Describe(r.Code);
             var place = string.IsNullOrWhiteSpace(p.WeatherPlace) ? "Weather" : p.WeatherPlace;
-            if (Instance.Variant == "line")
+            if (Line)
             {
                 // The line look, for desktop skins: the sky as a line icon, the place and "Cloudy · 24°C" in spaced capitals.
-                var row = Ui.Grid("auto,*");
-                row.Children.Add(Ui.LineIcon(icon, 36, "T.Accent", 1.5).With(v => v.VerticalAlignment = VerticalAlignment.Center));
-                var lines = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-                lines.Children.Add(WidgetLook.Caps(place, 13, "T.Text"));
-                lines.Children.Add(WidgetLook.Caps($"{text} · {r.Temperature:0}{unit}", 10.5, "T.Text2").With(t => t.Margin = new Thickness(0, 4, 0, 0)));
-                row.Children.Add(lines.At(0, 1));
-                _body.Children.Add(row);
+                _body.Children.Add(LineRow(icon, place, $"{text} · {r.Temperature:0}{unit}", "T.Accent"));
                 return;
             }
             _body.Children.Add(WidgetLook.Head(place));
@@ -1352,9 +1401,24 @@ internal sealed class WeatherWidget : WidgetView
         catch (Exception ex)
         {
             _body.Children.Clear();
+            if (Line) { _body.Children.Add(LineRow(LineIcons.Cloud, "Weather", "Unavailable right now", "T.Text3").With(r => r.ToolTip = ex.Message)); return; }
             _body.Children.Add(Ui.Text("Weather unavailable", "Text.Sub", 15));
             _body.Children.Add(Ui.Text(ex.Message, "Text.Caption", 12));
         }
+    }
+
+    private bool Line => Instance.Variant == "line";
+
+    /// <summary>The line look: a line icon, then a title and a detail in spaced capitals.</summary>
+    private static Grid LineRow(string icon, string title, string detail, string iconBrush)
+    {
+        var row = Ui.Grid("auto,*");
+        row.Children.Add(Ui.LineIcon(icon, 36, iconBrush, 1.5).With(v => v.VerticalAlignment = VerticalAlignment.Center));
+        var lines = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        lines.Children.Add(WidgetLook.Caps(title, 13, "T.Text"));
+        lines.Children.Add(WidgetLook.Caps(detail, 10.5, "T.Text2").With(t => t.Margin = new Thickness(0, 4, 0, 0)));
+        row.Children.Add(lines.At(0, 1));
+        return row;
     }
 
     protected override async void OnStart() { _timer.Start(); await Refresh(false); }

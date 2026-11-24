@@ -107,16 +107,22 @@ public partial class IslandWindow
             NetworkInformation.NetworkStatusChanged -= OnStatusNetwork;
             Hub.Power.BatteryChanged -= OnStatusBattery;
             Hub.Power.PowerSourceChanged -= OnStatusPower;
+            _statusSession++;   // a lookup still running must not hook the radio after this
             if (_btRadioForStatus is not null) { _btRadioForStatus.StateChanged -= OnStatusRadio; _btRadioForStatus = null; }
         }
     }
 
+    /// <summary>Counts status sessions: a radio lookup that finishes after the row was hidden (or shown again) is dropped.</summary>
+    private int _statusSession;
+
     private async Task HookBluetoothRadio()
     {
+        var session = ++_statusSession;
         try
         {
             var r = await QuickControls.FindRadio(RadioKind.Bluetooth);
-            if (r is null || !_statusLive) { UpdateStatus(); return; }
+            if (session != _statusSession || !_statusLive) return;   // a newer lookup owns the radio now
+            if (r is null) { UpdateStatus(); return; }
             _btRadioForStatus = r;
             r.StateChanged += OnStatusRadio;
             UpdateStatus();

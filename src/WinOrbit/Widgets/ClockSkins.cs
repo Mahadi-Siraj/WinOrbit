@@ -199,7 +199,8 @@ internal sealed partial class ClockWidget
         var box = new Border { BorderThickness = new Thickness(1.5), Padding = new Thickness(0, 4, 0, 5), SnapsToDevicePixels = true };
         box.SetResourceReference(Border.BorderBrushProperty, "T.Text");
         var day = Centred(T(38, FontWeights.SemiBold, "T.Text", LabelFont));
-        box.Child = day;
+        // Long weekdays ("QUARTA-FEIRA", "ВОСКРЕСЕНЬЕ") shrink to fit the box instead of running out of it.
+        box.Child = new Viewbox { Child = day, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Margin = new Thickness(8, 0, 8, 0), HorizontalAlignment = HorizontalAlignment.Center };
         var bar = new Shapes.Path { Margin = new Thickness(0, 6, 0, 0) };
         bar.SetResourceReference(Shapes.Shape.FillProperty, "T.Text");
         sp.Children.Add(ticks); sp.Children.Add(box); sp.Children.Add(bar);
@@ -241,11 +242,24 @@ internal sealed partial class ClockWidget
             new Typeface(family, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal), size, Brushes.Black, 1.0);
         var letters = ft.BuildGeometry(new Point(0, 0));
         var b = letters.Bounds;
-        if (!b.IsEmpty) letters.Transform = new TranslateTransform((width - b.Width) / 2 - b.X, (height - b.Height) / 2 - b.Y);
+        if (!b.IsEmpty)
+        {
+            // Centred, and shrunk when a long month or language would run past the bar's ends (and vanish).
+            var k = KnockoutScale(b.Width, width);
+            var t = new TransformGroup();
+            t.Children.Add(new TranslateTransform(-b.X - b.Width / 2, -b.Y - b.Height / 2));
+            t.Children.Add(new ScaleTransform(k, k));
+            t.Children.Add(new TranslateTransform(width / 2, height / 2));
+            letters.Transform = t;
+        }
         var bar = new CombinedGeometry(GeometryCombineMode.Exclude, new RectangleGeometry(new Rect(0, 0, width, height)), letters);
         bar.Freeze();
         return bar;
     }
+
+    /// <summary>How much the label bar's letters shrink to keep 10 px clear at each end: 1 (full size) when they fit.</summary>
+    internal static double KnockoutScale(double textWidth, double barWidth) =>
+        textWidth <= 0 ? 1 : Math.Min(1, Math.Max(1, barWidth - 20) / textWidth);
 
     /// <summary>Heavy figures with the date written out under them, full stop included.</summary>
     private FrameworkElement BuildHeavy()
@@ -273,10 +287,12 @@ internal sealed partial class ClockWidget
         var story = Centred(T(12.5, FontWeights.Normal, "T.Text2"));
         story.TextWrapping = TextWrapping.Wrap; story.MaxWidth = 330; story.LineHeight = 19;
         sp.Children.Add(month); sp.Children.Add(day); sp.Children.Add(story);
+        // The gradient is worked out from the accent, so it is redone when the theme (or the wallpaper's accent) changes.
+        _retint = () => month.Foreground = AccentGradient(TryFindResource("T.Accent") is SolidColorBrush b ? b.Color : Color.FromRgb(0x8A, 0x7D, 0xFF));
         _update = now =>
         {
             month.Text = now.ToString("MMMM", Ci);
-            month.Foreground = AccentGradient(TryFindResource("T.Accent") is SolidColorBrush b ? b.Color : Color.FromRgb(0x8A, 0x7D, 0xFF));
+            _retint();
             day.Text = now.ToString("dddd", Ci) + ", " + now.ToString("dd", Ci) + ".";
             story.Text = StoryLine(now, H24);
         };

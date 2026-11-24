@@ -402,9 +402,10 @@ public sealed class WidgetsPage : PageBase
         var clocks = Kit.Gallery();
         foreach (var (id, name, size) in ClockWidget.Styles)
         {
-            var preview = new ClockWidget(new WidgetInstance { Kind = "clock", Variant = id });
+            // Big stages and a thin inset: wide skins (Orbit) and tall ones (Hairline) still read at gallery size.
+            var preview = new ClockWidget(new WidgetInstance { Kind = "clock", Variant = id }) { Margin = new Thickness(10) };
             _previews.Add(preview);
-            var stage = new Grid { Height = 92, ClipToBounds = true };
+            var stage = new Grid { Height = 124, ClipToBounds = true };
             var wash = new Border { Opacity = 0.55 };
             wash.SetResourceReference(Border.BackgroundProperty, "T.WashStrong");
             wash.SetResourceReference(Border.CornerRadiusProperty, "R.Control");
@@ -414,7 +415,7 @@ public sealed class WidgetsPage : PageBase
             var sp = new StackPanel();
             sp.Children.Add(stage);
             sp.Children.Add(Ui.Text(name, "Text.Body", 13, FontWeights.SemiBold).With(t => t.Margin = new Thickness(2, 9, 0, 0)));
-            var card = new Button { Width = 196, Margin = new Thickness(6), Padding = new Thickness(10, 10, 10, 10), HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, ToolTip = $"Add the {name} clock to your desktop", Content = sp };
+            var card = new Button { Width = 264, Margin = new Thickness(6), Padding = new Thickness(10, 10, 10, 10), HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, ToolTip = $"Add the {name} clock to your desktop", Content = sp };
             card.Click += (_, _) => { Hub.Widgets.Add("clock", id, new Dictionary<string, string> { ["style"] = "bare" }, null, size); RenderPlaced(); };
             clocks.Children.Add(card);
         }

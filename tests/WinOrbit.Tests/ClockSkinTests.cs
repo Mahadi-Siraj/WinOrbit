@@ -95,6 +95,14 @@ public class ClockSkinTests
         Assert.Equal(heights, Enumerable.Range(0, 48).Select(ClockWidget.TickHeight));   // the same every day
     }
 
+    [Theory]
+    [InlineData(150, 232, 1.0)]     // fits: full size
+    [InlineData(212, 232, 1.0)]     // exactly 10 px clear at each end
+    [InlineData(424, 232, 0.5)]     // a long month or language: shrinks to keep the margins
+    [InlineData(0, 232, 1.0)]       // nothing drawn
+    public void Label_bar_letters_shrink_only_when_they_would_run_off_the_bar(double text, double bar, double scale) =>
+        Assert.Equal(scale, ClockWidget.KnockoutScale(text, bar), 3);
+
     [Fact]
     public void Story_tells_the_time_as_a_sentence()
     {
@@ -185,11 +193,31 @@ public class MatchingWidgetTests
     }
 
     [Fact]
-    public void Icon_row_turns_icons_grey_and_keeps_their_transparency()
+    public void Icon_row_inks_light_parts_fully_and_dark_parts_faintly()
     {
-        byte[] px = { 0, 0, 255, 200, 255, 255, 255, 255, 10, 20, 30, 0 };   // red half-see-through, white, a clear pixel
-        LauncherWidget.Grey(px);
-        Assert.Equal(new byte[] { 76, 76, 76, 200, 255, 255, 255, 255, 22, 22, 22, 0 }, px);
+        // A dark tile with a white logo, a clear pixel and a soft edge: white gets full ink, black the floor, clear stays clear.
+        byte[] px = { 255, 255, 255, 255, 0, 0, 0, 255, 10, 20, 30, 0, 255, 255, 255, 100 };
+        LauncherWidget.Ink(px, false);
+        var floor = (byte)Math.Round(255 * LauncherWidget.InkFloor);
+        Assert.Equal(new byte[] { 255, 255, 255, 255, floor, floor, floor, floor, 0, 0, 0, 0, 100, 100, 100, 100 }, px);
+    }
+
+    [Fact]
+    public void Icon_row_draws_a_one_colour_icon_as_a_solid_silhouette()
+    {
+        byte[] px = { 40, 40, 200, 255, 50, 40, 200, 255, 40, 40, 200, 128 };   // all red; one pixel half see-through
+        LauncherWidget.Ink(px, false);
+        Assert.Equal(new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 128, 128, 128, 128 }, px);
+    }
+
+    [Fact]
+    public void Icon_row_reads_premultiplied_pixels_by_their_real_colour()
+    {
+        // White at half alpha is stored premultiplied as 128s: it is still the lightest colour, so it gets all of its alpha as ink.
+        byte[] px = { 128, 128, 128, 128, 0, 0, 0, 255 };
+        LauncherWidget.Ink(px, true);
+        Assert.Equal(128, px[3]);
+        Assert.Equal((byte)Math.Round(255 * LauncherWidget.InkFloor), px[7]);
     }
 
     [Fact]
