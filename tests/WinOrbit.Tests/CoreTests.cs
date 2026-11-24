@@ -317,6 +317,75 @@ public class SettingsTests
     }
 
     [Fact]
+    public void Files_written_by_1_3_2_still_load()
+    {
+        // Fixtures written by the real 1.3.2 code on .NET 8, with values changed in every section.
+        // A rename or a type change that would reset someone's setup after an update fails here first.
+        var dir = Path.Combine(Path.GetTempPath(), "gw-f-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        Paths.OverrideRoot(dir);
+        string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
+        try
+        {
+            File.Copy(Fixture("settings-1.3.2.json"), Paths.Settings);
+            File.Copy(Fixture("data-1.3.2.json"), Paths.Data);
+            var store = new Store();
+            store.Load();
+            Assert.False(store.IsFirstRun);
+
+            var s = store.Settings;
+            Assert.Equal("midnight", s.ActiveThemeId);
+            Assert.Equal("work", s.ActiveProfileId);
+            Assert.False(s.WallpaperAutoExtract);
+            Assert.Equal("Left", s.Island.Edge);
+            Assert.Equal("Square", s.Island.Shape);
+            Assert.Equal("Album", s.Island.Rim);
+            Assert.Equal(24, s.Island.OffsetY);
+            Assert.False(s.Island.SnapToCentre);
+            Assert.DoesNotContain("notes", s.Island.Modules);
+            Assert.Equal(2, s.Widgets.Count);
+            Assert.Equal(@"\\.\DISPLAY1", s.Widgets[0].Monitor);
+            Assert.Equal("stacked", s.Widgets[0].Variant);
+            Assert.Equal(1500, s.Widgets[0].X);
+            Assert.Equal("IDEAS", s.Widgets[1].Opt("title"));
+            Assert.True(s.Widgets[1].Pinned);
+            Assert.Equal(0.8, s.Widgets[1].Opacity);
+            Assert.True(s.General.ReducedMotion);
+            Assert.False(s.General.Use24Hour);
+            Assert.Equal("Ctrl+Alt+I", s.General.HotkeyIsland);
+            Assert.True(s.Privacy.NetworkAllowed);
+            Assert.True(s.Privacy.LyricsEnabled);
+            Assert.True(s.Automation.Enabled);
+            Assert.Equal("21:30", s.Automation.TimeRules.Single().Time);
+            Assert.Equal("night", s.Automation.TimeRules[0].ProfileId);
+
+            var d = store.Data;
+            Assert.Equal("Remember the release notes", d.Notes[UserData.IslandNoteKey]);
+            Assert.Equal(2, d.Tasks["today"].Count);
+            Assert.True(d.Tasks["today"][0].Done);
+            Assert.Equal(new DateTime(2026, 11, 20, 9, 30, 0), d.Sessions.Single().Start);
+            Assert.Equal(25, d.Sessions[0].Minutes);
+            Assert.Equal("pinned text", d.ClipPins.Single());
+            Assert.Equal(3, d.LaunchCounts["notepad"]);
+            Assert.Equal(3, d.Events.Count);
+            Assert.Equal(new TimeSpan(14, 0, 0), d.Events[0].Time);
+            Assert.Null(d.Events[1].Time);                        // all-day event
+            Assert.Equal("holidays.ics", d.Events[1].Source);
+            Assert.True(d.Events[2].AtTimeOnly);
+
+            var t = Json.Read<Theme>(Fixture("theme-1.3.2.json"))!;
+            Assert.Equal(ThemeMode.Scheduled, t.Mode);
+            Assert.Equal("20:15", t.DarkAt);
+            Assert.Equal("#FF8A65", t.AccentDark);
+            Assert.Equal(GradientKind.Radial, t.Gradient.Kind);
+            Assert.Equal(2, t.Gradient.Stops.Count);
+
+            Assert.Empty(Directory.GetFiles(dir, "*.corrupt", SearchOption.AllDirectories));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Built_in_presets_are_complete_and_unique()
     {
         Assert.Equal(Presets.All.Count, Presets.All.Select(t => t.Id).Distinct().Count());

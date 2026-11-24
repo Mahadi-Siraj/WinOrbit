@@ -1,0 +1,59 @@
+{
+  "Notes": {
+    "island": "Remember the release notes"
+  },
+  "Tasks": {
+    "today": [
+      {
+        "Text": "Ship 1.4",
+        "Done": true
+      },
+      {
+        "Text": "Reply on Reddit",
+        "Done": false
+      }
+    ]
+  },
+  "Sessions": [
+    {
+      "Start": "2026-11-20T09:30:00",
+      "Minutes": 25,
+      "Label": "Deep work"
+    }
+  ],
+  "ClipPins": [
+    "pinned text"
+  ],
+  "LaunchCounts": {
+    "notepad": 3
+  },
+  "Events": [
+    {
+      "Id": "ev00000001",
+      "Date": "2026-12-01T00:00:00",
+      "Time": "14:00:00",
+      "Title": "Team meeting",
+      "Uid": null,
+      "Source": null,
+      "AtTimeOnly": false
+    },
+    {
+      "Id": "ev00000002",
+      "Date": "2026-12-25T00:00:00",
+      "Time": null,
+      "Title": "Holiday",
+      "Uid": "holiday-1@example.invalid",
+      "Source": "holidays.ics",
+      "AtTimeOnly": false
+    },
+    {
+      "Id": "ev00000003",
+      "Date": "2026-11-24T00:00:00",
+      "Time": "18:45:00",
+      "Title": "Stretch",
+      "Uid": null,
+      "Source": null,
+      "AtTimeOnly": true
+    }
+  ]
+}

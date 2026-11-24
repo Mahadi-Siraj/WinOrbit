@@ -19,4 +19,9 @@
     <ProjectReference Include="..\..\src\WinOrbit\WinOrbit.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Settings, data and theme files written by an older release; they must keep loading. -->
+    <None Update="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
