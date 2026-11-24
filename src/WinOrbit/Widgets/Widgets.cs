@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Shapes = System.Windows.Shapes;
 using System.Windows.Threading;
 using WinOrbit.Core;
 using WinOrbit.Design;
@@ -18,103 +19,349 @@ namespace WinOrbit.Widgets;
 
 public static class WidgetCatalog
 {
+    // Default sizes come from WidgetSizes (Small 160×160, Medium 336×160, Wide 512×160, Large 336×336), so new widgets
+    // line up with each other. Widgets placed by earlier versions keep the size they were given.
     public static readonly List<WidgetKind> All = new()
     {
-        new("clock", "Clock", "Minimal, stacked or ambient-date clock that scales with its size.", Glyph.Clock, "Time", 260, 128, 130, 80, i => new ClockWidget(i)),
-        new("calendar", "Calendar", "Month view with today highlighted.", Glyph.Calendar, "Time", 272, 268, 230, 236, i => new CalendarWidget(i)),
-        new("worldclock", "World clock", "Up to five cities with their offset from you.", Glyph.Globe, "Time", 256, 168, 200, 96, i => new WorldClockWidget(i)),
-        new("system", "System monitor", "CPU, memory, GPU, network and disk at a glance.", Glyph.Chip, "System", 272, 250, 220, 130, i => new SystemWidget(i)),
-        new("media", "Now playing", "Artwork, track details and playback controls.", Glyph.Music, "Media", 336, 128, 260, 112, i => new MediaWidget(i)),
-        new("focus", "Focus timer", "Pomodoro, countdown and stopwatch with today's session count.", Glyph.Stopwatch, "Productivity", 256, 264, 220, 240, i => new FocusWidget(i)),
-        new("notes", "Notes", "A sticky note that saves as you type. Stored only on this PC.", Glyph.Note, "Productivity", 272, 200, 180, 120, i => new NotesWidget(i)),
-        new("tasks", "Tasks", "A checklist for tasks or daily objectives.", Glyph.List, "Productivity", 272, 250, 220, 160, i => new TasksWidget(i)),
-        new("launcher", "Launcher", "Pin apps, files and folders. Drop items onto it to add them.", Glyph.Tiles, "Desktop", 288, 128, 150, 96, i => new LauncherWidget(i)),
-        new("recyclebin", "Recycle Bin", "Item count and size, with open and empty actions.", Glyph.Delete, "Desktop", 224, 112, 190, 104, i => new RecycleBinWidget(i)),
-        new("text", "Text", "A line of your own: a quote, a label or a reminder.", Glyph.Edit, "Aesthetic", 320, 96, 140, 64, i => new TextWidget(i)),
-        new("ambient", "Ambient card", "A wallpaper-matched gradient card with a greeting and the date.", Glyph.Color, "Aesthetic", 320, 144, 200, 110, i => new AmbientWidget(i)),
-        new("weather", "Weather", "Optional. Uses the internet only if you enable it in Settings › Privacy.", Glyph.Cloud, "Online (optional)", 272, 168, 230, 150, i => new WeatherWidget(i)),
+        new("clock", "Clock", "Nine styles, from minimal to handwritten. Pick one under Clocks above, or right-click › Style.", Glyph.Clock, "Time", 336, 160, 120, 80, i => new ClockWidget(i)),
+        new("calendar", "Calendar", "Month view with today highlighted.", Glyph.Calendar, "Time", 336, 336, 230, 236, i => new CalendarWidget(i)),
+        new("worldclock", "World clock", "Up to five cities with their offset from you.", Glyph.Globe, "Time", 336, 160, 200, 96, i => new WorldClockWidget(i)),
+        new("system", "System monitor", "CPU, memory, GPU, network and disk at a glance.", Glyph.Chip, "System", 336, 336, 220, 130, i => new SystemWidget(i)),
+        new("media", "Now playing", "Artwork, track details and playback controls.", Glyph.Music, "Media", 336, 160, 260, 112, i => new MediaWidget(i)),
+        new("focus", "Focus timer", "Pomodoro, countdown and stopwatch with today's session count.", Glyph.Stopwatch, "Productivity", 336, 336, 220, 240, i => new FocusWidget(i)),
+        new("notes", "Notes", "A sticky note that saves as you type. Stored only on this PC.", Glyph.Note, "Productivity", 336, 160, 160, 120, i => new NotesWidget(i)),
+        new("tasks", "Tasks", "A checklist for tasks or daily objectives.", Glyph.List, "Productivity", 336, 336, 220, 160, i => new TasksWidget(i)),
+        new("launcher", "Launcher", "Pin apps, files and folders. Drop items onto it to add them.", Glyph.Tiles, "Desktop", 336, 160, 150, 96, i => new LauncherWidget(i)),
+        new("recyclebin", "Recycle Bin", "Item count and size, with open and empty actions.", Glyph.Delete, "Desktop", 160, 160, 150, 104, i => new RecycleBinWidget(i)),
+        new("text", "Text", "A line of your own: a quote, a label or a reminder.", Glyph.Edit, "Aesthetic", 336, 160, 140, 64, i => new TextWidget(i)) { DefaultStyle = "bare" },
+        new("ambient", "Ambient card", "A wallpaper-matched gradient card with a greeting and the date.", Glyph.Color, "Aesthetic", 336, 160, 200, 110, i => new AmbientWidget(i)),
+        new("weather", "Weather", "Optional. Uses the internet only if you enable it in Settings › Privacy.", Glyph.Cloud, "Online (optional)", 336, 160, 230, 128, i => new WeatherWidget(i)),
     };
 
     public static WidgetKind? Find(string id) => All.FirstOrDefault(k => k.Id == id);
 }
 
 // =====================================================================================
+/// <summary>
+/// The desktop clock in nine styles. Each style builds its own little layout inside a Viewbox (so it scales with the
+/// widget) and an update function; the clock then sleeps until the next minute (or second, when seconds are shown).
+/// Only fonts that ship with Windows are used, so nothing is downloaded and nothing needs a licence.
+/// </summary>
 internal sealed class ClockWidget : WidgetView
 {
+    /// <summary>The styles in the order the menu and the gallery show them: (variant, name, the size it looks best at).</summary>
+    public static readonly (string Id, string Name, string Size)[] Styles =
+    {
+        ("", "Minimal", "m"), ("stacked", "Stacked", "m"), ("date", "Ambient date", "m"),
+        ("greeting", "Greeting", "w"), ("spaced", "Spaced", "w"), ("outline", "Outline", "m"),
+        ("bigdate", "Big date", "m"), ("script", "Script", "m"), ("mono", "Mono", "m"),
+    };
+
+    private static readonly FontFamily ScriptFont = new("Segoe Script, Ink Free, Segoe Print, Segoe UI");
+    private static readonly FontFamily CondensedFont = new("Bahnschrift Condensed, Bahnschrift, Segoe UI");
+    private static readonly FontFamily MonoFont = new("Cascadia Mono, Consolas, Courier New");
+
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Background);
-    private readonly TextBlock _a = new(), _b = new(), _c = new();
+    private Action<DateTime> _update = _ => { };
     private bool Seconds => Instance.Opt("seconds") == "1";
+    private bool TicksEverySecond => Seconds && Instance.Variant is "" or "minimal" or "mono";
 
     public ClockWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(18, 12, 18, 12);
-        var box = new Viewbox { Stretch = Stretch.Uniform };
-        _a.SetResourceReference(TextBlock.ForegroundProperty, "T.Text");
-        _b.SetResourceReference(TextBlock.ForegroundProperty, "T.Text2");
-        _c.SetResourceReference(TextBlock.ForegroundProperty, "T.Accent");
-        switch (Instance.Variant)
+        var box = new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.Both };
+        box.Child = Instance.Variant switch
         {
-            case "stacked":
-            {
-                var g = Ui.Grid("auto,auto", "auto,auto");
-                _a.FontSize = 62; _a.FontWeight = FontWeights.Bold; _a.LineHeight = 58; _a.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
-                _c.FontSize = 62; _c.FontWeight = FontWeights.Light; _c.LineHeight = 58; _c.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
-                _b.FontSize = 13; _b.Margin = new Thickness(16, 6, 0, 0); _b.VerticalAlignment = VerticalAlignment.Center; _b.LineHeight = 20;
-                g.Children.Add(_a); g.Children.Add(_c.At(1, 0)); g.Children.Add(_b.At(0, 1, 2));
-                box.Child = g;
-                break;
-            }
-            case "date":
-            {
-                var sp = new StackPanel();
-                _c.FontSize = 13; _c.FontWeight = FontWeights.SemiBold;
-                _a.FontSize = 64; _a.FontWeight = FontWeights.SemiBold; _a.Margin = new Thickness(-3, -10, 0, -8);
-                _b.FontSize = 15;
-                sp.Children.Add(_c); sp.Children.Add(_a); sp.Children.Add(_b);
-                box.Child = sp; box.HorizontalAlignment = HorizontalAlignment.Left;
-                break;
-            }
-            default:
-            {
-                var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-                var line = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
-                _a.FontSize = 58; _a.FontWeight = FontWeights.SemiBold;
-                _c.FontSize = 22; _c.FontWeight = FontWeights.SemiBold; _c.VerticalAlignment = VerticalAlignment.Bottom; _c.Margin = new Thickness(6, 0, 0, 11);
-                _b.FontSize = 14; _b.HorizontalAlignment = HorizontalAlignment.Center; _b.Margin = new Thickness(0, -4, 0, 0);
-                line.Children.Add(_a); line.Children.Add(_c);
-                sp.Children.Add(line); sp.Children.Add(_b);
-                box.Child = sp;
-                break;
-            }
-        }
+            "stacked" => BuildStacked(),
+            "date" => BuildAmbientDate(box),
+            "greeting" => BuildGreeting(box),
+            "spaced" => BuildSpaced(),
+            "outline" => BuildOutline(),
+            "bigdate" => BuildBigDate(box),
+            "script" => BuildScript(),
+            "mono" => BuildMono(box),
+            _ => BuildMinimal()
+        };
         Children.Add(box);
         _timer.Tick += (_, _) => Tick();
+    }
+
+    // ----------------------------------------------------------------- shared helpers
+    private static TextBlock T(double size, FontWeight weight, string brush = "T.Text", FontFamily? family = null)
+    {
+        var t = new TextBlock { FontSize = size, FontWeight = weight };
+        t.SetResourceReference(TextBlock.ForegroundProperty, brush);
+        if (family is not null) t.FontFamily = family;
+        return t;
+    }
+
+    /// <summary>Tight lines for big numerals: the line box is the size of the digits, not the font's tall default.</summary>
+    private static TextBlock Tight(TextBlock t, double lineHeight)
+    {
+        t.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+        t.LineHeight = lineHeight;
+        return t;
+    }
+
+    private static Shapes.Rectangle Rule(double width, double height, Thickness margin)
+    {
+        var r = new Shapes.Rectangle { Width = width, Height = height, Margin = margin, SnapsToDevicePixels = true };
+        r.SetResourceReference(Shapes.Shape.FillProperty, "T.Text3");
+        return r;
+    }
+
+    private static CultureInfo Ci => CultureInfo.CurrentCulture;
+    private static bool H24 => Hub.Settings.General.Use24Hour;
+
+    /// <summary>
+    /// Letter-spacing for WPF, which has none: a gap between every letter ("F R I D A Y"). Hair spaces give a light
+    /// tracking, thin spaces a wide one, ordinary spaces the very wide look. Surrogate pairs and accents stay whole.
+    /// </summary>
+    internal static string Track(string text, string gap)
+    {
+        if (text.Length < 2 || gap.Length == 0) return text;
+        var parts = new List<string>();
+        var e = StringInfo.GetTextElementEnumerator(text);
+        while (e.MoveNext()) parts.Add(e.GetTextElement());
+        return string.Join(gap, parts);
+    }
+
+    internal const string Hair = " ", Thin = " ";
+
+    /// <summary>"Good morning" from 5:00, "Good afternoon" from 12:00, "Good evening" from 18:00, "Good night" after midnight.</summary>
+    internal static string Greeting(DateTime now) => now.Hour switch { < 5 => "Good night", < 12 => "Good morning", < 18 => "Good afternoon", _ => "Good evening" };
+
+    /// <summary>How much of today has gone, 0–100.</summary>
+    internal static int DayPercent(DateTime now) => (int)Math.Clamp(Math.Floor(now.TimeOfDay.TotalMinutes / 14.4), 0, 100);
+
+    /// <summary>12- or 24-hour hours as two digits, the way stacked clocks show them ("09", "21").</summary>
+    internal static string Hours(DateTime now, bool h24) => now.ToString(h24 ? "HH" : "hh", CultureInfo.InvariantCulture);
+
+    // ----------------------------------------------------------------- the styles
+    private FrameworkElement BuildMinimal()
+    {
+        var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        var line = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+        var time = T(58, FontWeights.SemiBold);
+        var tail = T(22, FontWeights.SemiBold, "T.Accent");
+        tail.VerticalAlignment = VerticalAlignment.Bottom; tail.Margin = new Thickness(6, 0, 0, 11);
+        var date = T(14, FontWeights.Normal, "T.Text2");
+        date.HorizontalAlignment = HorizontalAlignment.Center; date.Margin = new Thickness(0, -4, 0, 0);
+        line.Children.Add(time); line.Children.Add(tail);
+        sp.Children.Add(line); sp.Children.Add(date);
+        _update = now =>
+        {
+            time.Text = Fmt.Time(now, H24);
+            tail.Text = Seconds ? now.ToString("ss", Ci) : H24 ? "" : now.ToString("tt", Ci);
+            tail.Visibility = tail.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+            date.Text = now.ToString("dddd, d MMMM", Ci);
+        };
+        return sp;
+    }
+
+    private FrameworkElement BuildStacked()
+    {
+        var g = Ui.Grid("auto,auto", "auto,auto");
+        var hh = Tight(T(62, FontWeights.Bold), 58);
+        var mm = Tight(T(62, FontWeights.Light, "T.Accent"), 58);
+        var side = T(13, FontWeights.Normal, "T.Text2");
+        side.Margin = new Thickness(16, 6, 0, 0); side.VerticalAlignment = VerticalAlignment.Center; side.LineHeight = 20;
+        g.Children.Add(hh); g.Children.Add(mm.At(1, 0)); g.Children.Add(side.At(0, 1, 2));
+        _update = now =>
+        {
+            hh.Text = Hours(now, H24); mm.Text = now.ToString("mm", Ci);
+            side.Text = now.ToString("dddd", Ci) + "\n" + now.ToString("d MMMM", Ci);
+        };
+        return g;
+    }
+
+    private FrameworkElement BuildAmbientDate(Viewbox box)
+    {
+        var sp = new StackPanel();
+        var day = T(13, FontWeights.SemiBold, "T.Accent");
+        var num = T(64, FontWeights.SemiBold);
+        num.Margin = new Thickness(-3, -10, 0, -8);
+        var rest = T(15, FontWeights.Normal, "T.Text2");
+        sp.Children.Add(day); sp.Children.Add(num); sp.Children.Add(rest);
+        box.HorizontalAlignment = HorizontalAlignment.Left;
+        _update = now =>
+        {
+            day.Text = now.ToString("dddd", Ci).ToUpper(Ci); num.Text = now.Day.ToString(Ci);
+            rest.Text = now.ToString("MMMM yyyy", Ci) + "  ·  " + Fmt.Time(now, H24);
+        };
+        return sp;
+    }
+
+    /// <summary>A spaced-caps greeting, the weekday in a light display weight, then the date and time between thin rules.</summary>
+    private FrameworkElement BuildGreeting(Viewbox box)
+    {
+        var sp = new StackPanel();
+        var hello = T(12, FontWeights.SemiBold, "T.Text2");
+        var day = T(46, FontWeights.Light);
+        day.Margin = new Thickness(-2, 0, 0, 0);
+        var line = new StackPanel { Orientation = Orientation.Horizontal };
+        var date = T(15, FontWeights.Normal, "T.Text2");
+        var time = T(15, FontWeights.SemiBold);
+        line.Children.Add(date);
+        line.Children.Add(Rule(1, 14, new Thickness(12, 2, 12, 0)));
+        line.Children.Add(time);
+        sp.Children.Add(hello);
+        sp.Children.Add(day);
+        sp.Children.Add(Rule(double.NaN, 1, new Thickness(0, 6, 0, 9)).With(r => r.HorizontalAlignment = HorizontalAlignment.Stretch));
+        sp.Children.Add(line);
+        box.HorizontalAlignment = HorizontalAlignment.Left;
+        _update = now =>
+        {
+            hello.Text = Track(Greeting(now).ToUpper(Ci), Thin);
+            day.Text = now.ToString("dddd", Ci);
+            date.Text = now.ToString("d MMMM", Ci);
+            time.Text = Fmt.Time(now, H24);
+        };
+        return sp;
+    }
+
+    /// <summary>The weekday in very wide caps, the date under it, then the time between dashes. Centred.</summary>
+    private FrameworkElement BuildSpaced()
+    {
+        var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        var day = T(34, FontWeights.Light);
+        var date = T(12.5, FontWeights.Normal, "T.Text2");
+        var time = T(16, FontWeights.SemiBold);
+        foreach (var t in new[] { day, date, time }) { t.HorizontalAlignment = HorizontalAlignment.Center; t.TextAlignment = TextAlignment.Center; }
+        date.Margin = new Thickness(0, 2, 0, 6);
+        sp.Children.Add(day); sp.Children.Add(date); sp.Children.Add(time);
+        _update = now =>
+        {
+            day.Text = Track(now.ToString("dddd", Ci).ToUpper(Ci), " ");
+            date.Text = Track(now.ToString("d MMMM yyyy", Ci).ToUpper(Ci), Hair);
+            time.Text = "—   " + Fmt.Time(now, H24) + "   —";
+        };
+        return sp;
+    }
+
+    /// <summary>Hours solid over minutes drawn as an outline, with the weekday and date beside them.</summary>
+    private FrameworkElement BuildOutline()
+    {
+        var g = Ui.Grid("auto,auto", "auto,auto");
+        var hh = new Shapes.Path { Margin = new Thickness(0, 0, 0, 8) };
+        hh.SetResourceReference(Shapes.Shape.FillProperty, "T.Text");
+        var mm = new Shapes.Path { StrokeThickness = 1.6, StrokeLineJoin = PenLineJoin.Round };
+        mm.SetResourceReference(Shapes.Shape.StrokeProperty, "T.Text");
+        var side = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(18, 0, 0, 0) };
+        var day = T(15, FontWeights.SemiBold);
+        var date = T(13, FontWeights.Normal, "T.Text2");
+        var ampm = T(12, FontWeights.SemiBold, "T.Accent");
+        ampm.Margin = new Thickness(0, 6, 0, 0);
+        side.Children.Add(day); side.Children.Add(date); side.Children.Add(ampm);
+        g.Children.Add(hh); g.Children.Add(mm.At(1, 0)); g.Children.Add(side.At(0, 1, 2));
+        _update = now =>
+        {
+            var family = TryFindResource("F.Family") as FontFamily ?? new FontFamily("Segoe UI");
+            hh.Data = Numerals(Hours(now, H24), family, FontWeights.Bold, 70);
+            mm.Data = Numerals(now.ToString("mm", Ci), family, FontWeights.Bold, 70);
+            day.Text = Track(now.ToString("ddd", Ci).ToUpper(Ci), Thin);
+            date.Text = now.ToString("d MMM", Ci);
+            ampm.Text = H24 ? "" : now.ToString("tt", Ci);
+            ampm.Visibility = ampm.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        };
+        return g;
+    }
+
+    /// <summary>Digits as a shape (for outlines), moved so the shape starts at its own top-left corner.</summary>
+    private static Geometry Numerals(string text, FontFamily family, FontWeight weight, double size)
+    {
+        var ft = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new Typeface(family, FontStyles.Normal, weight, FontStretches.Normal), size, Brushes.Black, 1.0);
+        var geo = ft.BuildGeometry(new Point(0, 0));
+        var b = geo.Bounds;
+        if (b.IsEmpty) return Geometry.Empty;
+        geo.Transform = new TranslateTransform(-b.X, -b.Y);
+        geo.Freeze();
+        return geo;
+    }
+
+    /// <summary>A huge day number in the accent colour, with the month and weekday laid over its lower half.</summary>
+    private FrameworkElement BuildBigDate(Viewbox box)
+    {
+        var g = new Grid();
+        var num = Tight(T(150, FontWeights.Bold, "T.Accent"), 118);
+        num.Opacity = 0.92;
+        var over = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(34, 0, 0, -6) };
+        var month = T(34, FontWeights.SemiBold);
+        var rest = T(15, FontWeights.Normal, "T.Text2");
+        over.Children.Add(month); over.Children.Add(rest);
+        g.Children.Add(num); g.Children.Add(over);
+        box.HorizontalAlignment = HorizontalAlignment.Left;
+        _update = now =>
+        {
+            num.Text = now.Day.ToString("00", Ci);
+            month.Text = Track(now.ToString("MMMM", Ci).ToUpper(Ci), Hair);
+            rest.Text = now.ToString("dddd", Ci) + "  ·  " + Fmt.Time(now, H24);
+        };
+        return g;
+    }
+
+    /// <summary>A handwritten weekday in the accent colour over a tall, condensed time, and the date in spaced caps.</summary>
+    private FrameworkElement BuildScript()
+    {
+        var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        var day = T(30, FontWeights.Normal, "T.Accent", ScriptFont);
+        day.HorizontalAlignment = HorizontalAlignment.Center;
+        day.Margin = new Thickness(0, 0, 0, -14);   // tucks into the top of the digits without hiding them
+        day.RenderTransform = new RotateTransform(-5);
+        day.RenderTransformOrigin = new Point(0.5, 0.5);
+        Panel.SetZIndex(day, 1);
+        var time = Tight(T(86, FontWeights.Bold, "T.Text", CondensedFont), 84);
+        time.HorizontalAlignment = HorizontalAlignment.Center;
+        var date = T(11.5, FontWeights.SemiBold, "T.Text2");
+        date.HorizontalAlignment = HorizontalAlignment.Center;
+        date.Margin = new Thickness(0, 4, 0, 0);
+        sp.Children.Add(day); sp.Children.Add(time); sp.Children.Add(date);
+        _update = now =>
+        {
+            day.Text = now.ToString("dddd", Ci);
+            time.Text = Fmt.Time(now, H24);
+            date.Text = Track(now.ToString("d MMMM yyyy", Ci).ToUpper(Ci), Thin);
+        };
+        return sp;
+    }
+
+    /// <summary>A terminal-style clock in a monospaced font, and a bar showing how much of the day has gone.</summary>
+    private FrameworkElement BuildMono(Viewbox box)
+    {
+        var sp = new StackPanel();
+        var time = T(54, FontWeights.Light, "T.Text", MonoFont);
+        time.Margin = new Thickness(-2, 0, 0, 0);
+        var date = T(13, FontWeights.Normal, "T.Text2", MonoFont);
+        var bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+        var cells = new List<Shapes.Rectangle>();
+        for (var k = 0; k < 10; k++)
+        {
+            var cell = new Shapes.Rectangle { Width = 14, Height = 6, RadiusX = 1.5, RadiusY = 1.5, Margin = new Thickness(0, 0, 3, 0), VerticalAlignment = VerticalAlignment.Center };
+            cells.Add(cell);
+            bar.Children.Add(cell);
+        }
+        var pct = T(11.5, FontWeights.Normal, "T.Text2", MonoFont);
+        pct.Margin = new Thickness(7, 0, 0, 0); pct.VerticalAlignment = VerticalAlignment.Center;
+        bar.Children.Add(pct);
+        sp.Children.Add(time); sp.Children.Add(date); sp.Children.Add(bar);
+        box.HorizontalAlignment = HorizontalAlignment.Left;
+        _update = now =>
+        {
+            time.Text = now.ToString(H24 ? "HH:mm" : "hh:mm", Ci) + (Seconds ? now.ToString(":ss", Ci) : "");
+            date.Text = now.ToString("ddd dd.MM.yyyy", Ci).ToLower(Ci) + (H24 ? "" : "  " + now.ToString("tt", Ci).ToLower(Ci));
+            var p = DayPercent(now);
+            for (var k = 0; k < cells.Count; k++) cells[k].SetResourceReference(Shapes.Shape.FillProperty, k < p / 10 ? "T.Accent" : "T.Track");
+            pct.Text = $"{p}% of today";
+        };
+        return sp;
     }
 
     private void Tick()
     {
         var now = DateTime.Now;
-        var h24 = Hub.Settings.General.Use24Hour;
-        var ci = CultureInfo.CurrentCulture;
-        switch (Instance.Variant)
-        {
-            case "stacked":
-                _a.Text = now.ToString(h24 ? "HH" : "hh", ci); _c.Text = now.ToString("mm", ci);
-                _b.Text = now.ToString("dddd", ci) + "\n" + now.ToString("d MMMM", ci);
-                break;
-            case "date":
-                _c.Text = now.ToString("dddd", ci).ToUpper(ci); _a.Text = now.Day.ToString(ci);
-                _b.Text = now.ToString("MMMM yyyy", ci) + "  ·  " + Fmt.Time(now, h24);
-                break;
-            default:
-                _a.Text = Fmt.Time(now, h24);
-                _c.Text = Seconds ? now.ToString("ss", ci) : h24 ? "" : now.ToString("tt", ci);
-                _c.Visibility = _c.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
-                _b.Text = now.ToString("dddd, d MMMM", ci);
-                break;
-        }
+        _update(now);
         // Sleep until the next change: one wake-up a minute unless seconds are shown.
-        _timer.Interval = Seconds && Instance.Variant is "" or "minimal" ? TimeSpan.FromMilliseconds(1000 - now.Millisecond + 5) : TimeSpan.FromSeconds(60 - now.Second) + TimeSpan.FromMilliseconds(30);
+        _timer.Interval = TicksEverySecond ? TimeSpan.FromMilliseconds(1000 - now.Millisecond + 5) : TimeSpan.FromSeconds(60 - now.Second) + TimeSpan.FromMilliseconds(30);
     }
 
     protected override void OnStart() { Tick(); _timer.Start(); }
@@ -122,8 +369,9 @@ internal sealed class ClockWidget : WidgetView
 
     public override void BuildMenu(ItemCollection items)
     {
-        items.Add(Choice("Style", "variant", ("Minimal", ""), ("Stacked", "stacked"), ("Ambient date", "date")));
-        items.Add(Item("Show seconds", () => { Instance.Options["seconds"] = Seconds ? "0" : "1"; Save(); Host?.Rebuild(); }, Seconds));
+        items.Add(Choice("Style", "variant", Styles.Select(s => (s.Name, s.Id)).ToArray()));
+        if (Instance.Variant is "" or "minimal" or "mono")
+            items.Add(Item("Show seconds", () => { Instance.Options["seconds"] = Seconds ? "0" : "1"; Save(); Host?.Rebuild(); }, Seconds));
     }
 }
 
@@ -135,7 +383,6 @@ internal sealed class CalendarWidget : WidgetView
 
     public CalendarWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(16, 14, 16, 12);
         Children.Add(_month);
         SizeChanged += (_, e) => { _month.CellSize = Math.Clamp(Math.Min((e.NewSize.Width - 8) / 7.4, (e.NewSize.Height - 54) / 6.3), 20, 44); _month.Build(); };
         _midnight.Tick += (_, _) => { _month.ShowToday(); Arm(); };
@@ -163,7 +410,6 @@ internal sealed class WorldClockWidget : WidgetView
 
     public WorldClockWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(18, 12, 18, 12);
         Children.Add(_rows);
         _timer.Tick += (_, _) => Tick();
     }
@@ -181,7 +427,7 @@ internal sealed class WorldClockWidget : WidgetView
             var diff = tz.GetUtcOffset(now) - local;
             var city = Cities.FirstOrDefault(c => c.Id == id).City ?? id;
             var row = Ui.Grid("*,auto");
-            row.Margin = new Thickness(0, 5, 0, 5);
+            row.Margin = new Thickness(0, 3, 0, 3);
             var left = new StackPanel();
             left.Children.Add(Ui.Text(city, "Text.Body", 14, FontWeights.SemiBold));
             var rel = diff == TimeSpan.Zero ? "Same time" : $"{(diff > TimeSpan.Zero ? "+" : "−")}{Math.Abs(diff.TotalHours):0.#} h";
@@ -223,7 +469,6 @@ internal sealed class SystemWidget : WidgetView
 
     public SystemWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(18, 14, 18, 14);
         if (Instance.Variant == "rings")
         {
             var grid = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1 };
@@ -297,7 +542,6 @@ internal sealed class MediaWidget : WidgetView
 
     public MediaWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(14);
         ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _art.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft");
@@ -343,7 +587,6 @@ internal sealed class FocusWidget : WidgetView
 
     public FocusWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(16, 16, 16, 12);
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -404,7 +647,6 @@ internal sealed class NotesWidget : WidgetView
 
     public NotesWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(16, 12, 12, 12);
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         Children.Add(Ui.Text(Instance.Opt("title", "NOTES"), "Text.Label").With(t => t.Margin = new Thickness(0, 0, 0, 8)));
@@ -454,7 +696,6 @@ internal sealed class TasksWidget : WidgetView
 
     public TasksWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(16, 12, 12, 12);
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -520,7 +761,7 @@ internal sealed class LauncherWidget : WidgetView
 
     public LauncherWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(12, 10, 12, 10);
+        Margin = new Thickness(Inset - 6);   // the buttons' own padding brings the icons to the common inset
         Background = Brushes.Transparent;
         Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = _panel, Focusable = false });
         AllowDrop = true;
@@ -612,13 +853,14 @@ internal sealed class RecycleBinWidget : WidgetView
 
     public RecycleBinWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(16, 12, 14, 12);
         ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var badge = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(13), VerticalAlignment = VerticalAlignment.Center, Child = Ui.Icon(Glyph.Delete, 19, "T.Accent") };
+        RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var badge = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(13), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Child = Ui.Icon(Glyph.Delete, 19, "T.Accent") };
         badge.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft");
         Children.Add(badge);
-        var sp = new StackPanel { Margin = new Thickness(13, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         sp.Children.Add(_value); sp.Children.Add(_detail);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 7, 0, 0) };
         var open = Ui.Button("Open", () => Island.IslandWindow.OpenUri("shell:RecycleBinFolder"));
@@ -627,7 +869,15 @@ internal sealed class RecycleBinWidget : WidgetView
         _empty.Padding = new Thickness(10, 4, 10, 4); _empty.FontSize = 12; _empty.Margin = new Thickness(6, 0, 0, 0);
         actions.Children.Add(open); actions.Children.Add(_empty);
         sp.Children.Add(actions);
-        Children.Add(sp.At(0, 1));
+        Children.Add(sp);
+        // Side by side when there is room; badge on top of the text in the Small size.
+        SizeChanged += (_, e) =>
+        {
+            var narrow = e.NewSize.Width < 220;
+            Grid.SetRow(sp, narrow ? 1 : 0); Grid.SetColumn(sp, narrow ? 0 : 1); Grid.SetColumnSpan(sp, narrow ? 2 : 1);
+            sp.Margin = narrow ? new Thickness(0, 12, 0, 0) : new Thickness(13, 0, 0, 0);
+            VerticalAlignment = narrow ? VerticalAlignment.Center : VerticalAlignment.Stretch;
+        };
         _timer.Tick += (_, _) => Refresh();
         MouseEnter += (_, _) => Refresh();
     }
@@ -657,7 +907,6 @@ internal sealed class TextWidget : WidgetView
 {
     public TextWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(20, 12, 20, 12);
         var text = Instance.Opt("text", "Make it simple, but significant.");
         var size = double.TryParse(Instance.Opt("size", "20"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) ? s : 20;
         var t = new TextBlock
@@ -704,13 +953,14 @@ internal sealed class AmbientWidget : WidgetView
     public AmbientWidget(WidgetInstance i) : base(i)
     {
         // The wallpaper gradient at full strength, softened by a dark veil so white text always reads.
+        Margin = new Thickness(0);   // the card fills the glass; its text keeps the common inset below
         var wash = new Border { Margin = new Thickness(6) };
         wash.SetResourceReference(Border.BackgroundProperty, "T.WashStrong");
         wash.SetResourceReference(Border.CornerRadiusProperty, "R.Control");
         var veil = new Border { Margin = new Thickness(6), Background = new LinearGradientBrush(Color.FromArgb(40, 0, 0, 0), Color.FromArgb(120, 0, 0, 0), 90) };
         veil.SetResourceReference(Border.CornerRadiusProperty, "R.Control");
         Children.Add(wash); Children.Add(veil);
-        var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(22, 0, 22, 20) };
+        var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(Inset + 6, 0, Inset + 6, Inset + 4) };
         sp.Children.Add(_greeting); sp.Children.Add(_date);
         Children.Add(sp);
         _timer.Tick += (_, _) => Tick();
@@ -720,7 +970,7 @@ internal sealed class AmbientWidget : WidgetView
     {
         var now = DateTime.Now;
         var name = Instance.Opt("name");
-        var hello = now.Hour switch { < 5 => "Good night", < 12 => "Good morning", < 18 => "Good afternoon", _ => "Good evening" };
+        var hello = ClockWidget.Greeting(now);
         _greeting.Text = string.IsNullOrWhiteSpace(name) ? hello : $"{hello}, {name}";
         _date.Text = now.ToString("dddd, d MMMM", CultureInfo.CurrentCulture);
         _timer.Interval = TimeSpan.FromMinutes(60 - now.Minute);
@@ -740,10 +990,10 @@ internal sealed class WeatherWidget : WidgetView
 {
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromMinutes(31) };
     private readonly StackPanel _body = new() { VerticalAlignment = VerticalAlignment.Center };
+    private const double ForecastHeight = 200;
 
     public WeatherWidget(WidgetInstance i) : base(i)
     {
-        Margin = new Thickness(18, 14, 18, 14);
         Children.Add(_body);
         _timer.Tick += async (_, _) => await Refresh(false);
     }
@@ -775,6 +1025,7 @@ internal sealed class WeatherWidget : WidgetView
             top.Children.Add(sp.At(0, 1));
             _body.Children.Add(top);
             _body.Children.Add(Ui.Text(p.WeatherPlace.ToUpperInvariant(), "Text.Label").With(t => t.Margin = new Thickness(0, 10, 0, 6)));
+            if (Instance.Height < ForecastHeight) return;   // Medium: now and the place; the next days need a taller widget
             var days = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1 };
             foreach (var d in r.Days.Skip(1).Take(3))
             {

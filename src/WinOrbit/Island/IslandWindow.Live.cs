@@ -70,6 +70,7 @@ public partial class IslandWindow
         Pill.Drop += OnDrop;
         UpdatePrivacyDot();
         OnMediaForLive();
+        IsVisibleChanged += (_, _) => UpdateGlanceLife();
     }
 
     private void CleanupLive()

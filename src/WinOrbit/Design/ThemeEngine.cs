@@ -185,6 +185,7 @@ public sealed class ThemeEngine
         r["G.ShadowOpacity"] = Math.Clamp(g.ShadowIntensity, 0, 1) * (dark ? 0.75 : 0.42);
         r["G.Refraction"] = Math.Clamp(g.Refraction, 0, 0.25);
         r["G.Liquid"] = liquid;
+        r["W.BareShadow"] = BareShadow(dark);
 
         // Wallpaper wash
         var stops = t.Gradient.FromWallpaper || t.Gradient.Stops.Count < 2 ? palette.ToGradientStops() : t.Gradient.Stops;
@@ -212,6 +213,21 @@ public sealed class ThemeEngine
 
         _wallpaper.SetGlass(g.Blur, g.BackdropSaturation);
         Applied?.Invoke();
+    }
+
+    /// <summary>
+    /// The soft shadow under widgets drawn straight on the wallpaper (the Bare style): a dark shadow under the light
+    /// text of dark looks, a pale glow under the dark text of light looks, so the letters read on any picture.
+    /// </summary>
+    internal static System.Windows.Media.Effects.DropShadowEffect BareShadow(bool dark)
+    {
+        var fx = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            BlurRadius = 14, ShadowDepth = 1.5, Direction = 270, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance,
+            Color = dark ? Colors.Black : Colors.White, Opacity = dark ? 0.6 : 0.75
+        };
+        fx.Freeze();
+        return fx;
     }
 
     /// <summary>

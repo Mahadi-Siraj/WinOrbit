@@ -548,13 +548,17 @@ public partial class IslandWindow : Window
         }
         UpdateEqualizerDrive();
 
-        CTime.Visibility = S.ShowTime ? Visibility.Visible : Visibility.Collapsed;
-        CDate.Visibility = S.ShowDate ? Visibility.Visible : Visibility.Collapsed;
-        CSys.Visibility = S.ShowSystem ? Visibility.Visible : Visibility.Collapsed;
         var activity = showCall || showTimer || showDownload || CMedia.Visibility == Visibility.Visible;
-        var trailing = S.ShowTime || S.ShowDate || S.ShowSystem;
+        var parts = GlanceParts(Glance, S.ShowTime, S.ShowDate, S.ShowSystem, activity);
+        CTime.Visibility = parts.Time ? Visibility.Visible : Visibility.Collapsed;
+        CDate.Visibility = parts.Date ? Visibility.Visible : Visibility.Collapsed;
+        CSys.Visibility = parts.Cpu ? Visibility.Visible : Visibility.Collapsed;
+        CSys.Margin = parts.Time || parts.Date ? new Thickness(0, 0, 10, 0) : new Thickness(0);
+        if (parts.Cpu && CSys.Text.Length == 0) CSys.Text = "CPU –  ·  RAM –";   // until the first sample arrives
+        ApplyGlance(parts.Status, parts.Eyes);
+        var trailing = parts.Time || parts.Date || parts.Cpu || parts.Status || parts.Eyes;
         CSep.Visibility = activity && trailing ? Visibility.Visible : Visibility.Collapsed;
-        if (!activity && !trailing) { CTime.Visibility = Visibility.Visible; }   // never show an empty pill
+        UpdateMonitorSubscription();
         FitCompact();
         UpdateArtWash();
     }
@@ -735,6 +739,7 @@ public partial class IslandWindow : Window
         if (_expanded || !IsVisible) { if (keyboard && _expanded) SetInteractive(true); return; }
         EndSatellite(true);
         _expanded = true;
+        UpdateGlanceLife();   // the eyes and the status row rest while the island is open
         _peekTimer.Stop();
         if (_card) { _card = false; _cardTimer?.Stop(); SetCardActions(null, null, null); Card.Visibility = Visibility.Collapsed; Card.Opacity = 0; }
         CPeek.Visibility = Visibility.Collapsed; CNormal.Visibility = Visibility.Visible;
@@ -1163,7 +1168,7 @@ public partial class IslandWindow : Window
     /// <summary>The system sampler runs only while something on the island actually displays it.</summary>
     private void UpdateMonitorSubscription()
     {
-        var need = (_expanded && _tab == "system") || (S.ShowSystem && !_expanded && IsVisible);
+        var need = (_expanded && _tab == "system") || (CSys.Visibility == Visibility.Visible && !_expanded && IsVisible);
         if (need && _monitorSub is null) _monitorSub = Hub.Monitor.Subscribe(OnSample);
         else if (!need && _monitorSub is not null) { _monitorSub.Dispose(); _monitorSub = null; }
     }

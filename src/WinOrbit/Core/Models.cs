@@ -173,6 +173,12 @@ public sealed class IslandSettings
     public bool ShowMedia { get; set; } = true;
     public bool ShowTimer { get; set; } = true;
     public bool ShowSystem { get; set; }
+    /// <summary>
+    /// What the collapsed capsule shows when nothing is happening: "clock" (time and date, as set above), "system"
+    /// (CPU and memory), "status" (Wi-Fi, Bluetooth, battery), "eyes" (follow the pointer) or "quiet" (nothing).
+    /// Settings from before 2.0 have no value and keep the clock.
+    /// </summary>
+    public string Glance { get; set; } = "clock";
     public bool WatchDownloads { get; set; }
     public List<string> Modules { get; set; } = new() { "media", "system", "controls", "focus", "calendar", "notes" };
 

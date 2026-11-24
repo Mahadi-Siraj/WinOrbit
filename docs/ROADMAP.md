@@ -114,7 +114,15 @@ Still open:
 5. Items from Wave 3 above (ARM64, code signing, languages). For signing, the SignPath Foundation offers free certificates to open-source projects; applying is the owner's call. Until then builds stay unsigned.
 6. **Display scaling 125 % / 150 %** — the code is per-monitor-DPI aware, but changing the test PC's scaling needs the owner's OK.
 
+2.0 — **built** (24–25 Nov 2026), on the `liquid-glass` branch, not released yet:
+* ✅ **Liquid lens** — Liquid Clear and Liquid Frosted themes (12 built-in themes now): a ps_3_0 shader with a thick rounded rim that bends the backdrop beyond the edge, a prism split and rim light; it flexes with size changes and sweeps light round the rim on open/close (none of that under Reduced Motion). A **Liquid lens** slider in the Glass Editor for any theme.
+* ✅ **One widget grid** — four sizes from one 160 px unit and 16 px gaps (Small, Medium, Wide, Large), one 16 px inset for every widget, a Size menu, and new widgets placed at a standard size. Widgets placed earlier keep their size.
+* ✅ **Bare widgets** — any widget can drop its glass card and sit on the wallpaper with a soft shadow.
+* ✅ **Nine clock styles** and a live **Clocks** gallery at the top of the Widgets page (many users would rather have the date and time as a desktop widget than in the island).
+* ✅ **Island glance** — what the collapsed capsule shows: Clock (as before, the default), System, Status (Wi-Fi/Ethernet, Bluetooth, battery from Windows' events), Eyes (follow the pointer; about 1 % of one core while visible) or Quiet. Sketches and sources are in the owner's private inspiration notes.
+* 🐛 Found while testing, to fix next: on a PC where Windows lists the graphics card as attached to the desktop but no monitor under it, `RenderGuard` thinks the screen is off and never runs, so a blank settings window is not rescued; Live glass uses the same check.
+
 Deliberately not planned:
-* **"Eyes that follow the cursor" / desktop pets** — in the Dyno thread, most replies said it's the first thing they'd turn off.
+* **Desktop pets** — in the Dyno thread, most replies said it's the first thing they'd turn off. (The 2.0 Eyes glance is opt-in for that reason; Clock stays the default.)
 * **A built-in AI chatbot** — needs API keys or large local models. That's against "light", and it's a different product.
 * **A built-in Rainmeter engine** — Rainmeter's skin format is large and its plugins are native code; WinOrbit manages a real Rainmeter install instead (read-only file access, documented bangs only).

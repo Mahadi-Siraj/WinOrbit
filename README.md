@@ -95,7 +95,7 @@
 
 <p align="center">
   <img src="docs/assets/shot-vibes.png" alt="Six looks: Midnight (black island, ocean rim), Ink (square shape, mono rim), Neon rain (smoked glass, aurora rim), Synthwave (drop shape, sunset rim), Cosmic (notch shape, prism rim, themed widgets) and Golden hour (solid island, warm accent)" width="100%">
-  <br><sub>10 themes, 8 rim colours, 5 shapes, 4 materials and 3 sizes. Six of the combinations, over Wallpaper Engine wallpapers.</sub>
+  <br><sub>12 themes, 8 rim colours, 5 shapes, 4 materials and 3 sizes. Six of the combinations, over Wallpaper Engine wallpapers.</sub>
 </p>
 
 <sub>Screenshots: the island at 1.4× size with the Black material and Midnight theme, using WinOrbit's built-in previews. The songs are silent demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are from Wallpaper Engine; credit to their creators.</sub>
@@ -106,7 +106,7 @@
 
 People stack half a dozen tools to make Windows feel modern — a Dynamic Island app, Rainmeter, a volume-flyout replacement, a clipboard manager, a launcher, a night-light toggle. WinOrbit replaces them with **one** native app:
 
-* **Featherweight.** About 80 MB of RAM in use and under 0.1 % CPU at idle, measured over five minutes ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 10 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The small exceptions: the lock-key alert checks three key lights about eight times a second, and — only if you have more than one keyboard — the keyboard-language card checks which keyboard is in use four times a second.
+* **Featherweight.** About 80 MB of RAM in use and under 0.1 % CPU at idle, measured over five minutes ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 10 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The small exceptions: the lock-key alert checks three key lights about eight times a second, and — only if you have more than one keyboard — the keyboard-language card checks which keyboard is in use four times a second, and the optional Eyes glance reads where the pointer is while it's on screen.
 * **Private by design.** No telemetry, analytics, accounts or automatic update checks. **Zero network connections by default**; the two optional online features (weather, synced lyrics) have their own switches, "Check for updates" only runs when you click it, and every request is shown in a ledger.
 * **Free forever.** Open source under GPL-3.0 — every copy and fork has to stay free and open.
 * **No admin rights, no hacks.** Per-user install. No DLL injection, no system-file patching, nothing that weakens Windows security.
@@ -120,6 +120,7 @@ A liquid-glass capsule at the top of your screen that comes alive:
 * **Live activities** — volume and brightness meter, a green **charging** animation, low-battery warnings, Energy Saver, focus timer, downloads, **screenshots** (a thumbnail card you can click to open or drag straight into a chat), **Caps / Num / Scroll Lock**, the **keyboard language** switching, **Wi-Fi and Ethernet** connecting and dropping, the **Wi-Fi and Bluetooth radios** switching on or off, **dark / light mode**, **night light**, **airplane mode**, **Energy Saver**, **Bluetooth** devices (with their battery level, when the device reports it) and **USB** devices coming and going. Connections and radios open as a larger card (icon tile, name, state, and a switch that flips while you watch), and they arrive within a moment of the change.
 * **Liquid motion** — the island moves on real spring physics: it bounces open, squashes when pressed, bulges like a droplet when something new arrives, and can be redirected mid-motion without a jolt. Optional coloured rims (Prism, Aurora, Sunset, Ocean, Mono, Accent) with a soft glow. Reduced Motion turns all of it off.
 * **Shapes** — Capsule, Rounded, Square, Notch (flush with the top of the screen, like a camera notch) or Drop, in Slim, Regular or Tall; every shape morphs on the same springs.
+* **Your glance** — choose what the resting capsule shows: the **clock**, **CPU and memory**, a **status** row (Wi-Fi, Bluetooth, battery), a pair of **eyes** that follow your pointer and blink, or nothing at all. Keep the time on your desktop with a clock widget instead.
 * **Album colours** — while a song plays, the glass glows with its artwork's colours and cross-fades when the track changes; a new song opens a card with the cover, title and artist. An "Album" rim uses the same colours.
 * **Privacy dots** — 🟠 microphone, 🟢 camera, 🔵 location in use, with the app's name. Your security, at a glance.
 * **Control Centre** — 12 liquid-glass tiles that switch the real setting: Wi-Fi, Bluetooth, Night light, Dark mode, Power mode, Microphone, Keep awake, Focus, Widgets, plus Airplane mode, Do not disturb and Energy saver shortcuts; volume and monitor brightness sliders, and **volume by app** — a slider and mute for each app playing sound — plus a one-click **output device** switch (speakers, headphones, HDMI).
@@ -138,9 +139,10 @@ A liquid-glass capsule at the top of your screen that comes alive:
 Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (dark mode, lock, focus, profiles…), recent files, a calculator (`12*7`, `200*15%`), unit conversion (`10 km to mi`), timers (`timer 5 min`, `focus 50`, `stopwatch`) that count down in the island, reminders (`remind me in 20 min to stretch`, `remind me at 6pm to call mom`), world time (`time in Tokyo`, offline) and your clipboard history (`clip invoice`). Learns your favourites — on your PC only.
 
 ### 🧊 Liquid-glass desktop
+* **Liquid glass that moves** — the **Liquid Clear** and **Liquid Frosted** themes have a thick, rounded rim that bends the wallpaper beyond the glass's edge with a hint of prism, flexes when the island grows or shrinks, and sweeps light round the rim as it opens. Runs on the graphics card.
 * **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers. Optional **Live glass** (Windows 11) shows the windows behind it instead, and **curved edges** bend the light at the rim. Island materials: Glass, Smoked, Solid or **Black**.
-* **13 widgets** — clocks, calendar, world clock, system monitor, now playing, focus, notes, tasks, launcher, recycle bin, weather and more; drag, snap, resize.
-* **10 themes**, a live **Liquid Glass Editor**, dark / light / auto / scheduled modes, wallpaper-generated gradients.
+* **13 widgets** on one tidy grid — four sizes that line up, the same margins everywhere, a glass card or **bare** on the wallpaper. **Nine clock styles** (minimal, stacked, greeting, spaced, outline, big date, script, mono…) with a live gallery to pick from, plus calendar, world clock, system monitor, now playing, focus, notes, tasks, launcher, recycle bin, weather and more.
+* **12 themes**, a live **Liquid Glass Editor**, dark / light / auto / scheduled modes, wallpaper-generated gradients.
 * **Profiles** (Study, Gaming, Productivity, Minimal, Night) with optional automation.
 * **Windows tweaks** with full backup and one-click **Revert all**.
 * **Rainmeter manager** — appears only if you use Rainmeter.

@@ -322,7 +322,7 @@ public partial class IslandWindow
 
     private void OnSample(SystemSample s)
     {
-        if (S.ShowSystem && !_expanded) { CSys.Text = $"CPU {s.Cpu:0}%  ·  RAM {s.Ram:0}%"; FitCompact(); }
+        if (CSys.Visibility == Visibility.Visible && !_expanded) { CSys.Text = $"CPU {s.Cpu:0}%  ·  RAM {s.Ram:0}%"; FitCompact(); }
         if (!_expanded || _tab != "system") return;
         var mon = Hub.Monitor;
         _tiles["cpu"].Value.Text = $"{s.Cpu:0}%"; _tiles["cpu"].Spark!.Update(mon.CpuHistory);

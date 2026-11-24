@@ -276,12 +276,15 @@ public sealed class IslandPage : PageBase
                 Kit.Segmented(WinOrbit.Island.IslandWindow.Thicknesses, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Thicknesses, S.Thickness)), i => { S.Thickness = WinOrbit.Island.IslandWindow.Thicknesses[i]; Save(); })),
             Kit.Row("Colours", "The island uses the active theme's glass, accent and wallpaper gradient.", Kit.Btn("Edit glass", () => Owner?.Navigate("studio"), Glyph.Drop))));
 
+        var glances = WinOrbit.Island.IslandWindow.Glances;
         Children.Add(Kit.Section("Collapsed capsule", "What the compact pill shows. Live activity (a timer, a download, or media) takes the left side.",
-            Kit.ToggleRow("Time", null, S.ShowTime, v => { S.ShowTime = v; Save(); }, false, Glyph.Clock),
-            Kit.ToggleRow("Date", null, S.ShowDate, v => { S.ShowDate = v; Save(); }, true, Glyph.Calendar),
+            Kit.WideRow("When nothing is happening", "Clock shows the time and date (switch them below). Rather have a clock widget on the desktop? Pick System for CPU and memory, Status for Wi-Fi, Bluetooth and battery, Eyes for a pair of eyes that follow your pointer and blink (they nod off when the pointer rests for a minute), or Quiet for just the glass.",
+                Kit.Segmented(glances.Select(g => g.Name).ToArray(), Math.Max(0, Array.FindIndex(glances, g => g.Id == WinOrbit.Island.IslandWindow.GlanceOf(S.Glance))), i => { S.Glance = glances[i].Id; Save(); Rebuild(); })),
+            Kit.ToggleRow("Time", "With Clock.", S.ShowTime, v => { S.ShowTime = v; Save(); }, true, Glyph.Clock),
+            Kit.ToggleRow("Date", "With Clock.", S.ShowDate, v => { S.ShowDate = v; Save(); }, true, Glyph.Calendar),
             Kit.ToggleRow("Now playing", null, S.ShowMedia, v => { S.ShowMedia = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Active timer", null, S.ShowTimer, v => { S.ShowTimer = v; Save(); }, true, Glyph.Stopwatch),
-            Kit.ToggleRow("CPU and memory", "Samples system load only while visible.", S.ShowSystem, v => { S.ShowSystem = v; Save(); }, true, Glyph.Chip),
+            Kit.ToggleRow("CPU and memory", "Beside the clock. Samples system load only while visible.", S.ShowSystem, v => { S.ShowSystem = v; Save(); }, true, Glyph.Chip),
             Kit.ToggleRow("Download activity", "Watches your Downloads folder for files that browsers are still downloading, and shows a card when one finishes — click it to open the file, or drag it into any app. Only file names are read, locally.", S.WatchDownloads, v => { S.WatchDownloads = v; Save(); }, true, Glyph.Download)));
 
         Children.Add(Kit.Section("Live activities", "Things the island shows on its own, the moment they happen. Windows pushes these events; the lock-key check is the one exception, noted below.",
@@ -389,8 +392,34 @@ public sealed class WidgetsPage : PageBase
     private StackPanel? _placed;
     private static LayoutSettings L => Hub.Settings.Layout;
 
+    private readonly List<WidgetView> _previews = new();
+
     protected override void Build()
     {
+        // Clocks first: the most asked-for desktop widget, in every style, live. Added Bare (straight on the wallpaper).
+        foreach (var p in _previews) p.Stop();
+        _previews.Clear();
+        var clocks = Kit.Gallery();
+        foreach (var (id, name, size) in ClockWidget.Styles)
+        {
+            var preview = new ClockWidget(new WidgetInstance { Kind = "clock", Variant = id });
+            _previews.Add(preview);
+            var stage = new Grid { Height = 92, ClipToBounds = true };
+            var wash = new Border { Opacity = 0.55 };
+            wash.SetResourceReference(Border.BackgroundProperty, "T.WashStrong");
+            wash.SetResourceReference(Border.CornerRadiusProperty, "R.Control");
+            stage.Children.Add(wash);
+            preview.SetResourceReference(EffectProperty, "W.BareShadow");
+            stage.Children.Add(preview);
+            var sp = new StackPanel();
+            sp.Children.Add(stage);
+            sp.Children.Add(Ui.Text(name, "Text.Body", 13, FontWeights.SemiBold).With(t => t.Margin = new Thickness(2, 9, 0, 0)));
+            var card = new Button { Width = 196, Margin = new Thickness(6), Padding = new Thickness(10, 10, 10, 10), HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, ToolTip = $"Add the {name} clock to your desktop", Content = sp };
+            card.Click += (_, _) => { Hub.Widgets.Add("clock", id, new Dictionary<string, string> { ["style"] = "bare" }, null, size); RenderPlaced(); };
+            clocks.Children.Add(card);
+        }
+        Children.Add(Kit.Section("Clocks", "Date and time as part of your wallpaper. Each one sits straight on the desktop with a soft shadow; right-click it to change the style or size, or to put it on a glass card.", clocks));
+
         var gallery = Kit.Gallery();
         foreach (var group in WidgetCatalog.All.GroupBy(k => k.Category))
         foreach (var kind in group)
@@ -450,10 +479,17 @@ public sealed class WidgetsPage : PageBase
                 Kit.Switch(w.Visible, v => { Hub.Widgets.SetVisible(w, v); }, "Show " + kind.Name),
                 Kit.Slider(0.2, 1, w.Opacity, v => { w.Opacity = Math.Round(v, 2); Hub.Widgets.WindowOf(w)?.ApplyAppearance(); Hub.Store.Save(); }, v => $"{v * 100:0}%", 110),
                 Ui.IconButton(Glyph.Delete, "Remove " + kind.Name, () => { Hub.Widgets.Remove(w); RenderPlaced(); }));
-            _placed.Children.Add(Kit.Row(kind.Name, $"{mon.Label} · {w.Width:0}×{w.Height:0}{(w.Pinned ? " · always on top" : "")}", controls, !first, kind.Glyph));
+            var size = WidgetSizes.Match(w.Width, w.Height) is { } sid ? WidgetSizes.All.First(s => s.Id == sid).Name : $"{w.Width:0}×{w.Height:0}";
+            var style = kind.Id == "clock" ? " · " + (ClockWidget.Styles.FirstOrDefault(s => s.Id == w.Variant).Name ?? "Minimal") : "";
+            _placed.Children.Add(Kit.Row(kind.Name + style, $"{mon.Label} · {size}{(WidgetWindow.IsBare(w) ? " · bare" : "")}{(w.Pinned ? " · always on top" : "")}", controls, !first, kind.Glyph));
             first = false;
         }
     }
 
-    protected override void OnEnter() => Live(() => Hub.Widgets.Changed += RenderPlaced, () => Hub.Widgets.Changed -= RenderPlaced);
+    protected override void OnEnter()
+    {
+        Live(() => Hub.Widgets.Changed += RenderPlaced, () => Hub.Widgets.Changed -= RenderPlaced);
+        // The previews tick once a minute, and only while this page is open.
+        Live(() => { foreach (var p in _previews) p.Start(); }, () => { foreach (var p in _previews) p.Stop(); });
+    }
 }

@@ -16,11 +16,18 @@ namespace WinOrbit.Widgets;
 /// <summary>Base class for the content of a widget. Start/Stop bracket every subscription and timer.</summary>
 public abstract class WidgetView : Grid
 {
+    /// <summary>The one inner margin every widget uses, so their contents line up on the desktop.</summary>
+    public const double Inset = 16;
+
     public WidgetInstance Instance { get; }
     public WidgetWindow? Host { get; internal set; }
     protected bool Running { get; private set; }
 
-    protected WidgetView(WidgetInstance instance) => Instance = instance;
+    protected WidgetView(WidgetInstance instance)
+    {
+        Instance = instance;
+        Margin = new Thickness(Inset);
+    }
 
     public void Start() { if (Running) return; Running = true; OnStart(); }
     public void Stop() { if (!Running) return; Running = false; OnStop(); }
@@ -55,7 +62,54 @@ public abstract class WidgetView : Grid
 }
 
 public sealed record WidgetKind(string Id, string Name, string Description, string Glyph, string Category,
-    double Width, double Height, double MinWidth, double MinHeight, Func<WidgetInstance, WidgetView> Create);
+    double Width, double Height, double MinWidth, double MinHeight, Func<WidgetInstance, WidgetView> Create)
+{
+    /// <summary>The look a new widget of this kind starts with: "" (glass card) or "bare".</summary>
+    public string DefaultStyle { get; init; } = "";
+}
+
+/// <summary>
+/// The few sizes every widget comes in, like phone widgets: one unit and one gap, so widgets of different kinds line up
+/// in a tidy grid. The corner grip still resizes freely; these are what the Size menu and new widgets use.
+/// </summary>
+public static class WidgetSizes
+{
+    public const double Unit = 160, Gap = 16;
+
+    public static readonly (string Id, string Name, int Cols, int Rows)[] All =
+    {
+        ("s", "Small", 1, 1), ("m", "Medium", 2, 1), ("w", "Wide", 3, 1), ("l", "Large", 2, 2)
+    };
+
+    internal static Size Of(int cols, int rows) => new(cols * Unit + (cols - 1) * Gap, rows * Unit + (rows - 1) * Gap);
+
+    internal static Size Of(string id)
+    {
+        foreach (var s in All) if (s.Id == id) return Of(s.Cols, s.Rows);
+        return Of(2, 1);
+    }
+
+    /// <summary>The size's id when a widget is exactly one of the sizes, or null after a free resize.</summary>
+    internal static string? Match(double width, double height)
+    {
+        foreach (var s in All)
+        {
+            var size = Of(s.Cols, s.Rows);
+            if (Math.Abs(size.Width - width) < 0.5 && Math.Abs(size.Height - height) < 0.5) return s.Id;
+        }
+        return null;
+    }
+
+    /// <summary>The sizes a kind of widget fits in (its content needs at least its minimum size).</summary>
+    internal static IEnumerable<(string Id, string Name)> Fitting(double minWidth, double minHeight)
+    {
+        foreach (var s in All)
+        {
+            var size = Of(s.Cols, s.Rows);
+            if (size.Width >= minWidth && size.Height >= minHeight) yield return (s.Id, s.Name);
+        }
+    }
+}
 
 /// <summary>
 /// One widget = one small layered window parked at the bottom of the z-order (on the desktop).
@@ -69,9 +123,21 @@ public sealed class WidgetWindow : Window
     public IntPtr Handle { get; private set; }
     public bool Raised { get; set; }
 
-    private readonly GlassSurface _glass = new() { SampleWallpaper = true };
+    /// <summary>What the pointer grabs: holds the glass card, or (Bare style) the content straight on the wallpaper.</summary>
+    private readonly Grid _frame = new();
+    /// <summary>The widget's content and its resize grip.</summary>
+    private readonly Grid _body = new();
+    private GlassSurface? _glass;
     private readonly Thumb _grip = new() { Width = 18, Height = 18, Cursor = Cursors.SizeNWSE, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Opacity = 0 };
     private WidgetView _view;
+
+    /// <summary>"Bare" widgets have no card: their text sits on the wallpaper with a soft shadow, like a clock painted on it.</summary>
+    internal static bool IsBare(WidgetInstance i) => i.Opt("style") == "bare";
+
+    // Fully transparent pixels of a layered window let clicks fall through to the desktop. Alpha 1 is invisible but
+    // keeps the whole Bare widget draggable, not just its letters.
+    private static readonly Brush HitBrush = Frozen(new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)));
+    private static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
     private bool _pressed, _dragging, _interactive, _closing;
     private Native.POINT _pressCursor;
     private double _pressX, _pressY;
@@ -96,10 +162,12 @@ public sealed class WidgetWindow : Window
         _view = kind.Create(instance);
         _view.Host = this;
         var root = new Grid { Margin = new Thickness(Pad) };
-        _glass.Content = new Grid { Children = { _view, _grip } };
+        _body.Children.Add(_view);
+        _body.Children.Add(_grip);
         _grip.Template = GripTemplate();
-        root.Children.Add(_glass);
+        root.Children.Add(_frame);
         Content = root;
+        ApplyStyle();
         ApplySize();
 
         SourceInitialized += (_, _) =>
@@ -113,18 +181,18 @@ public sealed class WidgetWindow : Window
             Place();
             ApplyAppearance();
             _view.Start();
-            if (Motion.Intensity > 0.01) { _glass.Opacity = 0; Motion.To(_glass, OpacityProperty, Instance.Opacity, 360); }
+            if (Motion.Intensity > 0.01) { _frame.Opacity = 0; Motion.To(_frame, OpacityProperty, Math.Clamp(Instance.Opacity, 0.2, 1), 360); }
         };
         Closed += (_, _) => { _closing = true; _view.Stop(); };
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(Place);
         Deactivated += (_, _) => SetInteractive(false);
 
-        _glass.MouseLeftButtonDown += OnDown;
-        _glass.MouseMove += OnMove;
-        _glass.MouseLeftButtonUp += OnUp;
-        _glass.MouseRightButtonUp += (_, e) => { ShowMenu(); e.Handled = true; };
-        _glass.MouseEnter += (_, _) => { if (!L.Locked) Motion.To(_grip, OpacityProperty, 0.55, 160); };
-        _glass.MouseLeave += (_, _) => Motion.To(_grip, OpacityProperty, 0, 220);
+        _frame.MouseLeftButtonDown += OnDown;
+        _frame.MouseMove += OnMove;
+        _frame.MouseLeftButtonUp += OnUp;
+        _frame.MouseRightButtonUp += (_, e) => { ShowMenu(); e.Handled = true; };
+        _frame.MouseEnter += (_, _) => { if (!L.Locked) Motion.To(_grip, OpacityProperty, 0.55, 160); };
+        _frame.MouseLeave += (_, _) => Motion.To(_grip, OpacityProperty, 0, 220);
         _grip.DragDelta += OnResize;
         _grip.DragCompleted += (_, _) => { Hub.Store.Save(); Hub.Widgets.NotifyChanged(); };
         // Text input needs focus: grant it only when the user clicks into a text box.
@@ -162,12 +230,36 @@ public sealed class WidgetWindow : Window
     public void Rebuild()
     {
         _view.Stop();
-        var grid = (Grid)_glass.Content;
-        grid.Children.Remove(_view);
+        _body.Children.Remove(_view);
         _view = Kind.Create(Instance);
         _view.Host = this;
-        grid.Children.Insert(0, _view);
+        _body.Children.Insert(0, _view);
+        ApplyStyle();
         if (IsLoaded) _view.Start();
+    }
+
+    /// <summary>Glass card or Bare (straight on the wallpaper), from the widget's "style" option.</summary>
+    private void ApplyStyle()
+    {
+        var bare = IsBare(Instance);
+        if (bare)
+        {
+            if (_glass is not null) { _glass.Content = null; _frame.Children.Remove(_glass); _glass = null; }
+            if (!_frame.Children.Contains(_body)) _frame.Children.Add(_body);
+            _frame.Background = HitBrush;
+            _body.SetResourceReference(EffectProperty, "W.BareShadow");
+        }
+        else
+        {
+            _frame.Background = null;
+            _body.ClearValue(EffectProperty);
+            if (_glass is null)
+            {
+                _frame.Children.Remove(_body);
+                _glass = new GlassSurface { SampleWallpaper = true, Content = _body };
+                _frame.Children.Add(_glass);
+            }
+        }
     }
 
     public void SetRunning(bool run) { if (run) _view.Start(); else _view.Stop(); }
@@ -178,9 +270,22 @@ public sealed class WidgetWindow : Window
         Height = Math.Max(Kind.MinHeight, Instance.Height) + Pad * 2;
     }
 
+    /// <summary>Switch to one of the standard sizes, keeping the top-left corner where it is.</summary>
+    internal void Resize(string sizeId)
+    {
+        var size = WidgetSizes.Of(sizeId);
+        Instance.Width = size.Width;
+        Instance.Height = size.Height;
+        ApplySize();
+        Rebuild();   // some widgets lay out differently at another size (the forecast row, the Small recycle bin)
+        Place();
+        Hub.Store.Save();
+        Hub.Widgets.NotifyChanged();
+    }
+
     public void ApplyAppearance()
     {
-        _glass.Opacity = Math.Clamp(Instance.Opacity, 0.2, 1);
+        _frame.Opacity = Math.Clamp(Instance.Opacity, 0.2, 1);
         if (Topmost != Instance.Pinned) Topmost = Instance.Pinned;
         if (!Instance.Pinned && Handle != IntPtr.Zero && !Raised) Native.SetWindowPos(Handle, Native.HWND_BOTTOM, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
     }
@@ -196,7 +301,7 @@ public sealed class WidgetWindow : Window
         var x = mon.Bounds.Left + (int)Math.Clamp(Instance.X, -Instance.Width * mon.Scale + 60, maxX) - pad;
         var y = mon.Bounds.Top + (int)Math.Clamp(Instance.Y, 0, maxY) - pad;
         Native.SetWindowPos(Handle, IntPtr.Zero, x, y, 0, 0, Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE);
-        _glass.UpdateBackdrop();
+        _glass?.UpdateBackdrop();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -232,7 +337,7 @@ public sealed class WidgetWindow : Window
         _pressed = true; _dragging = false;
         Native.GetCursorPos(out _pressCursor);
         _pressX = Instance.X; _pressY = Instance.Y;
-        _glass.CaptureMouse();
+        _frame.CaptureMouse();
     }
 
     private void OnMove(object sender, MouseEventArgs e)
@@ -263,7 +368,7 @@ public sealed class WidgetWindow : Window
         if (!_pressed) return;
         if (_dragging) OnMove(sender, e);     // apply the release point: the last move event can be coalesced away
         _pressed = false;
-        _glass.ReleaseMouseCapture();
+        _frame.ReleaseMouseCapture();
         if (_dragging) { _dragging = false; Hub.Store.Save(); Hub.Widgets.NotifyChanged(); }
     }
 
@@ -284,6 +389,19 @@ public sealed class WidgetWindow : Window
         _view.BuildMenu(menu.Items);
         if (menu.Items.Count > 0) menu.Items.Add(new Separator());
 
+        var current = WidgetSizes.Match(Instance.Width, Instance.Height);
+        var size = new MenuItem { Header = "Size" };
+        foreach (var (id, name) in WidgetSizes.Fitting(Kind.MinWidth, Kind.MinHeight))
+        {
+            var s = WidgetSizes.Of(id);
+            size.Items.Add(MenuItemOf($"{name}  ({s.Width:0} × {s.Height:0})", () => Resize(id), current == id));
+        }
+        if (size.Items.Count > 0) menu.Items.Add(size);
+        var style = new MenuItem { Header = "Look" };
+        style.Items.Add(MenuItemOf("Glass card", () => SetStyle(""), !IsBare(Instance)));
+        style.Items.Add(MenuItemOf("Bare (on the wallpaper)", () => SetStyle("bare"), IsBare(Instance)));
+        menu.Items.Add(style);
+
         var opacity = new MenuItem { Header = "Opacity" };
         foreach (var v in new[] { 1.0, 0.85, 0.7, 0.55, 0.4 })
         {
@@ -300,9 +418,17 @@ public sealed class WidgetWindow : Window
         menu.Items.Add(MenuItemOf("Remove widget", () => Hub.Widgets.Remove(Instance)));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItemOf("Manage widgets…", () => App.Current.ShowMain("widgets")));
-        menu.PlacementTarget = _glass;
+        menu.PlacementTarget = _frame;
         menu.Placement = PlacementMode.MousePoint;
         menu.IsOpen = true;
+    }
+
+    private void SetStyle(string style)
+    {
+        if (style.Length == 0) Instance.Options.Remove("style"); else Instance.Options["style"] = style;
+        Hub.Store.Save();
+        Rebuild();   // the content may lay itself out differently on the wallpaper
+        Place();
     }
 
     private static MenuItem MenuItemOf(string header, Action click, bool isChecked = false)
@@ -358,11 +484,17 @@ public sealed class WidgetManager
         Changed?.Invoke();
     }
 
-    public WidgetInstance Add(string kindId, string? monitor = null)
+    public WidgetInstance Add(string kindId, string? monitor = null) => Add(kindId, "", null, monitor);
+
+    /// <summary>Add a widget in a given style (a clock style from the gallery, say), with options such as "style" = "bare".</summary>
+    public WidgetInstance Add(string kindId, string variant, IReadOnlyDictionary<string, string>? options, string? monitor = null, string? sizeId = null)
     {
         var kind = WidgetCatalog.Find(kindId) ?? WidgetCatalog.All[0];
         var mon = Monitors.Find(monitor);
-        var inst = new WidgetInstance { Kind = kind.Id, Monitor = mon.Device, Width = kind.Width, Height = kind.Height };
+        var (w, h) = sizeId is null ? (kind.Width, kind.Height) : (WidgetSizes.Of(sizeId).Width, WidgetSizes.Of(sizeId).Height);
+        var inst = new WidgetInstance { Kind = kind.Id, Monitor = mon.Device, Width = w, Height = h, Variant = variant };
+        if (kind.DefaultStyle.Length > 0) inst.Options["style"] = kind.DefaultStyle;
+        if (options is not null) foreach (var (k, v) in options) inst.Options[k] = v;
         (inst.X, inst.Y) = FindFreeSpot(inst, mon);
         Hub.Settings.Widgets.Add(inst);
         Hub.Settings.Layout.WidgetsVisible = true;

@@ -138,6 +138,8 @@
                         <TextBlock x:Name="CSys" FontSize="12.5" VerticalAlignment="Center" Foreground="{DynamicResource T.Text2}" Margin="0,0,10,0" Visibility="Collapsed"/>
                         <TextBlock x:Name="CTime" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         <TextBlock x:Name="CDate" FontSize="12.5" VerticalAlignment="Center" Foreground="{DynamicResource T.Text2}" Margin="8,0,0,0"/>
+                        <!-- The other glances (IslandWindow.Glance.cs): the status row or the eyes, built on first use -->
+                        <StackPanel x:Name="CGlance" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed"/>
                     </StackPanel>
                 </StackPanel>
 
