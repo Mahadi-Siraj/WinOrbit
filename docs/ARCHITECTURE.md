@@ -24,7 +24,7 @@ Because widgets live on the desktop, the backdrop is exactly what is behind them
 
 ```
 src/WinOrbit
-├─ Program.cs             Entry point: `--agent` (coding-agent hooks) is answered here and exits before WPF loads
+├─ Program.cs             Entry point: `--agent` (coding-agent hooks) is answered here and exits before WPF loads; starts .NET's multicore JIT profile
 ├─ App.xaml(.cs)          Application shell: single instance, start-up order, tray, hotkeys, CLI (--page, --quit, --revert-tweaks)
 ├─ Hub.cs                 Service locator for long-lived services
 ├─ Core/                  Models (settings, themes, profiles, widgets) + Store (atomic JSON, debounced saves, local log)

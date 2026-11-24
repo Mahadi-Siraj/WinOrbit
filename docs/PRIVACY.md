@@ -17,6 +17,7 @@ Everything lives in one folder: `%APPDATA%\WinOrbit` (or `Data\` beside the exe 
 | `backups\windows-settings-backup.json` | Original values of Windows settings WinOrbit changed (e.g. `AppsUseLightTheme`, accent colour, wallpaper path) | **Revert all** and uninstall rollback |
 | `wallpapers\gradient-*.png` | Only if you use "Apply as wallpaper" | The generated wallpaper file |
 | `logs\winorbit.log` | Local diagnostic messages (start-up, errors, which Windows setting changed). Rotates at 512 KB, max 2 files | Troubleshooting. Never uploaded |
+| `startup.jitprofile` | Installed version only. Written by .NET itself (multicore JIT): which methods of WinOrbit, .NET and the Windows Runtime were compiled while WinOrbit started. Method names only; nothing about you, your files or what is on screen. Rewritten at each start, not included in backups, safe to delete | Start faster: next time .NET compiles those methods on a spare core in advance |
 
 WinOrbit also writes, **only when you ask it to**, per-user Windows values: the `WinOrbit` entry under `HKCU\…\Run` (start with Windows), and the appearance values listed on the Windows Tweaks page. All are under `HKEY_CURRENT_USER`; nothing machine-wide is changed.
 

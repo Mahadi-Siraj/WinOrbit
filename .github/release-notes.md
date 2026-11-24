@@ -15,9 +15,10 @@ Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScree
 - 🧱 **Now on .NET 10 (LTS).** .NET 8, which WinOrbit 1.3 used, stopped getting security fixes from Microsoft on 10 November 2026; .NET 10 gets them until November 2028
 - ⬇️ **The installer needs the .NET 10 Desktop Runtime (x64)** instead of .NET 8. Setup checks for it and links Microsoft's download page, and now also looks where Arm64 PCs keep the x64 runtime
 - ⚡ **The portable version starts faster and uses half the memory:** 0.78 s instead of 1.30 s to start, and 166 MB instead of 332 MB committed, on our test PC. The zip is a little bigger (89 MB instead of 75 MB)
+- ⚡ **The installed version starts faster too:** 0.63 s instead of 0.80 s for 1.3.2 on our test PC. .NET now compiles what WinOrbit needs while starting on a spare core, from a list of method names it keeps in your WinOrbit folder (`startup.jitprofile`). The first start after installing or updating writes that list, so that one start takes as long as before (about 0.9 s)
 - 🗂️ **Your settings carry over unchanged** — notes, tasks, events, widgets and themes too. A new test loads files written by 1.3.2 itself, so a later change can't silently reset them
 
-Known: the installed version starts about 0.15 s later than 1.3.2 did on our test PC (0.92 s instead of 0.77 s); memory use is about the same. Untested here: an Arm64 PC, Windows 10.
+The installed version uses about the same memory as 1.3.2. Untested here: an Arm64 PC, Windows 10.
 
 ### New in 1.3.2
 - 🎵 **Now playing shows the right song sooner.** When a player started (or another one took over) while WinOrbit was still loading the title and cover, a progress or play/pause update could cancel that load, leaving the previous app's title or no cover. Fixed, with tests

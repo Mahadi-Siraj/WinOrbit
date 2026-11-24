@@ -42,4 +42,11 @@
     <Using Include="WinOrbit.Core.ThemeMode" Alias="ThemeMode" />
   </ItemGroup>
 
+  <!-- Multicore JIT (Program.StartJitProfile) for framework-dependent builds, such as the installer's, where the Windows
+       Runtime projection and generic code are still compiled at start. The self-contained portable build has all of that
+       precompiled in one image, so it has nothing to gain (measured no faster) and stays off. -->
+  <ItemGroup Condition="'$(SelfContained)' != 'true'">
+    <RuntimeHostConfigurationOption Include="WinOrbit.MulticoreJit" Value="true" />
+  </ItemGroup>
+
 </Project>

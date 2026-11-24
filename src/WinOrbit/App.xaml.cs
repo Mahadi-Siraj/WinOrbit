@@ -19,7 +19,7 @@ public partial class App : Application
 {
     public static new App Current => (App)Application.Current;
 
-    private const string MutexName = "WinOrbit.SingleInstance.v1";
+    internal const string MutexName = "WinOrbit.SingleInstance.v1";
     private const string ShowEventName = "WinOrbit.ShowMain.v1";
     private Mutex? _mutex;
     private EventWaitHandle? _showEvent;
