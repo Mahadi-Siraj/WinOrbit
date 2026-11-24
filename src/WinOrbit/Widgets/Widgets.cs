@@ -23,7 +23,7 @@ public static class WidgetCatalog
     // line up with each other. Widgets placed by earlier versions keep the size they were given.
     public static readonly List<WidgetKind> All = new()
     {
-        new("clock", "Clock", "Nine styles, from minimal to handwritten. Pick one under Clocks above, or right-click › Style.", Glyph.Clock, "Time", 336, 160, 120, 80, i => new ClockWidget(i)),
+        new("clock", "Clock", "Ten styles, from minimal to handwritten and dot matrix. Pick one under Clocks above, or right-click › Style.", Glyph.Clock, "Time", 336, 160, 120, 80, i => new ClockWidget(i)),
         new("calendar", "Calendar", "Month view with today highlighted.", Glyph.Calendar, "Time", 336, 336, 230, 236, i => new CalendarWidget(i)),
         new("worldclock", "World clock", "Up to five cities with their offset from you.", Glyph.Globe, "Time", 336, 160, 200, 96, i => new WorldClockWidget(i)),
         new("system", "System monitor", "CPU, memory, GPU, network and disk at a glance.", Glyph.Chip, "System", 336, 336, 220, 130, i => new SystemWidget(i)),
@@ -43,7 +43,7 @@ public static class WidgetCatalog
 
 // =====================================================================================
 /// <summary>
-/// The desktop clock in nine styles. Each style builds its own little layout inside a Viewbox (so it scales with the
+/// The desktop clock in ten styles. Each style builds its own little layout inside a Viewbox (so it scales with the
 /// widget) and an update function; the clock then sleeps until the next minute (or second, when seconds are shown).
 /// Only fonts that ship with Windows are used, so nothing is downloaded and nothing needs a licence.
 /// </summary>
@@ -54,7 +54,7 @@ internal sealed class ClockWidget : WidgetView
     {
         ("", "Minimal", "m"), ("stacked", "Stacked", "m"), ("date", "Ambient date", "m"),
         ("greeting", "Greeting", "w"), ("spaced", "Spaced", "w"), ("outline", "Outline", "m"),
-        ("bigdate", "Big date", "m"), ("script", "Script", "m"), ("mono", "Mono", "m"),
+        ("bigdate", "Big date", "m"), ("script", "Script", "m"), ("mono", "Mono", "m"), ("dots", "Dot matrix", "m"),
     };
 
     private static readonly FontFamily ScriptFont = new("Segoe Script, Ink Free, Segoe Print, Segoe UI");
@@ -79,6 +79,7 @@ internal sealed class ClockWidget : WidgetView
             "bigdate" => BuildBigDate(box),
             "script" => BuildScript(),
             "mono" => BuildMono(box),
+            "dots" => BuildDots(),
             _ => BuildMinimal()
         };
         Children.Add(box);
@@ -356,6 +357,81 @@ internal sealed class ClockWidget : WidgetView
         return sp;
     }
 
+    /// <summary>
+    /// The time on a dot-matrix display: every dot of the grid is drawn, the lit ones bright and the rest faint, like
+    /// an LED panel. Two shapes in all (lit and unlit dots), rebuilt once a minute.
+    /// </summary>
+    private FrameworkElement BuildDots()
+    {
+        var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        var panel = new Grid { HorizontalAlignment = HorizontalAlignment.Center };
+        var off = new Shapes.Path();
+        off.SetResourceReference(Shapes.Shape.FillProperty, "T.Track");
+        var on = new Shapes.Path();
+        on.SetResourceReference(Shapes.Shape.FillProperty, "T.Text");
+        panel.Children.Add(off); panel.Children.Add(on);
+        var line = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 14, 0, 0) };
+        var date = T(13, FontWeights.SemiBold, "T.Text2", MonoFont);
+        var ampm = T(13, FontWeights.SemiBold, "T.Accent", MonoFont);
+        ampm.Margin = new Thickness(12, 0, 0, 0);
+        line.Children.Add(date); line.Children.Add(ampm);
+        sp.Children.Add(panel); sp.Children.Add(line);
+        _update = now =>
+        {
+            var (lit, unlit) = DotShapes(Hours(now, H24) + ":" + now.ToString("mm", CultureInfo.InvariantCulture), 7, 3);
+            on.Data = lit; off.Data = unlit;
+            date.Text = Track(now.ToString("ddd d MMM", Ci).ToUpper(Ci), " ");
+            ampm.Text = H24 ? "" : now.ToString("tt", Ci).ToUpper(Ci);
+            ampm.Visibility = ampm.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        };
+        return sp;
+    }
+
+    /// <summary>5 × 7 dot-matrix figures, top row first ("1" = a lit dot). The colon is one dot wide.</summary>
+    private static readonly Dictionary<char, string[]> DotFont = new()
+    {
+        ['0'] = new[] { "01110", "10001", "10011", "10101", "11001", "10001", "01110" },
+        ['1'] = new[] { "00100", "01100", "00100", "00100", "00100", "00100", "01110" },
+        ['2'] = new[] { "01110", "10001", "00001", "00010", "00100", "01000", "11111" },
+        ['3'] = new[] { "11111", "00010", "00100", "00010", "00001", "10001", "01110" },
+        ['4'] = new[] { "00010", "00110", "01010", "10010", "11111", "00010", "00010" },
+        ['5'] = new[] { "11111", "10000", "11110", "00001", "00001", "10001", "01110" },
+        ['6'] = new[] { "00110", "01000", "10000", "11110", "10001", "10001", "01110" },
+        ['7'] = new[] { "11111", "00001", "00010", "00100", "01000", "01000", "01000" },
+        ['8'] = new[] { "01110", "10001", "10001", "01110", "10001", "10001", "01110" },
+        ['9'] = new[] { "01110", "10001", "10001", "01111", "00001", "00010", "01100" },
+        [':'] = new[] { "0", "0", "1", "0", "1", "0", "0" },
+    };
+
+    internal static string[]? DotGlyph(char c) => DotFont.TryGetValue(c, out var g) ? g : null;
+
+    /// <summary>Every dot position of <paramref name="text"/> on the grid, lit or not, with one blank column between figures. Unknown characters leave a gap.</summary>
+    internal static List<(int X, int Y, bool On)> DotLayout(string text)
+    {
+        var dots = new List<(int, int, bool)>();
+        var x = 0;
+        foreach (var c in text)
+        {
+            if (DotGlyph(c) is not { } g) { x += 3; continue; }
+            var w = g[0].Length;
+            for (var row = 0; row < g.Length; row++)
+                for (var col = 0; col < w; col++) dots.Add((x + col, row, g[row][col] == '1'));
+            x += w + 1;
+        }
+        return dots;
+    }
+
+    private static (Geometry Lit, Geometry Unlit) DotShapes(string text, double dot, double gap)
+    {
+        var lit = new GeometryGroup();
+        var unlit = new GeometryGroup();
+        var r = dot / 2;
+        foreach (var (x, y, on) in DotLayout(text))
+            (on ? lit : unlit).Children.Add(new EllipseGeometry(new Point(x * (dot + gap) + r, y * (dot + gap) + r), r, r));
+        lit.Freeze(); unlit.Freeze();
+        return (lit, unlit);
+    }
+
     private void Tick()
     {
         var now = DateTime.Now;
@@ -426,20 +502,33 @@ internal sealed class WorldClockWidget : WidgetView
             var there = TimeZoneInfo.ConvertTimeFromUtc(now, tz);
             var diff = tz.GetUtcOffset(now) - local;
             var city = Cities.FirstOrDefault(c => c.Id == id).City ?? id;
-            var row = Ui.Grid("*,auto");
-            row.Margin = new Thickness(0, 3, 0, 3);
-            var left = new StackPanel();
-            left.Children.Add(Ui.Text(city, "Text.Body", 14, FontWeights.SemiBold));
-            var rel = diff == TimeSpan.Zero ? "Same time" : $"{(diff > TimeSpan.Zero ? "+" : "−")}{Math.Abs(diff.TotalHours):0.#} h";
+            if (_rows.Children.Count > 0)
+                _rows.Children.Add(new Shapes.Rectangle { Height = 1, Opacity = 0.7, Margin = new Thickness(16, 4, 0, 4), SnapsToDevicePixels = true }.With(r => r.SetResourceReference(Shapes.Shape.FillProperty, "T.Track")));
+            var row = Ui.Grid("auto,*,auto");
+            // A filled dot in daylight, a hollow one at night.
+            var day = IsDaytime(there);
+            var dot = new Shapes.Ellipse { Width = 6, Height = 6, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = day ? "Daytime there" : "Night-time there" };
+            if (day) dot.SetResourceReference(Shapes.Shape.FillProperty, "T.Accent");
+            else { dot.StrokeThickness = 1.2; dot.SetResourceReference(Shapes.Shape.StrokeProperty, "T.Text3"); }
+            row.Children.Add(dot);
+            var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            left.Children.Add(WidgetLook.Caps(city, 11, "T.Text"));
+            var rel = diff == TimeSpan.Zero ? "same time" : $"{(diff > TimeSpan.Zero ? "+" : "−")}{Math.Abs(diff.TotalHours):0.#}h";
             if (there.Date != DateTime.Now.Date) rel += there.Date > DateTime.Now.Date ? " · tomorrow" : " · yesterday";
-            left.Children.Add(Ui.Text(rel, "Text.Caption", 11));
-            row.Children.Add(left);
-            row.Children.Add(Ui.Text(Fmt.Time(there, Hub.Settings.General.Use24Hour), "Text.Sub", 22, FontWeights.SemiBold).With(t => t.VerticalAlignment = VerticalAlignment.Center).At(0, 1));
+            left.Children.Add(WidgetLook.Data(rel, 10.5, "T.Text3").With(t => t.Margin = new Thickness(0, 2, 0, 0)));
+            row.Children.Add(left.At(0, 1));
+            var time = WidgetLook.Big(26);
+            time.Text = Fmt.Time(there, Hub.Settings.General.Use24Hour);
+            time.VerticalAlignment = VerticalAlignment.Center;
+            row.Children.Add(time.At(0, 2));
             _rows.Children.Add(row);
         }
         if (_rows.Children.Count == 0) _rows.Children.Add(Ui.Text("Right-click to choose cities.", "Text.Caption"));
         _timer.Interval = TimeSpan.FromSeconds(60 - DateTime.Now.Second) + TimeSpan.FromMilliseconds(30);
     }
+
+    /// <summary>Daytime is 6:00 to 17:59 wherever the city is.</summary>
+    internal static bool IsDaytime(DateTime there) => there.Hour is >= 6 and < 18;
 
     protected override void OnStart() { Tick(); _timer.Start(); }
     protected override void OnStop() => _timer.Stop();
@@ -463,9 +552,11 @@ internal sealed class WorldClockWidget : WidgetView
 internal sealed class SystemWidget : WidgetView
 {
     private IDisposable? _sub;
-    private readonly Dictionary<string, (TextBlock Value, ProgressBar? Bar, Ring? Ring)> _rows = new();
+    private readonly Dictionary<string, (TextBlock Value, SegmentBar? Bar, Ring? Ring)> _rows = new();
     private readonly Sparkline _spark = new() { Height = 34 };
-    private readonly TextBlock _footer = Ui.Text("", "Text.Caption", 11);
+    private readonly TextBlock _footer = WidgetLook.Data("", 10.5, "T.Text3");
+    /// <summary>The parts that only show when the widget is tall enough (Large): header, graph, network and footer.</summary>
+    private readonly List<FrameworkElement> _tallOnly = new();
 
     public SystemWidget(WidgetInstance i) : base(i)
     {
@@ -474,39 +565,53 @@ internal sealed class SystemWidget : WidgetView
             var grid = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1 };
             foreach (var (id, label) in new[] { ("cpu", "CPU"), ("ram", "RAM"), ("gpu", "GPU") })
             {
-                var cell = new Grid { Margin = new Thickness(5) };
+                // A fixed 100 × 100 dial scaled as a whole, so the figures always sit inside the ring.
+                var dial = new Grid { Width = 100, Height = 100 };
                 var ring = new Ring { Thickness = 6 };
-                var box = new Viewbox { Margin = new Thickness(14) };
-                var sp = new StackPanel();
-                var value = Ui.Text("—", "Text.Sub", 20).With(t => t.HorizontalAlignment = HorizontalAlignment.Center);
+                var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+                var value = WidgetLook.Big(27).With(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Text = "—"; });
                 sp.Children.Add(value);
-                sp.Children.Add(Ui.Text(label, "Text.Label", 10).With(t => t.HorizontalAlignment = HorizontalAlignment.Center));
-                box.Child = sp;
-                cell.Children.Add(ring); cell.Children.Add(box);
-                grid.Children.Add(cell);
+                sp.Children.Add(WidgetLook.Caps(label, 9.5).With(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Margin = new Thickness(0, 3, 0, 0); }));
+                dial.Children.Add(ring); dial.Children.Add(sp);
+                grid.Children.Add(new Viewbox { Child = dial, Margin = new Thickness(4) });
                 _rows[id] = (value, null, ring);
             }
             Children.Add(grid);
             return;
         }
 
+        // The HUD: a label and a figure over a segmented meter for each part, network and uptime below.
         var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        if (Instance.Variant == "graph") stack.Children.Add(_spark.With(s => s.Margin = new Thickness(0, 0, 0, 10)));
-        foreach (var (id, label) in new[] { ("cpu", "CPU"), ("ram", "Memory"), ("gpu", "GPU"), ("net", "Network") })
+        var head = WidgetLook.Head("System");
+        stack.Children.Add(head); _tallOnly.Add(head);
+        if (Instance.Variant == "graph") { stack.Children.Add(_spark.With(s => s.Margin = new Thickness(0, 0, 0, 12))); _tallOnly.Add(_spark); }
+        foreach (var (id, label) in new[] { ("cpu", "CPU"), ("ram", "Memory"), ("gpu", "GPU") })
         {
-            var head = Ui.Grid("auto,*,auto");
-            head.Children.Add(Ui.LineIcon(Ui.MetricIcon(id), 15, Ui.MetricBrush(id)).With(v => { v.Margin = new Thickness(0, 0, 8, 0); v.VerticalAlignment = VerticalAlignment.Center; }));
-            head.Children.Add(Ui.Text(label, "Text.Caption", 12).With(t => t.VerticalAlignment = VerticalAlignment.Center).At(0, 1));
-            var value = Ui.Text("—", "Text.Body", 12.5, FontWeights.SemiBold).At(0, 2);
-            head.Children.Add(value);
-            stack.Children.Add(head);
-            ProgressBar? bar = null;
-            if (id != "net") { bar = new ProgressBar { Minimum = 0, Maximum = 100, Margin = new Thickness(0, 5, 0, 11) }; stack.Children.Add(bar); }
-            else head.Margin = new Thickness(0, 0, 0, 9);
+            var line = Ui.Grid("*,auto");
+            line.Children.Add(WidgetLook.Caps(label));
+            var value = WidgetLook.Data("—", 12, "T.Text").At(0, 1);
+            line.Children.Add(value);
+            stack.Children.Add(line);
+            var bar = new SegmentBar { Margin = new Thickness(0, 6, 0, 12) };
+            stack.Children.Add(bar);
             _rows[id] = (value, bar, null);
         }
-        stack.Children.Add(_footer);
+        var net = Ui.Grid("*,auto");
+        net.Children.Add(WidgetLook.Caps("Network"));
+        var rate = WidgetLook.Data("—", 12, "T.Text").At(0, 1);
+        net.Children.Add(rate);
+        net.Margin = new Thickness(0, 0, 0, 10);
+        stack.Children.Add(net); _tallOnly.Add(net);
+        _rows["net"] = (rate, null, null);
+        stack.Children.Add(_footer); _tallOnly.Add(_footer);
         Children.Add(stack);
+        // Medium (one row high) keeps just the three meters; Large shows everything.
+        SizeChanged += (_, e) =>
+        {
+            var tall = e.NewSize.Height >= 200;
+            foreach (var part in _tallOnly) part.Visibility = tall ? Visibility.Visible : Visibility.Collapsed;
+            stack.VerticalAlignment = tall ? VerticalAlignment.Top : VerticalAlignment.Center;   // the header sits at the top, like every other widget's
+        };
     }
 
     private void OnSample(SystemSample s)
@@ -514,21 +619,22 @@ internal sealed class SystemWidget : WidgetView
         void Set(string id, double? pct, string text)
         {
             if (!_rows.TryGetValue(id, out var r)) return;
-            r.Value.Text = text;
-            if (r.Bar is not null) r.Bar.Value = pct ?? 0;
+            if (r.Value.Text != text) r.Value.Text = text;
+            r.Bar?.Set(pct ?? 0);
             if (r.Ring is not null) r.Ring.Value = (pct ?? 0) / 100;
         }
         Set("cpu", s.Cpu, $"{s.Cpu:0}%");
-        Set("ram", s.Ram, Instance.Variant == "rings" ? $"{s.Ram:0}%" : $"{s.RamUsedGb:0.0} / {s.RamTotalGb:0} GB");
-        Set("gpu", s.Gpu, s.Gpu is { } g ? (s.GpuTemp is { } t && Instance.Variant != "rings" ? $"{g:0}%  ·  {t:0}°C" : $"{g:0}%") : "n/a");
-        Set("net", null, $"↓ {Fmt.Rate(s.NetDown)}   ↑ {Fmt.Rate(s.NetUp)}");
-        _footer.Text = $"Disk {s.DiskActive:0}%  ·  Up {Fmt.Uptime(s.Uptime)}" + (s.Battery is { } b ? $"  ·  Battery {b}%" : "");
+        Set("ram", s.Ram, Instance.Variant == "rings" ? $"{s.Ram:0}%" : $"{s.RamUsedGb:0.0}/{s.RamTotalGb:0} GB");
+        Set("gpu", s.Gpu, s.Gpu is { } g ? (s.GpuTemp is { } t && Instance.Variant != "rings" ? $"{g:0}% · {t:0}°C" : $"{g:0}%") : "n/a");
+        Set("net", null, $"↓{Fmt.Rate(s.NetDown)}  ↑{Fmt.Rate(s.NetUp)}");
+        var footer = $"disk {s.DiskActive:0}%  ·  up {Fmt.Uptime(s.Uptime)}" + (s.Battery is { } b ? $"  ·  battery {b}%" : "");
+        if (_footer.Text != footer) _footer.Text = footer;
         if (Instance.Variant == "graph") _spark.Update(Hub.Monitor.CpuHistory);
     }
 
     protected override void OnStart() => _sub = Hub.Monitor.Subscribe(OnSample);
     protected override void OnStop() { _sub?.Dispose(); _sub = null; }
-    public override void BuildMenu(ItemCollection items) => items.Add(Choice("Style", "variant", ("Bars", ""), ("Bars + CPU graph", "graph"), ("Rings", "rings")));
+    public override void BuildMenu(ItemCollection items) => items.Add(Choice("Style", "variant", ("Meters", ""), ("Meters + CPU graph", "graph"), ("Rings", "rings")));
 }
 
 // =====================================================================================
@@ -536,7 +642,8 @@ internal sealed class MediaWidget : WidgetView
 {
     private readonly Border _art = new() { CornerRadius = new CornerRadius(14) };
     private readonly TextBlock _artGlyph = Ui.Icon(Glyph.Music, 26, "T.Accent");
-    private readonly TextBlock _title = Ui.Text("", "Text.Sub", 15), _artist = Ui.Text("", "Text.Caption", 12.5);
+    private readonly TextBlock _title = Ui.Text("", "Text.Sub", 16), _artist = Ui.Text("", "Text.Caption", 12.5);
+    private readonly TextBlock _source;
     private readonly Button _play;
     private readonly StackPanel _controls = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(-6, 6, 0, 0) };
 
@@ -550,7 +657,8 @@ internal sealed class MediaWidget : WidgetView
         Children.Add(_art);
         _title.TextTrimming = TextTrimming.CharacterEllipsis; _title.TextWrapping = TextWrapping.NoWrap;
         _artist.TextTrimming = TextTrimming.CharacterEllipsis; _artist.TextWrapping = TextWrapping.NoWrap;
-        var sp = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        var sp = new StackPanel { Margin = new Thickness(16, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        sp.Children.Add(WidgetLook.Head("Now playing", out _source).With(h => h.Margin = new Thickness(0, 0, 0, 7)));
         sp.Children.Add(_title); sp.Children.Add(_artist);
         _controls.Children.Add(Ui.IconButton(Glyph.Previous, "Previous track", () => Hub.Media.Previous()));
         _play = Ui.IconButton(Glyph.Play, "Play or pause", () => Hub.Media.PlayPause(), 36, "Button.IconAccent");
@@ -567,6 +675,7 @@ internal sealed class MediaWidget : WidgetView
         var has = m.HasTrack;
         _title.Text = has ? m.DisplayTitle : "Nothing playing";
         _artist.Text = has ? (string.IsNullOrWhiteSpace(m.Artist) ? m.Source : m.Artist) : "Start music in any app";
+        WidgetLook.SetCaps(_source, has && !string.IsNullOrWhiteSpace(m.Source) ? m.Source : "Now playing");
         _play.Content = m.IsPlaying ? Glyph.Pause : Glyph.Play;
         _controls.Opacity = has ? 1 : 0.45;
         if (has && m.Art is not null) { _art.Background = new ImageBrush(m.Art) { Stretch = Stretch.UniformToFill }; _artGlyph.Visibility = Visibility.Collapsed; }
@@ -649,7 +758,7 @@ internal sealed class NotesWidget : WidgetView
     {
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Children.Add(Ui.Text(Instance.Opt("title", "NOTES"), "Text.Label").With(t => t.Margin = new Thickness(0, 0, 0, 8)));
+        Children.Add(WidgetLook.Head(Instance.Opt("title", "Notes")));
         _box.SetResourceReference(StyleProperty, "TextBox.Bare");
         System.Windows.Automation.AutomationProperties.SetName(_box, "Note text");
         _hint.IsHitTestVisible = false;
@@ -684,7 +793,7 @@ internal sealed class TasksWidget : WidgetView
 {
     private readonly StackPanel _list = new();
     private readonly TextBox _input = new() { FontSize = 13 };
-    private readonly TextBlock _count = Ui.Text("", "Text.Caption", 11);
+    private readonly TextBlock _count = WidgetLook.Data("", 10.5, "T.Text3");
     private List<TaskItem> Items
     {
         get
@@ -699,10 +808,8 @@ internal sealed class TasksWidget : WidgetView
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var head = Ui.Grid("*,auto");
-        head.Margin = new Thickness(0, 0, 4, 6);
-        head.Children.Add(Ui.Text(Instance.Variant == "objectives" ? "TODAY'S OBJECTIVES" : Instance.Opt("title", "TASKS"), "Text.Label"));
-        head.Children.Add(_count.At(0, 1));
+        var head = WidgetLook.Head(Instance.Variant == "objectives" ? "Today's objectives" : Instance.Opt("title", "Tasks"), _count);
+        head.Margin = new Thickness(0, 0, 4, 8);
         Children.Add(head);
         Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = _list, Focusable = false }.At(1, 0));
         _input.Margin = new Thickness(0, 8, 4, 0);
@@ -757,6 +864,7 @@ internal sealed class TasksWidget : WidgetView
 internal sealed class LauncherWidget : WidgetView
 {
     private readonly WrapPanel _panel = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly Grid _empty = new() { Margin = new Thickness(6) };
     private List<string> Paths => Instance.Opt("items").Split('|', StringSplitOptions.RemoveEmptyEntries).ToList();
 
     public LauncherWidget(WidgetInstance i) : base(i)
@@ -764,6 +872,16 @@ internal sealed class LauncherWidget : WidgetView
         Margin = new Thickness(Inset - 6);   // the buttons' own padding brings the icons to the common inset
         Background = Brushes.Transparent;
         Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = _panel, Focusable = false });
+        // Empty: a dashed drop zone that says what to do.
+        var zone = new Shapes.Rectangle { RadiusX = 12, RadiusY = 12, StrokeThickness = 1.2, StrokeDashArray = new DoubleCollection { 4, 3 }, SnapsToDevicePixels = true };
+        zone.SetResourceReference(Shapes.Shape.StrokeProperty, "T.Text3");
+        var label = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(10) };
+        label.Children.Add(Ui.Icon(Glyph.Add, 16, "T.Accent").With(t => t.HorizontalAlignment = HorizontalAlignment.Center));
+        label.Children.Add(WidgetLook.Caps("Drop apps here").With(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.Margin = new Thickness(0, 8, 0, 3); }));
+        label.Children.Add(Ui.Text("files and folders too, or right-click › Add shortcut…", "Text.Caption", 11.5, null, "T.Text3").With(t => { t.TextAlignment = TextAlignment.Center; t.HorizontalAlignment = HorizontalAlignment.Center; }));
+        _empty.Children.Add(zone); _empty.Children.Add(label);
+        _empty.IsHitTestVisible = false;
+        Children.Add(_empty);
         AllowDrop = true;
         DragOver += (_, e) => { e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Link : DragDropEffects.None; e.Handled = true; };
         Drop += (_, e) =>
@@ -799,13 +917,7 @@ internal sealed class LauncherWidget : WidgetView
             b.ContextMenu = menu;
             _panel.Children.Add(b);
         }
-        if (paths.Count == 0)
-        {
-            var hint = new StackPanel { Margin = new Thickness(8, 4, 8, 4) };
-            hint.Children.Add(Ui.Text("Drop apps, files or folders here", "Text.Body", 13, FontWeights.SemiBold));
-            hint.Children.Add(Ui.Text("or right-click › Add shortcut…", "Text.Caption", 12));
-            _panel.Children.Add(hint);
-        }
+        _empty.Visibility = paths.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     internal static ImageSource? ShellIcon(string path)
@@ -848,36 +960,26 @@ internal sealed class LauncherWidget : WidgetView
 internal sealed class RecycleBinWidget : WidgetView
 {
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(90) };
-    private readonly TextBlock _value = Ui.Text("—", "Text.Sub", 17), _detail = Ui.Text("", "Text.Caption", 12);
+    private readonly TextBlock _value = WidgetLook.Big(46), _detail = WidgetLook.Data("");
     private readonly Button _empty;
 
     public RecycleBinWidget(WidgetInstance i) : base(i)
     {
-        ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Header, a big count with its size underneath, and two small actions: the same layout at every size.
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var badge = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(13), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Child = Ui.Icon(Glyph.Delete, 19, "T.Accent") };
-        badge.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft");
-        Children.Add(badge);
+        Children.Add(WidgetLook.Head("Recycle bin"));
         var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        _value.Text = "—";
+        _detail.Margin = new Thickness(1, 2, 0, 0);
         sp.Children.Add(_value); sp.Children.Add(_detail);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 7, 0, 0) };
-        var open = Ui.Button("Open", () => Island.IslandWindow.OpenUri("shell:RecycleBinFolder"));
-        open.Padding = new Thickness(10, 4, 10, 4); open.FontSize = 12;
-        _empty = Ui.Button("Empty", Empty);
-        _empty.Padding = new Thickness(10, 4, 10, 4); _empty.FontSize = 12; _empty.Margin = new Thickness(6, 0, 0, 0);
-        actions.Children.Add(open); actions.Children.Add(_empty);
-        sp.Children.Add(actions);
-        Children.Add(sp);
-        // Side by side when there is room; badge on top of the text in the Small size.
-        SizeChanged += (_, e) =>
-        {
-            var narrow = e.NewSize.Width < 220;
-            Grid.SetRow(sp, narrow ? 1 : 0); Grid.SetColumn(sp, narrow ? 0 : 1); Grid.SetColumnSpan(sp, narrow ? 2 : 1);
-            sp.Margin = narrow ? new Thickness(0, 12, 0, 0) : new Thickness(13, 0, 0, 0);
-            VerticalAlignment = narrow ? VerticalAlignment.Center : VerticalAlignment.Stretch;
-        };
+        Children.Add(sp.At(1, 0));
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(-7, 0, 0, -6) };
+        actions.Children.Add(Ui.IconButton(Glyph.Folder, "Open the Recycle Bin", () => Island.IslandWindow.OpenUri("shell:RecycleBinFolder"), 30));
+        _empty = Ui.IconButton(Glyph.Delete, "Empty the Recycle Bin…", Empty, 30);
+        actions.Children.Add(_empty);
+        Children.Add(actions.At(2, 0));
         _timer.Tick += (_, _) => Refresh();
         MouseEnter += (_, _) => Refresh();
     }
@@ -885,11 +987,16 @@ internal sealed class RecycleBinWidget : WidgetView
     private void Refresh()
     {
         var info = new Native.SHQUERYRBINFO { cbSize = Marshal.SizeOf<Native.SHQUERYRBINFO>() };
-        if (Native.SHQueryRecycleBin(null, ref info) != 0) { _value.Text = "Recycle Bin"; _detail.Text = "Unavailable"; return; }
-        _value.Text = info.i64NumItems == 0 ? "Empty" : $"{info.i64NumItems:N0} item{(info.i64NumItems == 1 ? "" : "s")}";
-        _detail.Text = info.i64NumItems == 0 ? "Recycle Bin" : Fmt.Size(info.i64Size) + " in Recycle Bin";
+        if (Native.SHQueryRecycleBin(null, ref info) != 0) { _value.Text = "—"; _detail.Text = "unavailable"; return; }
+        var (count, detail) = Describe(info.i64NumItems, info.i64Size);
+        _value.Text = count; _detail.Text = detail;
         _empty.IsEnabled = info.i64NumItems > 0;
+        _empty.Opacity = info.i64NumItems > 0 ? 1 : 0.4;
     }
+
+    /// <summary>The big figure and the line under it: "11" and "items · 674.5 MB", or "0" and "all clear".</summary>
+    internal static (string Count, string Detail) Describe(long items, long bytes) =>
+        items <= 0 ? ("0", "all clear") : (items.ToString("N0", CultureInfo.CurrentCulture), $"{(items == 1 ? "item" : "items")} · {Fmt.Size(bytes)}");
 
     private void Empty()
     {
@@ -1004,10 +1111,9 @@ internal sealed class WeatherWidget : WidgetView
         var p = Hub.Settings.Privacy;
         if (!Hub.Weather.Enabled)
         {
-            _body.Children.Add(Ui.Icon(Glyph.Cloud, 24, "T.Text3").With(t => t.HorizontalAlignment = HorizontalAlignment.Left));
-            _body.Children.Add(Ui.Text("Weather is off", "Text.Sub", 15).With(t => t.Margin = new Thickness(0, 8, 0, 2)));
-            _body.Children.Add(Ui.Text("It needs the internet, so it stays off until you enable it and choose a place.", "Text.Caption", 12));
-            _body.Children.Add(Ui.Button("Open privacy settings", () => App.Current.ShowMain("settings")).With(b => { b.HorizontalAlignment = HorizontalAlignment.Left; b.Margin = new Thickness(0, 10, 0, 0); b.FontSize = 12; }));
+            _body.Children.Add(WidgetLook.Head("Weather", WidgetLook.Data("off", 10.5, "T.Text3")));
+            _body.Children.Add(Ui.Text("It needs the internet, so it waits until you turn it on and choose a place.", "Text.Caption", 12.5));
+            _body.Children.Add(Ui.Button("Turn on in Privacy ›", () => App.Current.ShowMain("settings"), "Button.Ghost").With(b => { b.HorizontalAlignment = HorizontalAlignment.Left; b.Margin = new Thickness(-8, 6, 0, 0); b.FontSize = 12; b.Padding = new Thickness(8, 4, 8, 4); }));
             return;
         }
         try
@@ -1017,22 +1123,23 @@ internal sealed class WeatherWidget : WidgetView
             _body.Children.Clear();
             var unit = p.WeatherFahrenheit ? "°F" : "°C";
             var (text, icon) = WeatherService.Describe(r.Code);
+            _body.Children.Add(WidgetLook.Head(string.IsNullOrWhiteSpace(p.WeatherPlace) ? "Weather" : p.WeatherPlace));
             var top = Ui.Grid("auto,*");
-            top.Children.Add(Ui.LineIcon(icon, 36, "T.Accent", 1.5).With(v => v.VerticalAlignment = VerticalAlignment.Center));
-            var sp = new StackPanel { Margin = new Thickness(14, 0, 0, 0) };
-            sp.Children.Add(Ui.Text($"{r.Temperature:0}{unit}", "Text.Display", 32));
-            sp.Children.Add(Ui.Text($"{text} · feels {r.Feels:0}{unit}", "Text.Caption", 12));
+            top.Children.Add(Ui.LineIcon(icon, 38, "T.Accent", 1.5).With(v => v.VerticalAlignment = VerticalAlignment.Center));
+            var sp = new StackPanel { Margin = new Thickness(16, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            sp.Children.Add(WidgetLook.Big(40).With(t => t.Text = $"{r.Temperature:0}°"));
+            sp.Children.Add(Ui.Text($"{text} · feels {r.Feels:0}{unit}", "Text.Caption", 12).With(t => t.Margin = new Thickness(0, 3, 0, 0)));
             top.Children.Add(sp.At(0, 1));
             _body.Children.Add(top);
-            _body.Children.Add(Ui.Text(p.WeatherPlace.ToUpperInvariant(), "Text.Label").With(t => t.Margin = new Thickness(0, 10, 0, 6)));
-            if (Instance.Height < ForecastHeight) return;   // Medium: now and the place; the next days need a taller widget
+            if (Instance.Height < ForecastHeight) return;   // Medium: the place and now; the next days need a taller widget
+            _body.Children.Add(new Shapes.Rectangle { Height = 1, Opacity = 0.7, Margin = new Thickness(0, 14, 0, 12) }.With(x => x.SetResourceReference(Shapes.Shape.FillProperty, "T.Track")));
             var days = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1 };
             foreach (var d in r.Days.Skip(1).Take(3))
             {
                 var cell = new StackPanel();
-                cell.Children.Add(Ui.Text(d.Date.ToString("ddd", CultureInfo.CurrentCulture), "Text.Caption", 11));
-                cell.Children.Add(Ui.LineIcon(WeatherService.Describe(d.Code).Icon, 17, "T.Text").With(t => { t.HorizontalAlignment = HorizontalAlignment.Left; t.Margin = new Thickness(0, 4, 0, 4); }));
-                cell.Children.Add(Ui.Text($"{d.Max:0}° / {d.Min:0}°", "Text.Body", 12));
+                cell.Children.Add(WidgetLook.Caps(d.Date.ToString("ddd", CultureInfo.CurrentCulture), 10).With(t => t.HorizontalAlignment = HorizontalAlignment.Left));
+                cell.Children.Add(Ui.LineIcon(WeatherService.Describe(d.Code).Icon, 17, "T.Text").With(t => { t.HorizontalAlignment = HorizontalAlignment.Left; t.Margin = new Thickness(0, 6, 0, 6); }));
+                cell.Children.Add(WidgetLook.Data($"{d.Max:0}° {d.Min:0}°", 11.5, "T.Text"));
                 days.Children.Add(cell);
             }
             _body.Children.Add(days);

@@ -181,9 +181,10 @@ public sealed class WidgetWindow : Window
             Place();
             ApplyAppearance();
             _view.Start();
+            if (Hub.Ready) Hub.Wallpaper.BackdropsChanged += UpdateBareInk;
             if (Motion.Intensity > 0.01) { _frame.Opacity = 0; Motion.To(_frame, OpacityProperty, Math.Clamp(Instance.Opacity, 0.2, 1), 360); }
         };
-        Closed += (_, _) => { _closing = true; _view.Stop(); };
+        Closed += (_, _) => { _closing = true; _view.Stop(); if (Hub.Ready) Hub.Wallpaper.BackdropsChanged -= UpdateBareInk; };
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(Place);
         Deactivated += (_, _) => SetInteractive(false);
 
@@ -248,11 +249,13 @@ public sealed class WidgetWindow : Window
             if (!_frame.Children.Contains(_body)) _frame.Children.Add(_body);
             _frame.Background = HitBrush;
             _body.SetResourceReference(EffectProperty, "W.BareShadow");
+            UpdateBareInk();
         }
         else
         {
             _frame.Background = null;
             _body.ClearValue(EffectProperty);
+            SetInk(null);
             if (_glass is null)
             {
                 _frame.Children.Remove(_body);
@@ -260,6 +263,67 @@ public sealed class WidgetWindow : Window
                 _frame.Children.Add(_glass);
             }
         }
+    }
+
+    // ---- Bare ink: a bare widget sits on the wallpaper, so its text takes its colour from the wallpaper under it, not
+    // from the theme. A light theme over a dark wallpaper would otherwise put dark text on a dark picture.
+    private bool? _ink;   // true = light text, false = dark text, null = the theme's own colours
+
+    /// <summary>Light or dark text for the wallpaper under a bare widget: light when the area's average relative
+    /// luminance is below 0.18, where white and black text have the same contrast (WCAG).</summary>
+    internal static bool LightInk(double luminance) => luminance < 0.18;
+
+    /// <summary>The average relative luminance of BGRA pixels (sRGB, alpha ignored).</summary>
+    internal static double AverageLuminance(byte[] bgra)
+    {
+        var n = bgra.Length / 4;
+        if (n == 0) return 0.5;
+        double sum = 0;
+        for (var k = 0; k < n; k++) sum += Wallpaper.ColorMath.Luminance(Color.FromRgb(bgra[k * 4 + 2], bgra[k * 4 + 1], bgra[k * 4]));
+        return sum / n;
+    }
+
+    private void UpdateBareInk()
+    {
+        if (!IsBare(Instance) || !Hub.Ready) return;
+        SetInk(WallpaperLuminanceUnder() is { } lum ? LightInk(lum) : null);
+    }
+
+    /// <summary>The blurred wallpaper under the widget, averaged; null when there is no picture of that screen yet.</summary>
+    private double? WallpaperLuminanceUnder()
+    {
+        try
+        {
+            var mon = Monitors.Find(Instance.Monitor);
+            if (Hub.Wallpaper.Backdrop(mon.Device) is not System.Windows.Media.Imaging.BitmapSource img || img.PixelWidth < 1 || mon.Bounds.Width < 1 || mon.Bounds.Height < 1) return null;
+            double fx = (double)img.PixelWidth / mon.Bounds.Width, fy = (double)img.PixelHeight / mon.Bounds.Height;
+            var x = (int)Math.Clamp(Instance.X * fx, 0, img.PixelWidth - 1);
+            var y = (int)Math.Clamp(Instance.Y * fy, 0, img.PixelHeight - 1);
+            var w = (int)Math.Clamp(Instance.Width * mon.Scale * fx, 1, img.PixelWidth - x);
+            var h = (int)Math.Clamp(Instance.Height * mon.Scale * fy, 1, img.PixelHeight - y);
+            System.Windows.Media.Imaging.BitmapSource src = img.Format == PixelFormats.Bgra32 || img.Format == PixelFormats.Pbgra32 || img.Format == PixelFormats.Bgr32
+                ? img : new System.Windows.Media.Imaging.FormatConvertedBitmap(img, PixelFormats.Bgra32, null, 0);
+            var pixels = new byte[w * h * 4];
+            src.CopyPixels(new Int32Rect(x, y, w, h), pixels, w * 4, 0);
+            return AverageLuminance(pixels);
+        }
+        catch { return null; }
+    }
+
+    private void SetInk(bool? light)
+    {
+        if (_ink == light) return;
+        _ink = light;
+        var r = _body.Resources;
+        foreach (var key in new[] { "T.Text", "T.Text2", "T.Text3", "T.Track", "W.BareShadow" }) r.Remove(key);
+        if (light is not { } l) return;
+        var ink = l ? Color.FromRgb(0xF6, 0xF7, 0xFA) : Color.FromRgb(0x14, 0x17, 0x1E);
+        SolidColorBrush B(Color c, double a) => Frozen(new SolidColorBrush(Color.FromArgb((byte)(a * 255), c.R, c.G, c.B)));
+        r["T.Text"] = B(ink, 1);
+        r["T.Text2"] = B(ink, 0.72);
+        r["T.Text3"] = B(ink, 0.5);
+        r["T.Track"] = l ? B(Colors.White, 0.16) : B(Colors.Black, 0.13);
+        r["W.BareShadow"] = ThemeEngine.BareShadow(dark: l);   // a dark shadow under light text, a light one under dark text
     }
 
     public void SetRunning(bool run) { if (run) _view.Start(); else _view.Stop(); }
@@ -302,6 +366,7 @@ public sealed class WidgetWindow : Window
         var y = mon.Bounds.Top + (int)Math.Clamp(Instance.Y, 0, maxY) - pad;
         Native.SetWindowPos(Handle, IntPtr.Zero, x, y, 0, 0, Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE);
         _glass?.UpdateBackdrop();
+        UpdateBareInk();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

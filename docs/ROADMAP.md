@@ -118,7 +118,8 @@ Still open:
 * ✅ **Liquid lens** — Liquid Clear and Liquid Frosted themes (12 built-in themes now): a ps_3_0 shader with a thick rounded rim that bends the backdrop beyond the edge, a prism split and rim light; it flexes with size changes and sweeps light round the rim on open/close (none of that under Reduced Motion). A **Liquid lens** slider in the Glass Editor for any theme.
 * ✅ **One widget grid** — four sizes from one 160 px unit and 16 px gaps (Small, Medium, Wide, Large), one 16 px inset for every widget, a Size menu, and new widgets placed at a standard size. Widgets placed earlier keep their size.
 * ✅ **Bare widgets** — any widget can drop its glass card and sit on the wallpaper with a soft shadow.
-* ✅ **Nine clock styles** and a live **Clocks** gallery at the top of the Widgets page (many users would rather have the date and time as a desktop widget than in the island).
+* ✅ **Ten clock styles** (including an LED-style dot matrix) and a live **Clocks** gallery at the top of the Widgets page (many users would rather have the date and time as a desktop widget than in the island).
+* ✅ **One widget design** (`Widgets/WidgetLook.cs`): accent-dot headers in spaced capitals, big light numbers, monospaced data, segmented HUD meters. The owner's bar: generic-looking widgets would push people to competitors. Bare widgets take their text colour from the wallpaper under them.
 * ✅ **Island glance** — what the collapsed capsule shows: Clock (as before, the default), System, Status (Wi-Fi/Ethernet, Bluetooth, battery from Windows' events), Eyes (follow the pointer; about 1 % of one core while visible) or Quiet. Sketches and sources are in the owner's private inspiration notes.
 * 🐛 Found while testing, to fix next: on a PC where Windows lists the graphics card as attached to the desktop but no monitor under it, `RenderGuard` thinks the screen is off and never runs, so a blank settings window is not rescued; Live glass uses the same check.
 

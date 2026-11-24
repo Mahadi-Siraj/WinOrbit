@@ -113,6 +113,76 @@ public class ClockStyleTests
     }
 }
 
+public class WidgetLookTests
+{
+    [Theory]
+    [InlineData(0, 24, 0)]
+    [InlineData(-5, 24, 0)]
+    [InlineData(double.NaN, 24, 0)]
+    [InlineData(0.4, 24, 1)]       // any use at all lights one cell
+    [InlineData(50, 24, 12)]
+    [InlineData(50.1, 24, 13)]
+    [InlineData(100, 24, 24)]
+    [InlineData(250, 24, 24)]
+    [InlineData(50, 0, 0)]
+    public void A_meter_lights_cells_in_proportion(double percent, int cells, int lit) => Assert.Equal(lit, WidgetLook.Lit(percent, cells));
+
+    [Fact]
+    public void Every_figure_of_the_dot_matrix_is_five_by_seven_and_distinct()
+    {
+        var shapes = new HashSet<string>();
+        foreach (var c in "0123456789")
+        {
+            var g = ClockWidget.DotGlyph(c)!;
+            Assert.Equal(7, g.Length);
+            Assert.All(g, row => Assert.Matches("^[01]{5}$", row));
+            Assert.True(shapes.Add(string.Join("", g)), $"{c} looks like another figure");
+        }
+        Assert.Null(ClockWidget.DotGlyph('x'));
+    }
+
+    [Fact]
+    public void The_dot_matrix_lays_out_figures_with_one_blank_column_between()
+    {
+        var dots = ClockWidget.DotLayout("10:42");
+        // 5 + 1 + 5 + 1 + 1 (colon) + 1 + 5 + 1 + 5 = 25 columns, 7 rows, every position drawn.
+        Assert.Equal(25, dots.Max(d => d.X) + 1);
+        Assert.Equal(7, dots.Max(d => d.Y) + 1);
+        Assert.Equal(4 * 35 + 7, dots.Count);
+        Assert.Equal(2, dots.Count(d => d.X == 12 && d.On));   // the colon: two lit dots
+        Assert.DoesNotContain(dots, d => d.X == 5);               // the gap after the first figure
+    }
+
+    [Theory]
+    [InlineData(5, false)]
+    [InlineData(6, true)]
+    [InlineData(17, true)]
+    [InlineData(18, false)]
+    [InlineData(0, false)]
+    public void World_clock_marks_daytime_from_six_to_six(int hour, bool day) => Assert.Equal(day, WorldClockWidget.IsDaytime(new DateTime(2026, 11, 25, hour, 30, 0)));
+
+    [Fact]
+    public void The_recycle_bin_says_all_clear_or_counts_items()
+    {
+        Assert.Equal(("0", "all clear"), RecycleBinWidget.Describe(0, 0));
+        Assert.StartsWith("item · ", RecycleBinWidget.Describe(1, 2048).Detail);
+        Assert.StartsWith("items · ", RecycleBinWidget.Describe(11, 707_264_512).Detail);
+    }
+
+    [Fact]
+    public void Bare_widgets_pick_light_text_on_dark_wallpaper_and_dark_text_on_light()
+    {
+        static byte[] Fill(byte r, byte g, byte b) => Enumerable.Range(0, 16).SelectMany(_ => new byte[] { b, g, r, 255 }).ToArray();
+        var navy = WidgetWindow.AverageLuminance(Fill(0x10, 0x20, 0x60));
+        var white = WidgetWindow.AverageLuminance(Fill(0xF0, 0xF0, 0xF0));
+        var midGrey = WidgetWindow.AverageLuminance(Fill(0x80, 0x80, 0x80));
+        Assert.True(WidgetWindow.LightInk(navy));
+        Assert.False(WidgetWindow.LightInk(white));
+        Assert.False(WidgetWindow.LightInk(midGrey));   // mid grey (L ≈ 0.22) reads better with dark text
+        Assert.Equal(0.5, WidgetWindow.AverageLuminance(Array.Empty<byte>()));
+    }
+}
+
 public class IslandGlanceTests
 {
     [Fact]

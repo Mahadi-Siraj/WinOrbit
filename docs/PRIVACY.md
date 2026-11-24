@@ -27,7 +27,7 @@ Not stored anywhere: unpinned clipboard history (memory only, see §2), browsing
 
 | Data | Purpose | Leaves the PC? |
 |---|---|---|
-| Wallpaper image file / live-wallpaper layer | Colour extraction and frosted backdrops | No |
+| Wallpaper image file / live-wallpaper layer | Colour extraction and frosted backdrops; bare widgets also average the blurred picture under them to choose light or dark text | No |
 | CPU, memory, disk, network counters (Windows PDH), GPU via NVIDIA's NVML | System widgets and island tiles — sampled **only while one is visible** | No |
 | Now-playing info from the Windows media session API, including the artwork thumbnail | Media widget/island; the artwork's colours are worked out in memory for the album-colour glass, equaliser and rim | No |
 | Name of the foreground process + whether it is fullscreen; Windows' "this window moved or resized" notices for that one app's windows | Hiding during games and for the apps you choose; opt-in automation rules | No (not logged) |

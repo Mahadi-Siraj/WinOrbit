@@ -80,7 +80,8 @@ Closing the main window keeps the island and widgets running from the tray (turn
 
 * Add from **Widgets**. Drag anywhere on the glass to move; drag the **corner grip** to resize. **Hold Alt** while dragging to ignore the grid.
 * **Sizes** — new widgets come in four sizes built on one grid: **Small** 160 × 160, **Medium** 336 × 160, **Wide** 512 × 160 and **Large** 336 × 336 (the gaps are 16 px, the grid's step), so widgets side by side line up and share the same margins. Right-click › **Size** switches between the sizes the widget's content fits in. Resizing with the grip still works; the Size menu then shows no tick until you pick one again. Widgets you placed before 2.0 keep their size.
-* **Look** — right-click › **Look** › **Glass card** (the usual glass) or **Bare (on the wallpaper)**: no card at all, just the text with a soft shadow so it reads on any wallpaper (dark shadow with dark themes, light with light ones). New Text widgets start bare.
+* **Look** — right-click › **Look** › **Glass card** (the usual glass) or **Bare (on the wallpaper)**: no card at all, just the text with a soft shadow. A bare widget picks its own text colour from the wallpaper under it, whatever the theme: light text with a dark shadow on a dark picture, dark text with a light shadow on a bright one. Move it and it checks again. New Text widgets start bare.
+* **One design** — every widget shares the same details, so a desktop full of them looks planned: a small header with an accent dot and a label in spaced capitals, big light numbers, sizes and rates in a monospaced font, and segmented meters. The **System monitor** shows CPU, memory and GPU as segmented meters (amber above 90 %); in the Large size it adds network, disk and uptime. Its other looks are **Meters + CPU graph** and **Rings**. The **World clock** marks each city with a filled dot in daylight and a hollow one at night.
 * **Clocks** — the top of the Widgets page shows every clock style, live: click one to put it on your desktop (bare, at its best size). Right-click a clock › **Style** to change it later. The styles:
 
   | Style | What it looks like |
@@ -94,6 +95,7 @@ Closing the main window keeps the island and widgets running from the tray (turn
   | Big date | A huge day of the month in your accent colour, with the month and weekday over it |
   | Script | The weekday handwritten over a tall, narrow time, and the date in spaced capitals |
   | Mono | A terminal look in a monospaced font, with a bar for how much of today has gone (optional seconds) |
+  | Dot matrix | The time on an LED-style dot grid, every dot drawn with the unlit ones faint, and the date in spaced capitals |
 
   Clocks update once a minute (once a second only when seconds are shown).
 * **Right-click** a widget for its own options (style, cities, timer length, rename, add shortcuts…) plus size, look, opacity, *Always on top*, lock, hide and remove.
