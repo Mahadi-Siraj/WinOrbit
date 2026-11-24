@@ -122,7 +122,8 @@ public partial class App : Application
         Hub.Wallpaper.PaletteChanged += () => Hub.Theme.Apply();
         Hub.Shell.SettingChanged += area =>
         {
-            if (area == "ImmersiveColorSet" && Hub.Theme.Current.Mode == ThemeMode.Auto) Dispatcher.BeginInvoke(Hub.Theme.Apply);
+            // Qualified: inside an Application, a bare "ThemeMode" is WPF's Application.ThemeMode property (.NET 9+).
+            if (area == "ImmersiveColorSet" && Hub.Theme.Current.Mode == Core.ThemeMode.Auto) Dispatcher.BeginInvoke(Hub.Theme.Apply);
         };
 
         Hub.Island = new IslandController(Dispatcher);
