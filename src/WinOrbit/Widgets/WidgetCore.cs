@@ -27,6 +27,8 @@ public abstract class WidgetView : Grid
     {
         Instance = instance;
         Margin = new Thickness(Inset);
+        // Every widget but the clock takes its text font from the clock's lettering (the clock sets the style).
+        if (instance.Kind != "clock" && WidgetLook.Current.Text is { } family) System.Windows.Documents.TextElement.SetFontFamily(this, family);
     }
 
     public void Start() { if (Running) return; Running = true; OnStart(); }
@@ -56,6 +58,11 @@ public abstract class WidgetView : Grid
                 if (optionKey == "variant") Instance.Variant = value; else Instance.Options[optionKey] = value;
                 Save();
                 Host?.Rebuild();
+                if (optionKey == "variant" && Hub.Ready)
+                {
+                    if (Instance.Kind == "clock") Hub.Widgets.RefreshLettering();   // the other widgets follow the clock's style
+                    Hub.Widgets.NotifyChanged();
+                }
             }, current == value));
         return parent;
     }
@@ -524,9 +531,23 @@ public sealed class WidgetManager
     public IEnumerable<WidgetWindow> Windows => _windows.Values;
     public WidgetWindow? WindowOf(WidgetInstance i) => _windows.TryGetValue(i.Id, out var w) ? w : null;
 
+    /// <summary>
+    /// Give every widget the lettering of the clock (or the HUD look when matching is off or there's no clock).
+    /// Widgets are rebuilt only when the lettering actually changes; the clocks themselves never are.
+    /// </summary>
+    public void RefreshLettering()
+    {
+        var s = Hub.Settings;
+        var lettering = WidgetLook.LetteringFor(s.Layout.MatchClockLettering ? WidgetLook.LeadClock(s.Widgets) : null);
+        if (ReferenceEquals(lettering, WidgetLook.Current)) return;
+        WidgetLook.Current = lettering;
+        foreach (var w in _windows.Values.Where(w => w.Kind.Id != "clock")) w.Rebuild();
+    }
+
     /// <summary>Make the open windows match settings.</summary>
     public void Apply()
     {
+        RefreshLettering();
         var s = Hub.Settings;
         var wanted = s.Layout.WidgetsVisible ? s.Widgets.Where(w => w.Visible && WidgetCatalog.Find(w.Kind) is not null).ToList() : new List<WidgetInstance>();
         foreach (var id in _windows.Keys.Where(id => wanted.All(w => w.Id != id)).ToList())

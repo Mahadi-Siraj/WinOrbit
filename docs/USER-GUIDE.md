@@ -87,6 +87,13 @@ Closing the main window keeps the island and widgets running from the tray (turn
   | Style | What it looks like |
   |---|---|
   | Minimal | Big time, date underneath (optional seconds) |
+  | Orbit | The weekday in **Orbit letters**, far apart, the date in spaced capitals, then the time between dashes (Wide) |
+  | Hairline | A centred stack between two fading hairlines: "GOOD / EVENING", the short weekday in bold Orbit letters, the date and the time (Large) |
+  | Poster | The day of the month huge in your accent colour, the month in heavy capitals across it, the weekday standing up the side and the time underlined (Large) |
+  | Label | A row of ticks for the day's half hours (the ones gone are lit), the weekday in a thin box, and the time and date cut out of a solid bar so the wallpaper shows through |
+  | Week | The time in outlined, narrow figures, the week underneath with today ringed, and the date in a serif (Wide) |
+  | Heavy | Heavy figures with the date written out underneath ("25, November, Wednesday.") |
+  | Story | The month in a gradient of your accent colour, the weekday and date, then the time told as a sentence ("It's 16:35 in the afternoon. 69% of the day has passed.") (Wide) |
   | Stacked | Hours over minutes, with the weekday and date beside them |
   | Ambient date | The day of the month large, the weekday above it, the month and time below |
   | Greeting | "GOOD EVENING", the weekday large and light, then the date and time between thin lines (Wide) |
@@ -97,7 +104,9 @@ Closing the main window keeps the island and widgets running from the tray (turn
   | Mono | A terminal look in a monospaced font, with a bar for how much of today has gone (optional seconds) |
   | Dot matrix | The time on an LED-style dot grid, every dot drawn with the unlit ones faint, and the date in spaced capitals |
 
-  Clocks update once a minute (once a second only when seconds are shown).
+  Clocks update once a minute (once a second only when seconds are shown). **Orbit letters** are WinOrbit's own geometric capitals, drawn as lines rather than taken from a font file; they cover A–Z and the figures, so a weekday with accents or in another script is written in a Windows font instead.
+* **Matching pieces** — under the clocks, text-only versions of other widgets made to sit beside a clock skin, straight on the wallpaper: **Now playing · Caption** (the song between two hairlines, controls when you point at it), **System · Slashes** (`CPU ////////////  12.5%`), **Weather · Line** (the place and the sky in spaced capitals; needs weather turned on), **Recycle bin · Label** (files and size beside the bin; double-click opens it) and **Launcher · Icon row** (your apps as grey icons without names). You can switch any of these widgets back and forth with right-click › **Style**.
+* **Match the clock's lettering** (**Widgets › Layout**, on by default) — every widget takes its letters from your clock, so the desktop reads as one design: monospaced with **Mono** and **Dot matrix**, narrow (Bahnschrift) with **Poster**, **Label**, **Week**, **Heavy** and **Script**, light and airy with **Orbit**, **Hairline**, **Spaced** and **Story**, and the usual theme font with the others. With several clocks, the first one that is shown decides. Turn it off to keep the theme's font everywhere.
 * **Right-click** a widget for its own options (style, cities, timer length, rename, add shortcuts…) plus size, look, opacity, *Always on top*, lock, hide and remove.
 * Widgets sit on the desktop beneath your windows. **Win+D** (show desktop) brings them forward with the desktop.
 * The Launcher accepts files, apps and folders dropped onto it.
@@ -158,7 +167,7 @@ All in `%APPDATA%\WinOrbit` (portable: `Data\` next to the exe). They are plain 
 | No GPU usage | WinOrbit reads NVIDIA GPUs through the driver's NVML and others through Windows GPU counters. Some drivers expose neither. |
 | Brightness slider disabled | The monitor doesn't support DDC/CI (or it is disabled in the monitor's OSD menu). |
 | A Rainmeter skin didn't load | WinOrbit reports it. Open the skin in Rainmeter's **Manage** (button on the card) and check Rainmeter's log; missing plugins are the usual cause. |
-| The settings window is blank | A graphics-driver state (e.g. after a display mode change) can stop GPU-rendered windows from appearing. WinOrbit detects this within a second and switches that window to software rendering automatically (About & Diagnostics › Rendering says so). It doesn't check while the screen is off, the monitor is switched off or unplugged, or the PC is locked, since every window looks blank then; it checks once the screen is back. To make it permanent: **Settings › Software rendering for this window**. Restarting the PC or updating the GPU driver normally restores hardware rendering; on the test PC, closing Wallpaper Engine was also followed by hardware rendering working again. |
+| The settings window is blank | A graphics-driver state (e.g. after a display mode change) can stop GPU-rendered windows from appearing. WinOrbit detects this within a second and switches that window to software rendering automatically (About & Diagnostics › Rendering says so). It doesn't check while the screen is off, the monitor is switched off or unplugged, or the PC is locked, since every window looks blank then; it checks once the screen is back. (Before 2.0 some graphics drivers made WinOrbit think no monitor was connected at all, so the check never ran and the window stayed blank; it now asks Windows' display configuration as well.) To make it permanent: **Settings › Software rendering for this window**. Restarting the PC or updating the GPU driver normally restores hardware rendering; on the test PC, closing Wallpaper Engine was also followed by hardware rendering working again. |
 | Anything else | **About & Diagnostics** shows the log and resource use. **Copy for a bug report** puts your WinOrbit and Windows versions, displays, rendering mode and island setup on the clipboard — no names of networks, devices, files or places, and no log lines — ready to paste into a GitHub issue. |
 
 ## Updating

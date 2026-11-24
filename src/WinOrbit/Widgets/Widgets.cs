@@ -23,7 +23,7 @@ public static class WidgetCatalog
     // line up with each other. Widgets placed by earlier versions keep the size they were given.
     public static readonly List<WidgetKind> All = new()
     {
-        new("clock", "Clock", "Ten styles, from minimal to handwritten and dot matrix. Pick one under Clocks above, or right-click › Style.", Glyph.Clock, "Time", 336, 160, 120, 80, i => new ClockWidget(i)),
+        new("clock", "Clock", "Seventeen styles, from minimal to Orbit letters, posters and dot matrix. Pick one under Clocks above, or right-click › Style.", Glyph.Clock, "Time", 336, 160, 120, 80, i => new ClockWidget(i)),
         new("calendar", "Calendar", "Month view with today highlighted.", Glyph.Calendar, "Time", 336, 336, 230, 236, i => new CalendarWidget(i)),
         new("worldclock", "World clock", "Up to five cities with their offset from you.", Glyph.Globe, "Time", 336, 160, 200, 96, i => new WorldClockWidget(i)),
         new("system", "System monitor", "CPU, memory, GPU, network and disk at a glance.", Glyph.Chip, "System", 336, 336, 220, 130, i => new SystemWidget(i)),
@@ -39,22 +39,37 @@ public static class WidgetCatalog
     };
 
     public static WidgetKind? Find(string id) => All.FirstOrDefault(k => k.Id == id);
+
+    /// <summary>
+    /// Text-only styles of other widgets, made to sit beside the clock skins on the wallpaper (all added Bare):
+    /// (kind, style, name, what it shows, size).
+    /// </summary>
+    public static readonly (string Kind, string Variant, string Name, string About, string Size)[] Companions =
+    {
+        ("media", "caption", "Now playing · Caption", "The song between two hairlines, centred. Controls show on hover.", "m"),
+        ("system", "slashes", "System · Slashes", "CPU, RAM and GPU as a terminal readout of slashes.", "m"),
+        ("weather", "line", "Weather · Line", "The place and the sky in spaced capitals. Needs weather turned on.", "m"),
+        ("recyclebin", "label", "Recycle bin · Label", "Files and size beside the bin. Double-click opens it.", "m"),
+        ("launcher", "icons", "Launcher · Icon row", "Your apps as one row of monochrome icons, no names.", "m"),
+    };
 }
 
 // =====================================================================================
 /// <summary>
-/// The desktop clock in ten styles. Each style builds its own little layout inside a Viewbox (so it scales with the
-/// widget) and an update function; the clock then sleeps until the next minute (or second, when seconds are shown).
-/// Only fonts that ship with Windows are used, so nothing is downloaded and nothing needs a licence.
+/// The desktop clock in seventeen styles. Each style builds its own little layout inside a Viewbox (so it scales with
+/// the widget) and an update function; the clock then sleeps until the next minute (or second, when seconds are shown).
+/// Only fonts that ship with Windows and WinOrbit's own Orbit letters are used, so nothing is downloaded and nothing
+/// needs a licence. The skin styles (Orbit, Hairline, Poster…) live in ClockSkins.cs.
 /// </summary>
-internal sealed class ClockWidget : WidgetView
+internal sealed partial class ClockWidget : WidgetView
 {
     /// <summary>The styles in the order the menu and the gallery show them: (variant, name, the size it looks best at).</summary>
     public static readonly (string Id, string Name, string Size)[] Styles =
     {
-        ("", "Minimal", "m"), ("stacked", "Stacked", "m"), ("date", "Ambient date", "m"),
-        ("greeting", "Greeting", "w"), ("spaced", "Spaced", "w"), ("outline", "Outline", "m"),
-        ("bigdate", "Big date", "m"), ("script", "Script", "m"), ("mono", "Mono", "m"), ("dots", "Dot matrix", "m"),
+        ("", "Minimal", "m"), ("orbit", "Orbit", "w"), ("hairline", "Hairline", "l"), ("poster", "Poster", "l"),
+        ("label", "Label", "m"), ("week", "Week", "w"), ("heavy", "Heavy", "m"), ("story", "Story", "w"),
+        ("stacked", "Stacked", "m"), ("date", "Ambient date", "m"), ("greeting", "Greeting", "w"), ("spaced", "Spaced", "w"),
+        ("outline", "Outline", "m"), ("bigdate", "Big date", "m"), ("script", "Script", "m"), ("mono", "Mono", "m"), ("dots", "Dot matrix", "m"),
     };
 
     private static readonly FontFamily ScriptFont = new("Segoe Script, Ink Free, Segoe Print, Segoe UI");
@@ -80,6 +95,13 @@ internal sealed class ClockWidget : WidgetView
             "script" => BuildScript(),
             "mono" => BuildMono(box),
             "dots" => BuildDots(),
+            "orbit" => BuildOrbit(),
+            "hairline" => BuildHairline(),
+            "poster" => BuildPoster(),
+            "label" => BuildLabel(),
+            "week" => BuildWeek(),
+            "heavy" => BuildHeavy(),
+            "story" => BuildStory(),
             _ => BuildMinimal()
         };
         Children.Add(box);
@@ -558,8 +580,40 @@ internal sealed class SystemWidget : WidgetView
     /// <summary>The parts that only show when the widget is tall enough (Large): header, graph, network and footer.</summary>
     private readonly List<FrameworkElement> _tallOnly = new();
 
+    /// <summary>The slashes look: (lit slashes, unlit slashes) for each part.</summary>
+    private readonly Dictionary<string, (System.Windows.Documents.Run Lit, System.Windows.Documents.Run Off)> _slashes = new();
+    internal const int SlashCount = 20;
+
     public SystemWidget(WidgetInstance i) : base(i)
     {
+        if (Instance.Variant == "slashes")
+        {
+            // A terminal readout for desktop skins: "CPU ////////////////////  12.5%", lit slashes bright and the rest faint.
+            var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left };
+            foreach (var (id, label) in new[] { ("cpu", "CPU"), ("ram", "RAM"), ("gpu", "GPU") })
+            {
+                var line = new TextBlock { FontFamily = WidgetLook.Mono, FontSize = 13, Margin = new Thickness(0, 0, 0, 5) };
+                var name = new System.Windows.Documents.Run(label + " ");
+                name.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "T.Text");
+                var lit = new System.Windows.Documents.Run("");
+                lit.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "T.Text");
+                var off = new System.Windows.Documents.Run(new string('/', SlashCount));
+                off.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "T.Track");
+                var value = new TextBlock { FontFamily = WidgetLook.Mono, FontSize = 13, MinWidth = 64, TextAlignment = TextAlignment.Right, Text = "—" };
+                value.SetResourceReference(TextBlock.ForegroundProperty, "T.Text");
+                line.Inlines.Add(name); line.Inlines.Add(lit); line.Inlines.Add(off);
+                var row = new StackPanel { Orientation = Orientation.Horizontal };
+                row.Children.Add(line); row.Children.Add(value);
+                lines.Children.Add(row);
+                _rows[id] = (value, null, null);
+                _slashes[id] = (lit, off);
+            }
+            var dashes = new Shapes.Line { X2 = 1, Stretch = Stretch.Fill, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 3, 3 }, Margin = new Thickness(0, 2, 0, 0) };
+            dashes.SetResourceReference(Shapes.Shape.StrokeProperty, "T.Text3");
+            lines.Children.Add(dashes);
+            Children.Add(lines);
+            return;
+        }
         if (Instance.Variant == "rings")
         {
             var grid = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1 };
@@ -622,6 +676,18 @@ internal sealed class SystemWidget : WidgetView
             if (r.Value.Text != text) r.Value.Text = text;
             r.Bar?.Set(pct ?? 0);
             if (r.Ring is not null) r.Ring.Value = (pct ?? 0) / 100;
+            if (_slashes.TryGetValue(id, out var sl))
+            {
+                var (lit, off) = Slashes(pct);
+                if (sl.Lit.Text != lit) { sl.Lit.Text = lit; sl.Off.Text = off; }
+            }
+        }
+        if (Instance.Variant == "slashes")
+        {
+            Set("cpu", s.Cpu, $"{s.Cpu:0.0}%");
+            Set("ram", s.Ram, $"{s.Ram:0.0}%");
+            Set("gpu", s.Gpu, s.Gpu is { } pg ? $"{pg:0.0}%" : "n/a");
+            return;
         }
         Set("cpu", s.Cpu, $"{s.Cpu:0}%");
         Set("ram", s.Ram, Instance.Variant == "rings" ? $"{s.Ram:0}%" : $"{s.RamUsedGb:0.0}/{s.RamTotalGb:0} GB");
@@ -634,7 +700,14 @@ internal sealed class SystemWidget : WidgetView
 
     protected override void OnStart() => _sub = Hub.Monitor.Subscribe(OnSample);
     protected override void OnStop() { _sub?.Dispose(); _sub = null; }
-    public override void BuildMenu(ItemCollection items) => items.Add(Choice("Style", "variant", ("Meters", ""), ("Meters + CPU graph", "graph"), ("Rings", "rings")));
+    public override void BuildMenu(ItemCollection items) => items.Add(Choice("Style", "variant", ("Meters", ""), ("Meters + CPU graph", "graph"), ("Rings", "rings"), ("Slashes", "slashes")));
+
+    /// <summary>The slashes readout for a percentage: the lit and the unlit part, together always <see cref="SlashCount"/> long.</summary>
+    internal static (string Lit, string Off) Slashes(double? percent)
+    {
+        var lit = WidgetLook.Lit(percent ?? 0, SlashCount);
+        return (new string('/', lit), new string('/', SlashCount - lit));
+    }
 }
 
 // =====================================================================================
@@ -647,8 +720,16 @@ internal sealed class MediaWidget : WidgetView
     private readonly Button _play;
     private readonly StackPanel _controls = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(-6, 6, 0, 0) };
 
+    private bool Caption => Instance.Variant == "caption";
+
     public MediaWidget(WidgetInstance i) : base(i)
     {
+        if (Caption)
+        {
+            _play = Ui.IconButton(Glyph.Play, "Play or pause", () => Hub.Media.PlayPause(), 34, "Button.IconAccent");
+            _source = BuildCaption();
+            return;
+        }
         ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _art.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft");
@@ -669,6 +750,38 @@ internal sealed class MediaWidget : WidgetView
         Children.Add(sp.At(0, 1));
     }
 
+    /// <summary>
+    /// The caption look, for desktop skins: no artwork and no card, just the playing app in spaced capitals between
+    /// two hairlines, the title and the artist, centred. The controls appear while the pointer is over it.
+    /// </summary>
+    private TextBlock BuildCaption()
+    {
+        Background = Brushes.Transparent;   // the pointer counts anywhere on it, not only over the letters
+        var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        var head = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 9) };
+        Shapes.Rectangle Rule() => new Shapes.Rectangle { Width = 22, Height = 1, VerticalAlignment = VerticalAlignment.Center }.With(r => r.SetResourceReference(Shapes.Shape.FillProperty, "T.Text3"));
+        var source = WidgetLook.Caps("Now playing", 10.5, "T.Text2");
+        source.Margin = new Thickness(10, 0, 10, 0);
+        head.Children.Add(Rule()); head.Children.Add(source); head.Children.Add(Rule());
+        foreach (var t in new[] { _title, _artist }) { t.TextAlignment = TextAlignment.Center; t.HorizontalAlignment = HorizontalAlignment.Center; t.TextTrimming = TextTrimming.CharacterEllipsis; t.TextWrapping = TextWrapping.NoWrap; }
+        _title.FontSize = 17; _title.FontWeight = FontWeights.SemiBold;
+        _artist.Margin = new Thickness(0, 2, 0, 0);
+        _controls.Children.Add(Ui.IconButton(Glyph.Previous, "Previous track", () => Hub.Media.Previous(), 30));
+        _play.Margin = new Thickness(4, 0, 4, 0);
+        _controls.Children.Add(_play);
+        _controls.Children.Add(Ui.IconButton(Glyph.Next, "Next track", () => Hub.Media.Next(), 30));
+        _controls.HorizontalAlignment = HorizontalAlignment.Center;
+        _controls.Margin = new Thickness(0, 6, 0, 0);
+        _controls.Opacity = 0;
+        sp.Children.Add(head); sp.Children.Add(_title); sp.Children.Add(_artist); sp.Children.Add(_controls);
+        Children.Add(sp);
+        MouseEnter += (_, _) => Motion.To(_controls, OpacityProperty, ControlsOpacity(true), 160);
+        MouseLeave += (_, _) => Motion.To(_controls, OpacityProperty, 0, 220);
+        return source;
+    }
+
+    private double ControlsOpacity(bool hover) => Caption && !hover ? 0 : Hub.Media.HasTrack ? 1 : 0.45;
+
     private void Update()
     {
         var m = Hub.Media;
@@ -677,14 +790,18 @@ internal sealed class MediaWidget : WidgetView
         _artist.Text = has ? (string.IsNullOrWhiteSpace(m.Artist) ? m.Source : m.Artist) : "Start music in any app";
         WidgetLook.SetCaps(_source, has && !string.IsNullOrWhiteSpace(m.Source) ? m.Source : "Now playing");
         _play.Content = m.IsPlaying ? Glyph.Pause : Glyph.Play;
-        _controls.Opacity = has ? 1 : 0.45;
+        _controls.Opacity = ControlsOpacity(IsMouseOver);
         if (has && m.Art is not null) { _art.Background = new ImageBrush(m.Art) { Stretch = Stretch.UniformToFill }; _artGlyph.Visibility = Visibility.Collapsed; }
         else { _art.SetResourceReference(Border.BackgroundProperty, "T.AccentSoft"); _artGlyph.Visibility = Visibility.Visible; }
     }
 
     protected override void OnStart() { Hub.Media.Changed += Update; Update(); }
     protected override void OnStop() => Hub.Media.Changed -= Update;
-    public override void BuildMenu(ItemCollection items) => items.Add(Item("Open sound output settings", () => Island.IslandWindow.OpenUri("ms-settings:sound")));
+    public override void BuildMenu(ItemCollection items)
+    {
+        items.Add(Choice("Style", "variant", ("Artwork and controls", ""), ("Caption", "caption")));
+        items.Add(Item("Open sound output settings", () => Island.IslandWindow.OpenUri("ms-settings:sound")));
+    }
 }
 
 // =====================================================================================
@@ -892,21 +1009,34 @@ internal sealed class LauncherWidget : WidgetView
 
     private void Store(List<string> paths) { Instance.Options["items"] = string.Join('|', paths.Take(24)); Save(); Render(); }
 
+    private bool IconRow => Instance.Variant == "icons";
+
     private void Render()
     {
         _panel.Children.Clear();
+        _panel.HorizontalAlignment = IconRow ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
         var paths = Paths;
         foreach (var path in paths)
         {
             var name = Path.GetFileNameWithoutExtension(path);
             if (string.IsNullOrEmpty(name)) name = path;
-            var b = new Button { Width = 76, Padding = new Thickness(4, 8, 4, 6), Margin = new Thickness(2), ToolTip = path };
-            b.SetResourceReference(StyleProperty, "Button.Ghost");
-            var sp = new StackPanel();
             var icon = ShellIcon(path);
-            sp.Children.Add(icon is not null ? new Image { Source = icon, Width = 32, Height = 32 } : Ui.Icon(Glyph.Page, 26));
-            sp.Children.Add(Ui.Text(name, "Text.Caption", 11).With(t => { t.TextWrapping = TextWrapping.NoWrap; t.TextTrimming = TextTrimming.CharacterEllipsis; t.HorizontalAlignment = HorizontalAlignment.Center; t.Margin = new Thickness(0, 5, 0, 0); }));
-            b.Content = sp;
+            var b = new Button { Margin = new Thickness(2), ToolTip = IconRow ? name : path };
+            b.SetResourceReference(StyleProperty, "Button.Ghost");
+            if (IconRow)
+            {
+                // The icon row, for desktop skins: monochrome icons and no names, so every app sits in the same tone.
+                b.Width = 48; b.Height = 48; b.Padding = new Thickness(8);
+                b.Content = icon is not null ? new Image { Source = Monochrome(icon), Width = 28, Height = 28, Opacity = 0.92 } : Ui.Icon(Glyph.Page, 22);
+            }
+            else
+            {
+                b.Width = 76; b.Padding = new Thickness(4, 8, 4, 6);
+                var sp = new StackPanel();
+                sp.Children.Add(icon is not null ? new Image { Source = icon, Width = 32, Height = 32 } : Ui.Icon(Glyph.Page, 26));
+                sp.Children.Add(Ui.Text(name, "Text.Caption", 11).With(t => { t.TextWrapping = TextWrapping.NoWrap; t.TextTrimming = TextTrimming.CharacterEllipsis; t.HorizontalAlignment = HorizontalAlignment.Center; t.Margin = new Thickness(0, 5, 0, 0); }));
+                b.Content = sp;
+            }
             b.Click += (_, _) =>
             {
                 try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
@@ -918,6 +1048,34 @@ internal sealed class LauncherWidget : WidgetView
             _panel.Children.Add(b);
         }
         _empty.Visibility = paths.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>The icon in grey tones, transparency kept: what the icon row shows.</summary>
+    private static ImageSource Monochrome(ImageSource icon)
+    {
+        if (icon is not BitmapSource src) return icon;
+        try
+        {
+            var bgra = src.Format == PixelFormats.Bgra32 || src.Format == PixelFormats.Pbgra32 ? src : new FormatConvertedBitmap(src, PixelFormats.Bgra32, null, 0);
+            var stride = bgra.PixelWidth * 4;
+            var px = new byte[stride * bgra.PixelHeight];
+            bgra.CopyPixels(px, stride, 0);
+            Grey(px);
+            var grey = BitmapSource.Create(bgra.PixelWidth, bgra.PixelHeight, bgra.DpiX, bgra.DpiY, bgra.Format, null, px, stride);
+            grey.Freeze();
+            return grey;
+        }
+        catch { return icon; }
+    }
+
+    /// <summary>Turns BGRA pixels grey in place (Rec. 601 weights), keeping alpha. Works on premultiplied pixels too.</summary>
+    internal static void Grey(byte[] bgra)
+    {
+        for (var k = 0; k + 3 < bgra.Length; k += 4)
+        {
+            var y = (byte)Math.Round(0.114 * bgra[k] + 0.587 * bgra[k + 1] + 0.299 * bgra[k + 2]);
+            bgra[k] = bgra[k + 1] = bgra[k + 2] = y;
+        }
     }
 
     internal static ImageSource? ShellIcon(string path)
@@ -943,6 +1101,7 @@ internal sealed class LauncherWidget : WidgetView
 
     public override void BuildMenu(ItemCollection items)
     {
+        items.Add(Choice("Style", "variant", ("Icons and names", ""), ("Icon row", "icons")));
         items.Add(Item("Add shortcut…", () =>
         {
             var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Choose an app or file to pin", Multiselect = true, DereferenceLinks = false, Filter = "Apps and shortcuts|*.exe;*.lnk;*.url|All files|*.*" };
@@ -962,9 +1121,29 @@ internal sealed class RecycleBinWidget : WidgetView
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(90) };
     private readonly TextBlock _value = WidgetLook.Big(46), _detail = WidgetLook.Data("");
     private readonly Button _empty;
+    private readonly TextBlock? _files, _size;
 
     public RecycleBinWidget(WidgetInstance i) : base(i)
     {
+        _empty = Ui.IconButton(Glyph.Delete, "Empty the Recycle Bin…", Empty, 30);
+        _timer.Tick += (_, _) => Refresh();
+        MouseEnter += (_, _) => Refresh();
+        if (Instance.Variant == "label")
+        {
+            // The label look, for desktop skins: right-aligned spaced capitals beside the bin. Double-click opens it.
+            Background = Brushes.Transparent;
+            var g = Ui.Grid("*,auto");
+            var lines = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+            lines.Children.Add(WidgetLook.Caps("Recycle bin", 13, "T.Text").With(t => t.HorizontalAlignment = HorizontalAlignment.Right));
+            _files = WidgetLook.Caps("", 10, "T.Text2").With(t => { t.HorizontalAlignment = HorizontalAlignment.Right; t.Margin = new Thickness(0, 4, 0, 0); });
+            _size = WidgetLook.Caps("", 10, "T.Text2").With(t => { t.HorizontalAlignment = HorizontalAlignment.Right; t.Margin = new Thickness(0, 2, 0, 0); });
+            lines.Children.Add(_files); lines.Children.Add(_size);
+            g.Children.Add(lines);
+            g.Children.Add(Ui.Icon(Glyph.Delete, 30, "T.Accent").With(t => { t.VerticalAlignment = VerticalAlignment.Center; t.Margin = new Thickness(12, 0, 0, 0); }).At(0, 1));
+            Children.Add(g);
+            MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2) { Island.IslandWindow.OpenUri("shell:RecycleBinFolder"); e.Handled = true; } };
+            return;
+        }
         // Header, a big count with its size underneath, and two small actions: the same layout at every size.
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -977,11 +1156,8 @@ internal sealed class RecycleBinWidget : WidgetView
         Children.Add(sp.At(1, 0));
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(-7, 0, 0, -6) };
         actions.Children.Add(Ui.IconButton(Glyph.Folder, "Open the Recycle Bin", () => Island.IslandWindow.OpenUri("shell:RecycleBinFolder"), 30));
-        _empty = Ui.IconButton(Glyph.Delete, "Empty the Recycle Bin…", Empty, 30);
         actions.Children.Add(_empty);
         Children.Add(actions.At(2, 0));
-        _timer.Tick += (_, _) => Refresh();
-        MouseEnter += (_, _) => Refresh();
     }
 
     private void Refresh()
@@ -990,6 +1166,11 @@ internal sealed class RecycleBinWidget : WidgetView
         if (Native.SHQueryRecycleBin(null, ref info) != 0) { _value.Text = "—"; _detail.Text = "unavailable"; return; }
         var (count, detail) = Describe(info.i64NumItems, info.i64Size);
         _value.Text = count; _detail.Text = detail;
+        if (_files is not null && _size is not null)
+        {
+            var (files, size) = LabelLines(info.i64NumItems, info.i64Size);
+            WidgetLook.SetCaps(_files, files); WidgetLook.SetCaps(_size, size);
+        }
         _empty.IsEnabled = info.i64NumItems > 0;
         _empty.Opacity = info.i64NumItems > 0 ? 1 : 0.4;
     }
@@ -997,6 +1178,17 @@ internal sealed class RecycleBinWidget : WidgetView
     /// <summary>The big figure and the line under it: "11" and "items · 674.5 MB", or "0" and "all clear".</summary>
     internal static (string Count, string Detail) Describe(long items, long bytes) =>
         items <= 0 ? ("0", "all clear") : (items.ToString("N0", CultureInfo.CurrentCulture), $"{(items == 1 ? "item" : "items")} · {Fmt.Size(bytes)}");
+
+    /// <summary>The label look's two lines: "Files 11" and "Size 674.5 MB" ("Size 0 B" when empty).</summary>
+    internal static (string Files, string Size) LabelLines(long items, long bytes) =>
+        ($"Files {Math.Max(0, items).ToString("N0", CultureInfo.CurrentCulture)}", $"Size {(items <= 0 ? "0 B" : Fmt.Size(bytes))}");
+
+    public override void BuildMenu(ItemCollection items)
+    {
+        items.Add(Choice("Style", "variant", ("Count and actions", ""), ("Label", "label")));
+        items.Add(Item("Open the Recycle Bin", () => Island.IslandWindow.OpenUri("shell:RecycleBinFolder")));
+        items.Add(Item("Empty the Recycle Bin…", Empty));
+    }
 
     private void Empty()
     {
@@ -1123,7 +1315,20 @@ internal sealed class WeatherWidget : WidgetView
             _body.Children.Clear();
             var unit = p.WeatherFahrenheit ? "°F" : "°C";
             var (text, icon) = WeatherService.Describe(r.Code);
-            _body.Children.Add(WidgetLook.Head(string.IsNullOrWhiteSpace(p.WeatherPlace) ? "Weather" : p.WeatherPlace));
+            var place = string.IsNullOrWhiteSpace(p.WeatherPlace) ? "Weather" : p.WeatherPlace;
+            if (Instance.Variant == "line")
+            {
+                // The line look, for desktop skins: the sky as a line icon, the place and "Cloudy · 24°C" in spaced capitals.
+                var row = Ui.Grid("auto,*");
+                row.Children.Add(Ui.LineIcon(icon, 36, "T.Accent", 1.5).With(v => v.VerticalAlignment = VerticalAlignment.Center));
+                var lines = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                lines.Children.Add(WidgetLook.Caps(place, 13, "T.Text"));
+                lines.Children.Add(WidgetLook.Caps($"{text} · {r.Temperature:0}{unit}", 10.5, "T.Text2").With(t => t.Margin = new Thickness(0, 4, 0, 0)));
+                row.Children.Add(lines.At(0, 1));
+                _body.Children.Add(row);
+                return;
+            }
+            _body.Children.Add(WidgetLook.Head(place));
             var top = Ui.Grid("auto,*");
             top.Children.Add(Ui.LineIcon(icon, 38, "T.Accent", 1.5).With(v => v.VerticalAlignment = VerticalAlignment.Center));
             var sp = new StackPanel { Margin = new Thickness(16, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -1154,5 +1359,9 @@ internal sealed class WeatherWidget : WidgetView
 
     protected override async void OnStart() { _timer.Start(); await Refresh(false); }
     protected override void OnStop() => _timer.Stop();
-    public override void BuildMenu(ItemCollection items) => items.Add(Item("Refresh now", async () => await Refresh(true)));
+    public override void BuildMenu(ItemCollection items)
+    {
+        items.Add(Choice("Style", "variant", ("Card", ""), ("Line", "line")));
+        items.Add(Item("Refresh now", async () => await Refresh(true)));
+    }
 }

@@ -420,6 +420,25 @@ public sealed class WidgetsPage : PageBase
         }
         Children.Add(Kit.Section("Clocks", "Date and time as part of your wallpaper. Each one sits straight on the desktop with a soft shadow; right-click it to change the style or size, or to put it on a glass card.", clocks));
 
+        // Text-only pieces that go with the clock skins, so the whole desktop reads as one design.
+        var matching = Kit.Gallery();
+        foreach (var (kindId, variant, name, about, size) in WidgetCatalog.Companions)
+        {
+            if (WidgetCatalog.Find(kindId) is not { } kind) continue;
+            var card = new Button { Width = 196, Margin = new Thickness(6), Padding = new Thickness(16, 14, 16, 14), HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Top, ToolTip = $"Add {name} to your desktop" };
+            var sp = new StackPanel();
+            var head = Ui.Grid("auto,*,auto");
+            head.Children.Add(Ui.Icon(kind.Glyph, 15, "T.Accent").With(t => t.VerticalAlignment = VerticalAlignment.Center));
+            head.Children.Add(Ui.Icon(Glyph.Add, 12, "T.Text3").At(0, 2));
+            sp.Children.Add(head);
+            sp.Children.Add(Ui.Text(name, "Text.Body", 13.5, FontWeights.SemiBold).With(t => t.Margin = new Thickness(0, 10, 0, 2)));
+            sp.Children.Add(Ui.Text(about, "Text.Caption", 11.5).With(t => { t.Height = 46; t.TextTrimming = TextTrimming.CharacterEllipsis; }));
+            card.Content = sp;
+            card.Click += (_, _) => { Hub.Widgets.Add(kindId, variant, new Dictionary<string, string> { ["style"] = "bare" }, null, size); RenderPlaced(); };
+            matching.Children.Add(card);
+        }
+        Children.Add(Kit.Section("Matching pieces", "Text-only widgets made for the clock skins: no card, straight on the wallpaper. With Match the clock's lettering on (below), every widget takes the clock's letters: mono, condensed or airy.", matching));
+
         var gallery = Kit.Gallery();
         foreach (var group in WidgetCatalog.All.GroupBy(k => k.Category))
         foreach (var kind in group)
@@ -446,6 +465,7 @@ public sealed class WidgetsPage : PageBase
 
         Children.Add(Kit.Section("Layout", null,
             Kit.ToggleRow("Show widgets", $"Shortcut: {Hub.Settings.General.HotkeyWidgets}", L.WidgetsVisible, v => { L.WidgetsVisible = v; Hub.Store.Save(); Hub.Widgets.Apply(); }, false),
+            Kit.ToggleRow("Match the clock's lettering", "Widgets take their letters from your clock: mono with Mono and Dot matrix, condensed with Poster, Label, Week, Heavy and Script, airy with Orbit, Hairline, Spaced and Story.", L.MatchClockLettering, v => { L.MatchClockLettering = v; Hub.Store.Save(); Hub.Widgets.RefreshLettering(); }),
             Kit.ToggleRow("Lock layout", "Prevents accidental moving and resizing.", L.Locked, v => { L.Locked = v; Hub.Store.Save(); }),
             Kit.ToggleRow("Snap to grid", "Widgets also snap magnetically to the screen margins.", L.SnapToGrid, v => { L.SnapToGrid = v; Hub.Store.Save(); }),
             Kit.SliderRow("Grid size", null, 4, 48, L.GridSize, v => { L.GridSize = (int)v; Hub.Store.Save(); }, v => $"{v:0} px", true, 4),

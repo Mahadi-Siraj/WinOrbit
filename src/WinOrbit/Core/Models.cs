@@ -226,6 +226,8 @@ public sealed class LayoutSettings
     public int Margin { get; set; } = 28;
     public int Spacing { get; set; } = 16;
     public bool WidgetsVisible { get; set; } = true;
+    /// <summary>Widgets take their lettering from the clock (mono, condensed or airy), so the desktop reads as one design.</summary>
+    public bool MatchClockLettering { get; set; } = true;
     public LayoutSettings Clone() => (LayoutSettings)MemberwiseClone();
 }
 
