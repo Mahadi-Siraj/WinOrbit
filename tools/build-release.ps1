@@ -13,7 +13,8 @@ if (-not $SkipTests) {
   if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
 }
 
-Remove-Item artifacts -Recurse -Force -ErrorAction SilentlyContinue
+# Clear only what this script makes, so anything else kept in artifacts\ (videos, older builds) survives a build.
+Remove-Item artifacts\publish, "artifacts\installer\WinOrbit-Setup-$Version.exe", "artifacts\WinOrbit-Portable-$Version-win-x64.zip" -Recurse -Force -ErrorAction SilentlyContinue
 $common = @("src\WinOrbit\WinOrbit.csproj", "-c", "Release", "-r", "win-x64", "--nologo", "-v", "q", "-p:Version=$Version", "-p:DebugType=none")
 
 # 1) Framework-dependent, ReadyToRun (fast start, ~small) for the installer
@@ -35,5 +36,5 @@ if ($iscc) {
   if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
 } else { Write-Warning "Inno Setup not found; skipped the installer. The portable zip was still built." }
 
-Get-ChildItem artifacts -File -Recurse | Where-Object { $_.Extension -in ".exe", ".zip" -and $_.DirectoryName -notmatch "publish" } |
+Get-ChildItem artifacts -File -Recurse | Where-Object { $_.Extension -in ".exe", ".zip" -and $_.DirectoryName -notmatch "publish" -and $_.Name -like "*-$Version*" } |
   ForEach-Object { "{0,-50} {1,8:N1} MB  SHA256 {2}" -f $_.Name, ($_.Length / 1MB), (Get-FileHash $_.FullName).Hash }
