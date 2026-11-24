@@ -264,11 +264,11 @@ public sealed class LiveGlass
             try
             {
                 var mt = Native.IID_ID3D10Multithread;
-                Marshal.ThrowExceptionForHR(Marshal.QueryInterface(context, ref mt, out var multithread));
+                Marshal.ThrowExceptionForHR(Marshal.QueryInterface(context, in mt, out var multithread));
                 try { Native.ComSlot<Native.D3DSetMultithreadProtected>(multithread, 5)(multithread, 1); }
                 finally { Marshal.Release(multithread); }
                 var iid = Native.IID_IDXGIDevice;
-                Marshal.ThrowExceptionForHR(Marshal.QueryInterface(device, ref iid, out var dxgi));
+                Marshal.ThrowExceptionForHR(Marshal.QueryInterface(device, in iid, out var dxgi));
                 try
                 {
                     Marshal.ThrowExceptionForHR(Native.CreateDirect3D11DeviceFromDXGIDevice(dxgi, out var inspectable));
@@ -360,7 +360,7 @@ public sealed class LiveGlass
         {
             var iid = Native.IID_IGraphicsCaptureSession3;
             var abi = ((WinRT.IWinRTObject)session).NativeObject.ThisPtr;
-            if (Marshal.QueryInterface(abi, ref iid, out var s3) != 0 || s3 == IntPtr.Zero)
+            if (Marshal.QueryInterface(abi, in iid, out var s3) != 0 || s3 == IntPtr.Zero)
                 throw new NotSupportedException("Needs Windows 11: this version of Windows marks a captured screen with a yellow frame.");
             try { Marshal.ThrowExceptionForHR(Native.ComSlot<Native.WinRtPutBool>(s3, 7)(s3, 0)); }
             finally { Marshal.Release(s3); }
@@ -513,7 +513,7 @@ public sealed class LiveGlass
         {
             var abi = ((WinRT.IWinRTObject)surface).NativeObject.ThisPtr;
             var iid = Native.IID_IDirect3DDxgiInterfaceAccess;
-            Marshal.ThrowExceptionForHR(Marshal.QueryInterface(abi, ref iid, out var access));
+            Marshal.ThrowExceptionForHR(Marshal.QueryInterface(abi, in iid, out var access));
             try
             {
                 var fn = Marshal.ReadIntPtr(Marshal.ReadIntPtr(access), 3 * IntPtr.Size);
