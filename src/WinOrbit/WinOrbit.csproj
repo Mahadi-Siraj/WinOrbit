@@ -10,7 +10,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>12</LangVersion>
+    <LangVersion>14</LangVersion>
     <AssemblyName>WinOrbit</AssemblyName>
     <!-- Program.Main answers the agent switch (AI tool hooks) before WPF loads, then starts App as usual. -->
     <StartupObject>WinOrbit.Program</StartupObject>
