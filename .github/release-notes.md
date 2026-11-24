@@ -11,6 +11,18 @@ Free, open source (GPL-3.0), about 45–80 MB of RAM and ~0.1 % CPU at idle, zer
 
 Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScreen warns, choose *More info → Run anyway*. [Code signing policy](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/CODE_SIGNING_POLICY.md)
 
+### New in 2.0
+- 💧 **Liquid glass that moves.** Two new themes, **Liquid Clear** and **Liquid Frosted**, give the glass a thick, rounded rim that bends the wallpaper beyond its edge, with a hint of prism and a lit rim. The glass flexes when the island grows or shrinks and wobbles back, light sweeps round the rim when it opens or closes, and the panel comes into focus through it. Any theme can have it with the new **Liquid lens** slider in the Liquid Glass Editor. It runs on the graphics card (pixel shader 3.0); without one, or with Curved glass edges off, you get the classic curved edge. Reduce motion keeps the lens and drops the movement
+- 🔍 **Sharper Live glass with the clear looks**: a quarter-size picture of the windows behind, up to 20 times a second, instead of an eighth at 10
+- 🧩 **Widgets on one grid.** Four sizes built from one unit, **Small** 160 × 160, **Medium** 336 × 160, **Wide** 512 × 160 and **Large** 336 × 336, with the same 16 px margins inside every widget, so widgets side by side line up. Right-click › **Size** to switch. Widgets you placed before keep their size
+- 🪟 **Bare widgets**: right-click › **Look** › **Bare** drops the glass card, leaving the text on your wallpaper with a soft shadow that reads on light and dark wallpapers
+- 🕰️ **Nine clock styles**: Minimal, Stacked, Ambient date, Greeting, Spaced, Outline, Big date, Script and Mono, and a live **Clocks** gallery at the top of the Widgets page: click one to put it on your desktop
+- 🏝️ **Choose your island's glance.** Some of you would rather keep the time on the desktop, so the resting capsule can now show the **Clock** (as before, still the default), **System** (CPU and memory), **Status** (Wi-Fi or Ethernet, Bluetooth, battery), **Eyes** that follow your pointer, blink and doze off, or nothing (**Quiet**). Dynamic Island › Collapsed capsule › When nothing is happening
+- 🔒 **Still private and light.** No new network access. The Status glance listens to Windows' own change events and the Eyes read only the pointer's position, both only while they're on screen. The Eyes cost about 1 % of one CPU core while visible on our test PC; the other glances cost nothing extra
+- 🗂️ **Your settings carry over**: old widgets keep their size and glass, and the island keeps the clock
+
+Untested here: multiple monitors, scaling above 100 %, Windows 10, an Arm64 PC, the Status battery on a laptop (the test PC is a desktop), and the liquid lens on graphics cards other than an NVIDIA GTX 1660 SUPER.
+
 ### New in 1.4
 - 🧱 **Now on .NET 10 (LTS).** .NET 8, which WinOrbit 1.3 used, stopped getting security fixes from Microsoft on 10 November 2026; .NET 10 gets them until November 2028
 - ⬇️ **The installer needs the .NET 10 Desktop Runtime (x64)** instead of .NET 8. Setup checks for it and links Microsoft's download page, and now also looks where Arm64 PCs keep the x64 runtime

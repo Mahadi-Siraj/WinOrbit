@@ -3,7 +3,7 @@
 
 #define AppName "WinOrbit"
 #ifndef AppVersion
-  #define AppVersion "1.4.0"
+  #define AppVersion "2.0.0"
 #endif
 #define AppExe "WinOrbit.exe"
 #ifndef PublishDir
