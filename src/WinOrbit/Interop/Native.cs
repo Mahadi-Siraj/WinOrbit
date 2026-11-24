@@ -301,6 +301,53 @@ public static class Native
         }
         return flags;
     }
+
+    // Display paths (read-only). Some drivers list no monitors under the adapter in EnumDisplayDevices even while
+    // one is plugged in and showing the desktop; the display configuration still has an active path to it.
+    [StructLayout(LayoutKind.Sequential)]
+    public struct DISPLAYCONFIG_PATH_INFO
+    {
+        public uint SourceAdapterLow; public int SourceAdapterHigh; public uint SourceId, SourceModeIndex, SourceStatus;
+        public uint TargetAdapterLow; public int TargetAdapterHigh; public uint TargetId, TargetModeIndex;
+        public int OutputTechnology, Rotation, Scaling;
+        public uint RefreshNumerator, RefreshDenominator;
+        public int ScanLineOrdering, TargetAvailable;
+        public uint TargetStatus, Flags;
+    }
+    [StructLayout(LayoutKind.Sequential, Size = 64)]
+    public struct DISPLAYCONFIG_MODE_INFO { public int InfoType; }
+    public const uint QDC_ONLY_ACTIVE_PATHS = 0x2, DISPLAYCONFIG_PATH_ACTIVE = 0x1;
+    private const int ERROR_INSUFFICIENT_BUFFER = 122;
+    [DllImport("user32.dll")] public static extern int GetDisplayConfigBufferSizes(uint flags, out uint paths, out uint modes);
+    [DllImport("user32.dll")]
+    public static extern int QueryDisplayConfig(uint flags, ref uint paths, [Out] DISPLAYCONFIG_PATH_INFO[] pathArray, ref uint modes, [Out] DISPLAYCONFIG_MODE_INFO[] modeArray, IntPtr topology);
+
+    /// <summary>Active display paths that lead to a monitor that is there, or -1 when Windows can't say.</summary>
+    public static int ShownDisplayTargets()
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, out var pathCount, out var modeCount) != 0) return -1;
+            if (pathCount == 0) return 0;
+            var paths = new DISPLAYCONFIG_PATH_INFO[pathCount];
+            var modes = new DISPLAYCONFIG_MODE_INFO[Math.Max(1, modeCount)];
+            var rc = QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, ref pathCount, paths, ref modeCount, modes, IntPtr.Zero);
+            if (rc == ERROR_INSUFFICIENT_BUFFER) continue;   // the setup changed between the two calls
+            if (rc != 0) return -1;
+            return ShownTargets(paths.AsSpan(0, (int)Math.Min(pathCount, (uint)paths.Length)));
+        }
+        return -1;
+    }
+
+    /// <summary>How many of these paths are active and lead to a monitor Windows sees as available.</summary>
+    internal static int ShownTargets(ReadOnlySpan<DISPLAYCONFIG_PATH_INFO> paths)
+    {
+        var n = 0;
+        foreach (var p in paths)
+            if ((p.Flags & DISPLAYCONFIG_PATH_ACTIVE) != 0 && p.TargetAvailable != 0) n++;
+        return n;
+    }
+
     [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
     [DllImport("gdi32.dll")] public static extern IntPtr CreateCompatibleDC(IntPtr hdc);

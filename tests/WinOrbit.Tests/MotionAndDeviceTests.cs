@@ -416,6 +416,17 @@ public class MotionAndDeviceTests
     }
 
     [Fact]
+    public void Display_paths_count_only_active_paths_to_an_available_monitor()
+    {
+        static WinOrbit.Interop.Native.DISPLAYCONFIG_PATH_INFO P(uint flags, int available) => new() { Flags = flags, TargetAvailable = available };
+        Assert.Equal(16 + 20 + 36, System.Runtime.InteropServices.Marshal.SizeOf<WinOrbit.Interop.Native.DISPLAYCONFIG_PATH_INFO>());   // 72 bytes, as in wingdi.h
+        Assert.Equal(64, System.Runtime.InteropServices.Marshal.SizeOf<WinOrbit.Interop.Native.DISPLAYCONFIG_MODE_INFO>());
+        Assert.Equal(0, WinOrbit.Interop.Native.ShownTargets(Array.Empty<WinOrbit.Interop.Native.DISPLAYCONFIG_PATH_INFO>()));
+        Assert.Equal(1, WinOrbit.Interop.Native.ShownTargets(new[] { P(1, 1), P(0, 1), P(1, 0) }));
+        Assert.Equal(2, WinOrbit.Interop.Native.ShownTargets(new[] { P(1, 1), P(1, 1) }));
+    }
+
+    [Fact]
     public void Render_check_waits_while_the_screen_is_off_or_locked()
     {
         int[] one = { 0x3 }, none = Array.Empty<int>(), inactive = { 0x2 };
@@ -427,6 +438,12 @@ public class MotionAndDeviceTests
         Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, none));     // monitor switched off (DisplayPort)
         Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, inactive));
         Assert.True(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, new[] { 0x2, 0x3 }));
+        // Drivers that list no monitors under the adapter: an active display path still counts.
+        Assert.True(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, none, 1));
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, none, 0));
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, false, none, -1));  // Windows couldn't say
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(0, false, none, 1));
+        Assert.False(WinOrbit.Services.PowerEvents.ScreenShowing(1, true, none, 1));
 
         Assert.Equal(WinOrbit.Design.RenderGuard.Step.Wait, WinOrbit.Design.RenderGuard.Next(false, null, false, 2));
         Assert.Equal(WinOrbit.Design.RenderGuard.Step.KeepHardware, WinOrbit.Design.RenderGuard.Next(true, true, false, 0));

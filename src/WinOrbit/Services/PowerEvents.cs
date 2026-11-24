@@ -118,17 +118,20 @@ public sealed class PowerEvents : IDisposable
 
     /// <summary>
     /// Whether a window's pixels can be trusted right now: the session is unlocked, the screen is on (or dimmed)
-    /// and at least one monitor is active. A DisplayPort monitor that is switched off disappears from Windows,
+    /// and at least one monitor is there. A DisplayPort monitor that is switched off disappears from Windows,
     /// which keeps drawing a desktop nobody can see; the GPU then presents nothing.
+    /// A monitor counts when the display configuration has an active path to it (<paramref name="shownTargets"/>)
+    /// or when EnumDisplayDevices lists it as active. Some drivers list no monitors at all there, so that list alone
+    /// would say "no monitor" forever and the blank-window check would never run.
     /// </summary>
-    internal static bool ScreenShowing(int? display, bool locked, IReadOnlyCollection<int> monitorFlags) =>
-        !locked && display != 0 && monitorFlags.Any(f => (f & Interop.Native.DISPLAY_DEVICE_ACTIVE) != 0);
+    internal static bool ScreenShowing(int? display, bool locked, IReadOnlyCollection<int> monitorFlags, int shownTargets = 0) =>
+        !locked && display != 0 && (shownTargets > 0 || monitorFlags.Any(f => (f & Interop.Native.DISPLAY_DEVICE_ACTIVE) != 0));
 
     public bool IsScreenShowing
     {
         get
         {
-            try { return ScreenShowing(Display, Locked, Interop.Native.DesktopMonitorFlags()); }
+            try { return ScreenShowing(Display, Locked, Interop.Native.DesktopMonitorFlags(), Interop.Native.ShownDisplayTargets()); }
             catch { return ScreenShowing(Display, Locked, new[] { Interop.Native.DISPLAY_DEVICE_ACTIVE }); }
         }
     }
