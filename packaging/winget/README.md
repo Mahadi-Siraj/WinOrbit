@@ -27,4 +27,4 @@ winget install --manifest packaging\winget\1.3.1     # needs: winget settings --
 * `InstallerSha256` must be the hash of the installer **GitHub Actions published** (from that release's `SHA256SUMS.txt`), not of a local build — local builds differ byte for byte.
 * `ProductCode` is Inno Setup's `{AppId}_is1` and never changes.
 
-Notes: the installer is per-user (`Scope: user`, no admin) and needs the .NET 8 Desktop Runtime, declared as a dependency so winget installs it first. Builds are not code-signed.
+Notes: the installer is per-user (`Scope: user`, no admin) and needs the .NET Desktop Runtime, declared as a dependency so winget installs it first. 1.3.x needs .NET 8 (`Microsoft.DotNet.DesktopRuntime.8`); from 1.4 it is .NET 10, so a 1.4 manifest must declare `Microsoft.DotNet.DesktopRuntime.10` instead. Builds are not code-signed.

@@ -1,5 +1,5 @@
 # Builds everything a release needs:
-#   artifacts\installer\WinOrbit-Setup-<ver>.exe        per-user installer (needs .NET 8 Desktop Runtime)
+#   artifacts\installer\WinOrbit-Setup-<ver>.exe        per-user installer (needs .NET 10 Desktop Runtime)
 #   artifacts\WinOrbit-Portable-<ver>-win-x64.zip        self-contained, no runtime needed, runs from any folder
 param([string]$Version = "", [switch]$SkipTests)
 $ErrorActionPreference = "Stop"
@@ -20,8 +20,9 @@ $common = @("src\WinOrbit\WinOrbit.csproj", "-c", "Release", "-r", "win-x64", "-
 dotnet publish @common --self-contained false -p:PublishReadyToRun=true -o artifacts\publish\fdd
 if ($LASTEXITCODE -ne 0) { throw "Publish (installer) failed" }
 
-# 2) Self-contained single file for the portable package
-dotnet publish @common --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:PublishReadyToRun=true -o artifacts\publish\portable
+# 2) Self-contained single file for the portable package. Not compressed: on .NET 10 that starts about a third
+#    faster and commits ~116 MB less memory, for a zip that is only ~5 MB bigger (the zip compresses it anyway).
+dotnet publish @common --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishReadyToRun=true -o artifacts\publish\portable
 if ($LASTEXITCODE -ne 0) { throw "Publish (portable) failed" }
 Set-Content artifacts\publish\portable\portable.flag "WinOrbit keeps its settings in the Data folder next to the exe while this file exists."
 Copy-Item README.md, docs\PRIVACY.md, docs\USER-GUIDE.md artifacts\publish\portable\ -ErrorAction SilentlyContinue

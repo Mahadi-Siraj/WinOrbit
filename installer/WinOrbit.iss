@@ -75,18 +75,21 @@ Filename: "{app}\{#AppExe}"; Parameters: "--quit"; Flags: runhidden waituntilter
 
 [Code]
 const
-  DotNetHelp = 'https://dotnet.microsoft.com/download/dotnet/8.0';
+  DotNetHelp = 'https://dotnet.microsoft.com/download/dotnet/10.0';
 
-function DesktopRuntimeInstalled(): Boolean;
+function HasDesktopRuntime(const DotnetRoot: String): Boolean;
 var
   FindRec: TFindRec;
 begin
-  Result := False;
-  if FindFirst(ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App\8.*'), FindRec) then
-  begin
-    Result := True;
-    FindClose(FindRec);
-  end;
+  Result := FindFirst(DotnetRoot + '\shared\Microsoft.WindowsDesktop.App\10.*', FindRec);
+  if Result then FindClose(FindRec);
+end;
+
+// The x64 runtime lives in Program Files\dotnet on x64 PCs and in Program Files\dotnet\x64 on Arm64 PCs.
+function DesktopRuntimeInstalled(): Boolean;
+begin
+  Result := HasDesktopRuntime(ExpandConstant('{commonpf64}\dotnet')) or
+            HasDesktopRuntime(ExpandConstant('{commonpf64}\dotnet\x64'));
 end;
 
 function InitializeSetup(): Boolean;
@@ -96,8 +99,8 @@ begin
   Result := True;
   if not DesktopRuntimeInstalled() then
   begin
-    if SuppressibleMsgBox('WinOrbit needs the Microsoft .NET 8 Desktop Runtime (x64), which was not found.' + #13#10#13#10 +
-              'Open Microsoft''s official download page now? Install the ".NET Desktop Runtime 8" for x64, then run this setup again.' + #13#10#13#10 +
+    if SuppressibleMsgBox('WinOrbit needs the Microsoft .NET 10 Desktop Runtime (x64), which was not found.' + #13#10#13#10 +
+              'Open Microsoft''s official download page now? Install the ".NET Desktop Runtime 10" for x64, then run this setup again.' + #13#10#13#10 +
               'Tip: the portable WinOrbit package includes everything and needs no runtime.',
               mbConfirmation, MB_YESNO, IDNO) = IDYES then
       ShellExec('open', DotNetHelp, '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
