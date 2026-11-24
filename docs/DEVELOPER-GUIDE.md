@@ -2,16 +2,16 @@
 
 How WinOrbit is built, how the pieces fit, and how to change it safely. Read [ARCHITECTURE.md](ARCHITECTURE.md) for *why* it is built this way (technology choice, how the glass works); this guide is the *how*.
 
-Last updated 20 November 2026: version 1.3.2 (see [ROADMAP.md](ROADMAP.md) and [TEST-REPORT.md](TEST-REPORT.md)).
+Last updated 24 November 2026: version 1.4.0, on .NET 10 (see [ROADMAP.md](ROADMAP.md) and [TEST-REPORT.md](TEST-REPORT.md)).
 
 ## 1. Get it running
 
-Requirements: Windows 10 2004+ or 11, the .NET 8 SDK. Optional: Inno Setup 6 for the installer.
+Requirements: Windows 10 2004+ or 11, the .NET 10 SDK. Optional: Inno Setup 6 for the installer.
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 320 unit tests, under a second
-src\WinOrbit\bin\Debug\net8.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
+dotnet test tests\WinOrbit.Tests                  # 323 unit tests, under a second
+src\WinOrbit\bin\Debug\net10.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
 
@@ -117,7 +117,8 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 320 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 323 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Old settings keep loading.** `Files_written_by_1_3_2_still_load` reads settings, data and a theme that the real 1.3.2 build wrote (`tests/WinOrbit.Tests/Fixtures`). If it fails, a change to `Core/Models.cs` would reset people's setup after an update: add the new property with a default instead of renaming or retyping the old one.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.
 * Never toggle someone's real Wi-Fi, Bluetooth, dark mode or night light in a test without asking; use the `Demo()` previews instead.
@@ -137,5 +138,6 @@ The builds are **not code-signed**. Do not describe them as signed.
 * Every network request goes through the network gate (`Services/Network.cs`), is off by default, has its own switch and shows in the request ledger.
 * Prefer Windows' own notifications over polling; stop any sampling nobody is looking at.
 * All P/Invoke goes in `Interop/Native.cs` (small, private ones next to their only user are fine when documented).
+* `ThemeMode` means WinOrbit's own enum (a project-wide alias, because WPF has had a `System.Windows.ThemeMode` since .NET 9). Inside a class that derives from `Application` or `Window`, write `Core.ThemeMode`: there a bare `ThemeMode` is WPF's property of that name.
 * Never commit secrets, personal data or local settings files.
 * Keep the docs honest: a feature is "done" only when it works; known limits go in the README's status table.

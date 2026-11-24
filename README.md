@@ -17,7 +17,7 @@
 <p align="center">
   <img alt="License GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-black">
   <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-black">
-  <img alt=".NET 8 WPF" src="https://img.shields.io/badge/.NET%208-WPF-black">
+  <img alt=".NET 10 WPF" src="https://img.shields.io/badge/.NET%2010-WPF-black">
   <img alt="Zero telemetry" src="https://img.shields.io/badge/telemetry-none-black">
 </p>
 
@@ -106,7 +106,7 @@
 
 People stack half a dozen tools to make Windows feel modern — a Dynamic Island app, Rainmeter, a volume-flyout replacement, a clipboard manager, a launcher, a night-light toggle. WinOrbit replaces them with **one** native app:
 
-* **Featherweight.** About 80 MB of RAM in use and under 0.1 % CPU at idle, measured over five minutes ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 8 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The small exceptions: the lock-key alert checks three key lights about eight times a second, and — only if you have more than one keyboard — the keyboard-language card checks which keyboard is in use four times a second.
+* **Featherweight.** About 80 MB of RAM in use and under 0.1 % CPU at idle, measured over five minutes ([test report](docs/TEST-REPORT.md)). Native WPF on .NET 10 — no Electron, no WebView, **no third-party packages**. Almost everything is event-driven: Windows tells WinOrbit when something changes. The small exceptions: the lock-key alert checks three key lights about eight times a second, and — only if you have more than one keyboard — the keyboard-language card checks which keyboard is in use four times a second.
 * **Private by design.** No telemetry, analytics, accounts or automatic update checks. **Zero network connections by default**; the two optional online features (weather, synced lyrics) have their own switches, "Check for updates" only runs when you click it, and every request is shown in a ledger.
 * **Free forever.** Open source under GPL-3.0 — every copy and fork has to stay free and open.
 * **No admin rights, no hacks.** Per-user install. No DLL injection, no system-file patching, nothing that weakens Windows security.
@@ -151,7 +151,7 @@ Grab the files from the **[latest release](../../releases/latest)**:
 
 | File | For |
 |---|---|
-| `WinOrbit-Setup-<version>.exe` | Recommended. Installs for your user only — **no admin prompt**. Needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (setup checks and links it). |
+| `WinOrbit-Setup-<version>.exe` | Recommended. Installs for your user only — **no admin prompt**. Needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (setup checks and links it). |
 | `WinOrbit-Portable-<version>-win-x64.zip` | No install, no runtime needed. Unzip anywhere and run `WinOrbit.exe`; settings stay next to it. |
 
 > **SmartScreen:** WinOrbit isn't code-signed (certificates cost money), so Windows may say *"Windows protected your PC"*. Click **More info → Run anyway**. Every release lists SHA-256 checksums, and the source is right here. WinOrbit is applying for free open-source code signing: see the [code signing policy](CODE_SIGNING_POLICY.md).
@@ -190,7 +190,7 @@ Details and measurements: [test report](docs/TEST-REPORT.md) · what's next: [ro
 
 ## Build from source
 
-Requirements: Windows 10 2004+ / 11 and the .NET 8 SDK. Optional: Inno Setup 6 for the installer (`winget install JRSoftware.InnoSetup --scope user`).
+Requirements: Windows 10 2004+ / 11 and the .NET 10 SDK. Optional: Inno Setup 6 for the installer (`winget install JRSoftware.InnoSetup --scope user`).
 
 ```powershell
 dotnet build WinOrbit.sln                 # debug build

@@ -97,7 +97,7 @@ When Wallpaper Engine or Lively Wallpaper draws your desktop, the real wallpaper
 
 ## 5. Verification performed
 
-1. **Dependency audit.** The app has **zero NuGet package dependencies** — only the .NET 8 / WPF framework and Windows APIs. There is no third-party SDK, analytics or crash-reporting library to audit. (`src/WinOrbit/WinOrbit.csproj` contains no `PackageReference`.)
+1. **Dependency audit.** The app has **zero NuGet package dependencies** — only the .NET 10 / WPF framework and Windows APIs. There is no third-party SDK, analytics or crash-reporting library to audit. (`src/WinOrbit/WinOrbit.csproj` contains no `PackageReference`.)
 2. **Static check (automated test).** `PrivacyTests.Only_the_network_gate_creates_http_clients` scans every source file and fails the build if anything other than `Network.cs` constructs an `HttpClient`, `WebClient`, `Socket`, `TcpClient` or `WebRequest`.
 3. **Behavioural tests.** `Network_gate_refuses_when_switched_off` and `Network_gate_refuses_plain_http` prove the gate blocks requests with the default settings and rejects non-HTTPS URLs. `Lyrics_need_both_switches_and_never_touch_the_network_when_off` proves a lyrics lookup makes no request unless both the network switch and the lyrics switch are on.
 4. **Runtime check.** With default settings, during the idle benchmark, `Get-NetTCPConnection` and `Get-NetUDPEndpoint` for the WinOrbit process returned **0 TCP connections and 0 UDP endpoints**. (The process does load the framework assemblies `System.Net.Requests` and `System.Net.WebClient`: WPF's resource loader uses them internally to resolve `pack://application` URIs for embedded images such as the app icon. They open no sockets — confirmed by the zero counts above.)

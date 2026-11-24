@@ -5,7 +5,7 @@ Free, open source (GPL-3.0), about 45–80 MB of RAM and ~0.1 % CPU at idle, zer
 ### Download
 | File | For |
 |---|---|
-| `WinOrbit-Setup-*.exe` | **Recommended.** Per-user install, no admin prompt. Needs the [.NET 8 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/8.0) — setup checks and links it. |
+| `WinOrbit-Setup-*.exe` | **Recommended.** Per-user install, no admin prompt. Needs the [.NET 10 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/10.0) — setup checks and links it. |
 | `WinOrbit-Portable-*-win-x64.zip` | No install and no runtime needed. Unzip anywhere, run `WinOrbit.exe`. |
 | `SHA256SUMS.txt` | Checksums for both. |
 

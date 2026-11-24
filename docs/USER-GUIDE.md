@@ -123,7 +123,7 @@ All in `%APPDATA%\WinOrbit` (portable: `Data\` next to the exe). They are plain 
 | Problem | Fix |
 |---|---|
 | Windows SmartScreen says "Windows protected your PC" | The installer is not code-signed (no certificate). Click **More info → Run anyway** if you built/obtained it yourself. |
-| Setup says the .NET 8 Desktop Runtime is missing | Install ".NET Desktop Runtime 8 (x64)" from dotnet.microsoft.com, or use the portable zip which includes it. |
+| Setup says the .NET 10 Desktop Runtime is missing | WinOrbit 1.4 and later need .NET 10 (1.3 used .NET 8, so an update can ask for it even though .NET 8 is installed). Install ".NET Desktop Runtime 10 (x64)" from dotnet.microsoft.com, or use the portable zip which includes it. |
 | A shortcut does nothing | Another app owns that key combination. Pick a new one in **Settings › Keyboard shortcuts** (the page lists conflicts). |
 | Widgets disappeared | Press **Ctrl+Alt+W**, or check **Widgets › Show widgets**. Widgets stay hidden while a fullscreen app has focus. |
 | The island is gone | Tray menu › **Dynamic Island**, or **Dynamic Island › Show**. It hides during fullscreen apps. |

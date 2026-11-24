@@ -11,7 +11,7 @@ dotnet test tests\WinOrbit.Tests                                    # must stay 
 .\tools\build-release.ps1                                           # full release build into .\artifacts
 ```
 
-WPF on .NET 8, Windows only, no NuGet packages in the app (keep it that way). Target framework `net8.0-windows10.0.19041.0`.
+WPF on .NET 10 (LTS), Windows only, no NuGet packages in the app (keep it that way). Target framework `net10.0-windows10.0.19041.0`, C# 14.
 
 ## Rules
 

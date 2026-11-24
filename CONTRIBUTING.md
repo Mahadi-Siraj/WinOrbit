@@ -10,7 +10,7 @@ Thanks for helping. Bug reports, ideas and pull requests are all welcome.
 
 ## Building
 
-You need Windows 10/11 and the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
+You need Windows 10/11 and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```powershell
 dotnet build WinOrbit.sln

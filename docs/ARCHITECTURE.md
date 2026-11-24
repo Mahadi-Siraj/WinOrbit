@@ -4,7 +4,7 @@
 
 | Option | Verdict | Reasoning |
 |---|---|---|
-| **WPF on .NET 8** | **Chosen** | Mature, GPU-composited (DirectX) retained-mode UI; per-pixel transparent top-level windows for the island and widgets; full Win32/COM interop; per-monitor DPI v2; ships in the Windows Desktop Runtime so the app itself has **no third-party dependencies**; framework-dependent build is ~2 MB. Idle cost is near zero because WPF only renders on change. |
+| **WPF on .NET 10** (LTS, supported to Nov 2028; was .NET 8 until 1.3.2) | **Chosen** | Mature, GPU-composited (DirectX) retained-mode UI; per-pixel transparent top-level windows for the island and widgets; full Win32/COM interop; per-monitor DPI v2; ships in the Windows Desktop Runtime so the app itself has **no third-party dependencies**; framework-dependent build is ~2 MB. Idle cost is near zero because WPF only renders on change. |
 | WinUI 3 / Windows App SDK | Rejected for this product | Excellent Mica/Acrylic, but transparent, borderless, non-activating overlay windows (needed for the island and desktop widgets) are poorly supported; each window hosts its own XAML island with a higher memory floor; unpackaged deployment adds the App SDK runtime. |
 | Electron | Rejected | 150 MB+ per process, Chromium background activity, weak native integration — contrary to the performance and "native app" requirements. |
 | Tauri / WebView2 | Rejected | Lighter than Electron, but every widget would be a WebView2 (~30–60 MB each); transparency and click-through on WebView2 are awkward; still a web stack wrapped in a window. |
