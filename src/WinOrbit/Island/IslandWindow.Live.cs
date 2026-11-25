@@ -50,6 +50,7 @@ public partial class IslandWindow
         Hub.Power.BatteryChanged += OnBattery;
         Hub.Power.BrightnessChanged += OnBrightness;
         Hub.Power.EnergySaverChanged += OnEnergySaver;
+        Hub.Power.TimeChanged += OnTimeChanged;
         Hub.Media.Hint += OnMediaHint;
         Hub.Devices.LockChanged += OnLockKey;
         Hub.Devices.NetworkChanged += OnNetwork;
@@ -73,6 +74,9 @@ public partial class IslandWindow
         IsVisibleChanged += (_, _) => UpdateGlanceLife();
     }
 
+    /// <summary>Windows' clock or time zone changed: show the new time now and re-align the minute timer.</summary>
+    private void OnTimeChanged() { UpdateClock(); AlignClock(); }
+
     private void CleanupLive()
     {
         foreach (var t in new[] { _hudTimer, _levelTimer, _lyricTimer, _callTimer }) t?.Stop();
@@ -85,6 +89,7 @@ public partial class IslandWindow
         Hub.Power.BatteryChanged -= OnBattery;
         Hub.Power.BrightnessChanged -= OnBrightness;
         Hub.Power.EnergySaverChanged -= OnEnergySaver;
+        Hub.Power.TimeChanged -= OnTimeChanged;
         Hub.Media.Hint -= OnMediaHint;
         Hub.Devices.LockChanged -= OnLockKey;
         Hub.Devices.NetworkChanged -= OnNetwork;

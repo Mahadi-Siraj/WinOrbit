@@ -139,6 +139,7 @@ public partial class App : Application
         Hub.Privacy.Start();
         Hub.Clipboard.Apply();
         Hub.Power.Start();
+        Hub.Power.TimeChanged += Hub.Widgets.RefreshTime;   // a new time zone shows at once, not after a restart
         Hub.Devices.Apply();
 
         // First launch: seed a tasteful starter layout so the product is visibly alive.

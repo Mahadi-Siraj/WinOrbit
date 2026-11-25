@@ -544,6 +544,15 @@ public sealed class WidgetManager
         foreach (var w in _windows.Values.Where(w => w.Kind.Id != "clock")) w.Rebuild();
     }
 
+    /// <summary>Widgets that show the time or the date, redrawn at once when Windows' clock or time zone changes.</summary>
+    internal static bool ShowsTime(string kind) => kind is "clock" or "worldclock" or "calendar";
+
+    /// <summary>Windows' clock or time zone changed: redraw the clocks and calendars now instead of at their next tick.</summary>
+    public void RefreshTime()
+    {
+        foreach (var w in _windows.Values.Where(w => ShowsTime(w.Kind.Id))) w.Rebuild();
+    }
+
     /// <summary>Make the open windows match settings.</summary>
     public void Apply()
     {

@@ -58,8 +58,20 @@ public sealed class PowerEvents : IDisposable
                 if (h != IntPtr.Zero) _registrations.Add(h);
             }
             Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
+            // Our window above is message-only, and those never get Windows' "time changed" broadcast; SystemEvents does.
+            Microsoft.Win32.SystemEvents.TimeChanged += OnTimeChanged;
         }
         catch (Exception ex) { Log.Warn("Power notifications unavailable: " + ex.Message); }
+    }
+
+    /// <summary>Windows' clock or time zone changed (set by hand, or the PC moved to another zone). Raised on the UI thread.</summary>
+    public event Action? TimeChanged;
+
+    private void OnTimeChanged(object? sender, EventArgs e)
+    {
+        // .NET keeps the local time zone it first read: forget it, or DateTime.Now stays in the old zone until a restart.
+        TimeZoneInfo.ClearCachedData();
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => TimeChanged?.Invoke());
     }
 
     private IntPtr Hook(IntPtr hwnd, int msg, IntPtr w, IntPtr l, ref bool handled)
@@ -142,6 +154,7 @@ public sealed class PowerEvents : IDisposable
     public void Dispose()
     {
         Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
+        Microsoft.Win32.SystemEvents.TimeChanged -= OnTimeChanged;
         foreach (var h in _registrations) UnregisterPowerSettingNotification(h);
         _registrations.Clear();
         _window?.Dispose();

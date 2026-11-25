@@ -162,6 +162,37 @@ public class WidgetLookTests
     public void World_clock_marks_daytime_from_six_to_six(int hour, bool day) => Assert.Equal(day, WorldClockWidget.IsDaytime(new DateTime(2026, 11, 25, hour, 30, 0)));
 
     [Fact]
+    public void World_clock_says_how_far_ahead_or_behind_a_city_is()
+    {
+        var today = new DateTime(2026, 11, 25);
+        Assert.Equal("same time", WorldClockWidget.Relative(TimeSpan.Zero, today, today));
+        Assert.Equal("+5.5h", WorldClockWidget.Relative(TimeSpan.FromHours(5.5), today, today));        // India
+        Assert.Equal("+5.75h", WorldClockWidget.Relative(TimeSpan.FromHours(5.75), today, today));      // Nepal, not rounded to 5.8
+        Assert.Equal("−8h · yesterday", WorldClockWidget.Relative(TimeSpan.FromHours(-8), today.AddDays(-1), today));
+        Assert.Equal("+9h · tomorrow", WorldClockWidget.Relative(TimeSpan.FromHours(9), today.AddDays(1), today));
+    }
+
+    [Fact]
+    public void World_clock_menu_stops_at_the_cities_it_can_show()
+    {
+        var four = new[] { "a", "b", "c", "d" };
+        var five = new[] { "a", "b", "c", "d", "e" };
+        Assert.True(WorldClockWidget.CanToggle(four, "z"));    // room for one more
+        Assert.False(WorldClockWidget.CanToggle(five, "z"));   // a sixth would never show
+        Assert.True(WorldClockWidget.CanToggle(five, "c"));    // unticking always works
+        Assert.Equal(5, WorldClockWidget.MaxCities);
+    }
+
+    [Theory]
+    [InlineData("clock", true)]
+    [InlineData("worldclock", true)]
+    [InlineData("calendar", true)]
+    [InlineData("system", false)]
+    [InlineData("media", false)]
+    public void A_time_zone_change_redraws_the_widgets_that_show_time(string kind, bool redraw) =>
+        Assert.Equal(redraw, WidgetManager.ShowsTime(kind));
+
+    [Fact]
     public void The_recycle_bin_says_all_clear_or_counts_items()
     {
         Assert.Equal(("0", "all clear"), RecycleBinWidget.Describe(0, 0));

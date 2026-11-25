@@ -25,6 +25,7 @@ Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScree
 - 🔒 **Still private and light.** No new network access. The Status glance listens to Windows' own change events and the Eyes read only the pointer's position, both only while they're on screen. The Eyes cost about 1 % of one CPU core while visible on our test PC; the other glances cost nothing extra
 - 🔤 **English everywhere**: day and month names, AM/PM and numbers are English whatever language Windows uses, so a clock never mixes languages. The week still starts on your region's first day
 - 🐛 **Fixed: a blank settings window that never recovered.** With some graphics drivers Windows lists no monitor under the graphics card, so WinOrbit thought the screen was off: the check that rescues a blank window never ran, and Live glass showed the wallpaper instead of the windows behind. It now asks Windows' display configuration too
+- 🕑 **Fixed: clocks stuck in the old time zone.** After Windows moved to another time zone (travelling, or changed by hand), WinOrbit's clocks kept the old zone until it was restarted. They now update at once
 - 🗂️ **Your settings carry over**: old widgets keep their size and glass, and the island keeps the clock
 
 Untested here: multiple monitors, scaling above 100 %, Windows 10, an Arm64 PC, the Status battery on a laptop (the test PC is a desktop), the liquid lens on graphics cards other than an NVIDIA GTX 1660 SUPER, and whether a DisplayPort monitor that is switched off still counts as "no screen" with the new display check.

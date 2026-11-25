@@ -521,7 +521,7 @@ internal sealed class WorldClockWidget : WidgetView
         _rows.Children.Clear();
         var now = DateTime.UtcNow;
         var local = TimeZoneInfo.Local.GetUtcOffset(now);
-        foreach (var id in Zones.Take(5))
+        foreach (var id in Zones.Take(MaxCities))
         {
             TimeZoneInfo tz;
             try { tz = TimeZoneInfo.FindSystemTimeZoneById(id); } catch { continue; }
@@ -539,8 +539,7 @@ internal sealed class WorldClockWidget : WidgetView
             row.Children.Add(dot);
             var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             left.Children.Add(WidgetLook.Caps(city, 11, "T.Text"));
-            var rel = diff == TimeSpan.Zero ? "same time" : $"{(diff > TimeSpan.Zero ? "+" : "−")}{Math.Abs(diff.TotalHours):0.#}h";
-            if (there.Date != DateTime.Now.Date) rel += there.Date > DateTime.Now.Date ? " · tomorrow" : " · yesterday";
+            var rel = Relative(diff, there.Date, DateTime.Now.Date);
             left.Children.Add(WidgetLook.Data(rel, 10.5, "T.Text3").With(t => t.Margin = new Thickness(0, 2, 0, 0)));
             row.Children.Add(left.At(0, 1));
             var time = WidgetLook.Big(26);
@@ -556,6 +555,20 @@ internal sealed class WorldClockWidget : WidgetView
     /// <summary>Daytime is 6:00 to 17:59 wherever the city is.</summary>
     internal static bool IsDaytime(DateTime there) => there.Hour is >= 6 and < 18;
 
+    /// <summary>The most cities one widget shows (a Large widget fits five rows).</summary>
+    internal const int MaxCities = 5;
+
+    /// <summary>The line under a city: "+5.5h", "−8h · yesterday", "same time".</summary>
+    internal static string Relative(TimeSpan diff, DateTime thereDate, DateTime hereDate)
+    {
+        var rel = diff == TimeSpan.Zero ? "same time" : $"{(diff > TimeSpan.Zero ? "+" : "−")}{Math.Abs(diff.TotalHours).ToString("0.##", CultureInfo.InvariantCulture)}h";
+        if (thereDate.Date != hereDate.Date) rel += thereDate.Date > hereDate.Date ? " · tomorrow" : " · yesterday";
+        return rel;
+    }
+
+    /// <summary>Whether a city can be ticked in the menu: always to untick it, and to add one only while fewer than <see cref="MaxCities"/> are chosen.</summary>
+    internal static bool CanToggle(IReadOnlyCollection<string> chosen, string id) => chosen.Contains(id) || chosen.Count < MaxCities;
+
     protected override void OnStart() { Tick(); _timer.Start(); }
     protected override void OnStop() => _timer.Stop();
 
@@ -564,12 +577,17 @@ internal sealed class WorldClockWidget : WidgetView
         var cities = new MenuItem { Header = "Cities" };
         var zones = Zones;
         foreach (var (id, city) in Cities)
-            cities.Items.Add(Item(city, () =>
+        {
+            var item = Item(city, () =>
             {
                 if (!zones.Remove(id)) zones.Add(id);
                 Instance.Options["zones"] = string.Join(';', zones);
                 Save(); Tick();
-            }, zones.Contains(id)));
+            }, zones.Contains(id));
+            // Only five fit: once five are ticked, untick one before adding another (no silent sixth that never shows).
+            if (!CanToggle(zones, id)) { item.IsEnabled = false; item.ToolTip = $"Up to {MaxCities} cities: untick one first"; ToolTipService.SetShowOnDisabled(item, true); }
+            cities.Items.Add(item);
+        }
         items.Add(cities);
     }
 }
