@@ -262,14 +262,23 @@ public sealed class WidgetWindow : Window
         {
             _frame.Background = null;
             _body.ClearValue(EffectProperty);
-            SetInk(null);
             if (_glass is null)
             {
                 _frame.Children.Remove(_body);
                 _glass = new GlassSurface { SampleWallpaper = true, Content = _body };
                 _frame.Children.Add(_glass);
             }
+            ApplyMaterial();
         }
+    }
+
+    /// <summary>The card's material from Widgets › Material; Black always takes light text.</summary>
+    private void ApplyMaterial()
+    {
+        if (_glass is null) return;
+        var m = GlassSurface.Material(L.WidgetMaterial);
+        _glass.UseMaterial(m);
+        SetInk(m == "Black" ? true : null);
     }
 
     // ---- Bare ink: a bare widget sits on the wallpaper, so its text takes its colour from the wallpaper under it, not
@@ -362,6 +371,7 @@ public sealed class WidgetWindow : Window
     public void ApplyAppearance()
     {
         _frame.Opacity = Math.Clamp(Instance.Opacity, 0.2, 1);
+        ApplyMaterial();
         if (Topmost != Instance.Pinned) Topmost = Instance.Pinned;
         if (!Instance.Pinned && Handle != IntPtr.Zero && !Raised) Native.SetWindowPos(Handle, Native.HWND_BOTTOM, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
     }

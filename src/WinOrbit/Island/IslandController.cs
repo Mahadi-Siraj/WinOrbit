@@ -161,6 +161,8 @@ public sealed class IslandController
     public void Expand() { if (_windows.Count > 0) _windows[0].Expand(false); }
     public void CollapseAll() { foreach (var w in _windows) w.Collapse(); }
     public void Peek(string glyph, string text) { foreach (var w in _windows) w.Peek(glyph, text); }
+    /// <summary>One of WinOrbit's own cards (an update is out, say); clicking it runs <paramref name="onClick"/>.</summary>
+    public void Card(string glyph, string title, string subtitle, Color color, double seconds, Action onClick) { foreach (var w in _windows) w.ShowCard(glyph, title, subtitle, color, seconds, onClick: onClick); }
     public void Centre() { foreach (var w in _windows) w.Centre(); }
     public void Demo(string what) { foreach (var w in _windows) w.Demo(what); }
     /// <summary>Events changed outside the island (an import): redraw the month marks and the open day.</summary>

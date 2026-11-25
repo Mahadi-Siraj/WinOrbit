@@ -1,6 +1,6 @@
 # WinOrbit privacy audit
 
-**Summary: WinOrbit contains no telemetry, analytics, tracking, advertising identifiers, crash uploading, accounts or automatic update checks. With default settings it makes zero network connections.**
+**Summary: WinOrbit contains no telemetry, analytics, tracking, advertising identifiers, crash uploading or accounts. Update checks happen only if you turn them on, and read nothing but the latest version number. With default settings it makes zero network connections.**
 
 This document describes what the application stores, what it can transmit, and how that was verified.
 
@@ -70,13 +70,14 @@ There is exactly **one** class that can open a network connection: `NetworkGate`
 * HTTPS only; no cookies, no redirects, no custom headers, no identifiers.
 * Every attempt (including blocked ones) is recorded in an in-memory ledger visible under **About & Diagnostics › Network ledger**.
 
-Two optional features use it, each with its own switch under **Settings › Privacy & network**, both off by default:
+Three optional features use it, each with its own switch under **Settings › Privacy & network**, all off by default:
 
 | Feature | Request | When | Data sent |
 |---|---|---|---|
 | Weather (Open-Meteo, no account or key) | `geocoding-api.open-meteo.com/v1/search?name=…` | When you search for a place | The place name you typed |
 | | `api.open-meteo.com/v1/forecast?latitude=…&longitude=…` | At most every 30 minutes while a Weather widget is visible, or when you open the island's Weather page or launcher (the same 30-minute cache) | Coordinates of the chosen place (rounded to 3 decimals) and your unit choice |
 | Synced lyrics (LRCLIB, no account or key) | `lrclib.net/api/get?track_name=…&artist_name=…&album_name=…&duration=…`, then up to two `/api/search` requests if there is no exact match (for example the name split from a video title "Artist - Song") | Once per new song while lyrics are on; at most three requests per song | The song's title, artist, album and length — what your player publishes to Windows, with video-page extras such as "(Official Video)" removed. Results are cached in memory, never on disk |
+| Tell me about updates (GitHub) | `raw.githubusercontent.com/Mahadi-Siraj/WinOrbit/main/VERSION`, the one-line version file releases are published from | At start-up when 48 hours have passed since the last check, then every 48 hours while WinOrbit runs; skipped while a fullscreen app is in front. Asked once on Home or at the first start; turning it on also turns on the network switch | Nothing but the request itself. The time of the last check and a version you skipped are kept in `settings.json` |
 
 Your IP address is inevitably visible to those services when you enable a feature, as with any web request.
 
@@ -84,9 +85,9 @@ Your IP address is inevitably visible to those services when you enable a featur
 
 **Coding agents** (Dynamic Island › Coding agents, **off by default**) uses the same local pipe and the same protections, and is not a network feature either. AI coding tools you connect yourself (Claude Code, Codex, your own scripts) run `WinOrbit.exe --agent <name>` from their hooks. That short-lived command reads what the tool hands its hooks, keeps only the session's id, the first ~60 characters of its first request as a title, the project folder's **name** (not its path), a state (working, needs you, done) and a few words such as "Editing app.cs" or Claude's own "needs your permission to use Bash". Prompts, answers, commands and file contents are dropped there, before anything reaches WinOrbit. The running app keeps at most eight sessions in memory, drops a session after three hours of silence, writes nothing to disk or the log, and forgets them all when the switch is turned off or WinOrbit quits. WinOrbit never edits those tools' settings; you paste the setup yourself. While the island shows a session's title, anyone who can see your screen (or your screen share) can read it.
 
-Links such as "Open rainmeter.net", and the launcher's "Search the web for …", open in **your own browser**; WinOrbit itself makes no request.
+Links such as "Open rainmeter.net", and the launcher's "Search the web for …", open in **your own browser**; WinOrbit itself makes no request. The same goes for **Report a bug or share an idea** (About & Diagnostics, and the tray menu): **Email** opens your own email app with a draft (to the address shown, with the setup summary from "Copy for a bug report" in the body) that you read and send yourself; **Instagram** and **GitHub** open those sites in your browser or app. WinOrbit sends nothing.
 
-There is **no** automatic update checker. **Settings › Privacy & network › Updates › Check now** makes one request when you click it, and only while the network switch is on: `raw.githubusercontent.com/Mahadi-Siraj/WinOrbit/main/VERSION`, the one-line version file releases are published from. Nothing is sent but the request itself (GitHub sees your IP address), it shows in the request ledger, and nothing is downloaded or installed; if a newer version exists, WinOrbit offers to open the release page in your browser.
+**Updates.** The automatic check (above) is off until you turn it on. **Settings › Privacy & network › Check now** makes the same single request when you click it, and only while the network switch is on. Nothing is sent but the request itself (GitHub sees your IP address), every check shows in the request ledger, and nothing is downloaded or installed; if a newer version exists, WinOrbit shows a card and a note on Home, and **Download** opens the installer's (or portable zip's) GitHub address in your browser.
 
 ## 4. Live wallpaper snapshots
 

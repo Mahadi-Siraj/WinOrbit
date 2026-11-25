@@ -228,6 +228,8 @@ public sealed class LayoutSettings
     public bool WidgetsVisible { get; set; } = true;
     /// <summary>Widgets take their lettering from the clock (mono, condensed or airy), so the desktop reads as one design.</summary>
     public bool MatchClockLettering { get; set; } = true;
+    /// <summary>What glass-card widgets are made of: Glass, Gradient, Smoked, Solid or Black (bare widgets have none).</summary>
+    public string WidgetMaterial { get; set; } = "Glass";
     public LayoutSettings Clone() => (LayoutSettings)MemberwiseClone();
 }
 
@@ -350,6 +352,14 @@ public sealed class PrivacySettings
     public bool WeatherFahrenheit { get; set; }
     /// <summary>Synced lyrics from LRCLIB (sends track title, artist, album and length). Off by default; needs the network switch.</summary>
     public bool LyricsEnabled { get; set; }
+    /// <summary>Ask GitHub for the latest version number at start-up when 48 hours have passed, and every 48 hours. Off by default; needs the network switch.</summary>
+    public bool UpdateCheck { get; set; }
+    /// <summary>The one-time "tell me about updates?" question has been answered (yes or no).</summary>
+    public bool UpdateAsked { get; set; }
+    /// <summary>When the automatic check last asked (local time), to keep 48 hours between checks across restarts.</summary>
+    public DateTime? UpdateLastCheck { get; set; }
+    /// <summary>A version the user chose to skip: no card for it, only for a newer one.</summary>
+    public string UpdateSkipped { get; set; } = "";
 }
 
 public sealed class RainmeterPrefs

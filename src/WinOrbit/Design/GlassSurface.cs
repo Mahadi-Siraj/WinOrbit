@@ -43,6 +43,34 @@ public class GlassSurface : ContentControl
     public bool CastShadow { get => (bool)GetValue(CastShadowProperty); set => SetValue(CastShadowProperty, value); }
     public double ShadowSize { get => (double)GetValue(ShadowSizeProperty); set => SetValue(ShadowSizeProperty, value); }
 
+    /// <summary>
+    /// The surfaces people can pick for the island and widgets: Glass frosts the wallpaper (or, with Live glass, the
+    /// windows behind); Gradient is an opaque fade from the accent into the wallpaper's colours; Smoked is a deep tint;
+    /// Solid is the theme's colour; Black is true black with a fine edge.
+    /// </summary>
+    public static readonly string[] Materials = { "Glass", "Gradient", "Smoked", "Solid", "Black" };
+
+    /// <summary>A stored material name, or Glass for anything unknown (old or hand-edited settings).</summary>
+    internal static string Material(string? name) => Materials.FirstOrDefault(m => string.Equals(m, name?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "Glass";
+
+    /// <summary>Dress this surface as <paramref name="material"/>. Callers that pick Black also switch to light text.</summary>
+    public void UseMaterial(string? material)
+    {
+        var m = Material(material);
+        SampleWallpaper = m == "Glass";
+        switch (m)
+        {
+            case "Gradient": SetResourceReference(TintProperty, "G.TintGradient"); break;
+            case "Smoked": SetResourceReference(TintProperty, "G.TintSmoked"); break;
+            case "Solid": SetResourceReference(TintProperty, "G.TintSolid"); break;
+            case "Black": Tint = Brushes.Black; break;
+            default: SetResourceReference(TintProperty, "G.Tint"); break;
+        }
+        // Gradient already carries the wallpaper's colours; Black is plain on purpose.
+        WashOpacity = m is "Black" or "Gradient" ? 0 : 1;
+        OrnamentOpacity = m == "Black" ? 0 : 1;
+    }
+
     /// <summary>Motion in the liquid lens: 0 at rest; it deepens while the glass changes size and wobbles back after.</summary>
     private static readonly DependencyProperty FlexProperty = DependencyProperty.Register("Flex", typeof(double), typeof(GlassSurface),
         new PropertyMetadata(0.0, (d, _) => ((GlassSurface)d).UpdateLensShape()));

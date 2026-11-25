@@ -108,7 +108,7 @@ Not planned:
 
 Still open:
 1. **Island follows the cursor between monitors** — each display already gets its own island; a "follow the pointer" mode needs a multi-monitor PC to test.
-2. **Automatic update check** (opt-in, daily) — deliberately not added: the app promises it never checks by itself. The owner decides.
+2. ~~**Automatic update check**~~ — built in 2.0 at the owner's request: opt-in, asked once, every 48 hours (see below).
 3. **README demo GIF and 1.2/1.3 screenshots.**
 4. **Microsoft Store (MSIX)** — fixes the SmartScreen warning and unlocks notifications in the island; needs a developer account.
 5. Items from Wave 3 above (ARM64, code signing, languages). For signing, the SignPath Foundation offers free certificates to open-source projects; applying is the owner's call. Until then builds stay unsigned.
@@ -126,6 +126,9 @@ Still open:
 * ✅ **Desktop sets** — a whole look in one click (clock skin, pieces, theme, glance, liquid glass), five built in, save your own, share and import `.winorbitset` files (private options stripped, imports cleaned and clamped). Applying one keeps the old desktop for Restore previous desktop.
 * ✅ **First start** — three steps on Home: pick a look (three sets, live on your wallpaper, or keep the starter widgets), liquid or classic glass on a live sample plus the colour mode, then simple or all settings. The owner asked for this so a new user's first look is a good one.
 * ✅ **Liquid glass switch** (Appearance › Glass and the tray menu) and **simple settings**: new installs show the settings most people change, with a note on each page saying how many more are hidden and a button to show them; search still finds everything. Upgrades keep all settings.
+* ✅ **Surfaces** — the owner: people may prefer a colour, solid or plain black to glass. Appearance › Glass › Surface (also at the first start) sets the island and widgets to Glass, **Gradient** (new: the accent fading into the look's gradient, mixed into its tint so it stays opaque and readable), Smoked, Solid or Black; Dynamic Island › Material and Widgets › Material set them apart. Live glass moved into simple settings, the first start and the tray.
+* ✅ **Opt-in update check** — asked once (Home, or the first start), then at start-up when 48 hours have passed and every 48 hours: the VERSION file through the network gate, not during fullscreen. A new version gets an island card and a Home note whose **Download** opens the installer (or portable zip) URL directly; **Skip this version**. Nothing installs by itself.
+* ✅ **Feedback without GitHub** — the owner: most people don't use GitHub. About › Report a bug or share an idea (and the tray): an email draft with the setup summary, an Instagram DM link, or the GitHub forms; the issue templates and README say the same.
 * ✅ **Fixed**: the glass in in-app previews (Home, the first-start sample) lost its blurred backdrop, because the glass dropped any backdrop it hadn't sampled itself; so those previews never showed the frost or the lens.
 * 🧪 Trial note: a second copy of WinOrbit started beside the running one has its main window fall back to software rendering on the test PC (the same with the last commit), so the first-start liquid sample was checked there only in software mode, where it says it can't show the lens.
 * ✅ **Fixed**: on a PC where Windows lists the graphics card as attached to the desktop but no monitor under it, `RenderGuard` thought the screen was off and never ran, so a blank settings window was not rescued, and Live glass used the same check. The screen now counts as showing when the display configuration has an active path to an available monitor (`Native.ShownDisplayTargets`). Not tested: a DisplayPort monitor switched off.

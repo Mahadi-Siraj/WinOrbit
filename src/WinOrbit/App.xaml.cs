@@ -164,6 +164,7 @@ public partial class App : Application
         // Measured from process creation, so it includes .NET runtime start-up, not just our own code.
         using (var self = Process.GetCurrentProcess()) StartupTime = DateTime.Now - self.StartTime;
         Log.Info($"Started in {StartupTime.TotalMilliseconds:0} ms");
+        Updates.Apply();   // the opt-in update check: nothing at all unless it's on
         // Trim the start-up working set once everything has settled.
         _ = Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, async () => { await Task.Delay(4000); TrimMemory(); });
     }
@@ -270,6 +271,11 @@ public partial class App : Application
         m.Items.Add(Item("Desktop widgets", () => Hub.Widgets.ToggleAll(), Hub.Settings.Layout.WidgetsVisible));
         var liquid = Hub.Theme.LiquidShowing;
         m.Items.Add(Item("Liquid glass", () => Hub.Theme.SetLiquidGlass(!liquid), liquid));
+        if (LiveGlass.Supported)
+        {
+            var live = Hub.Settings.General.LiveGlass;
+            m.Items.Add(Item("Live glass", () => { Hub.Settings.General.LiveGlass = !live; Hub.Store.Save(); Hub.LiveGlass?.Apply(); }, live));
+        }
         var sets = new MenuItem { Header = "Desktop set" };
         foreach (var d in DesktopSets.All) sets.Items.Add(Item(d.Name, () => DesktopSets.Apply(d), d.Id == Hub.Settings.ActiveSetId));
         m.Items.Add(sets);
@@ -280,6 +286,7 @@ public partial class App : Application
         foreach (var t in Hub.Theme.All) themes.Items.Add(Item(t.Name, () => Hub.Theme.Use(t.Id), t.Id == Hub.Settings.ActiveThemeId));
         m.Items.Add(themes);
         m.Items.Add(new Separator());
+        m.Items.Add(Item("Report a bug or idea…", () => ShowMain("about")));
         m.Items.Add(Item("Quit WinOrbit", Quit));
         m.Placement = PlacementMode.MousePoint;
         m.IsOpen = true;

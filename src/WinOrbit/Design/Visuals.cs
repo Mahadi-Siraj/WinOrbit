@@ -11,6 +11,7 @@ namespace WinOrbit.Design;
 /// <summary>Glyph codes from Segoe Fluent Icons (falls back to Segoe MDL2 Assets on Windows 10).</summary>
 public static class Glyph
 {
+    public const string Mail = "";
     public const string Usb = "";
     public const string Home = "", Color = "", Personalize = "", Picture = "", More = "", Tiles = "",
         Drop = "", System = "", Profiles = "", Settings = "", Info = "", Play = "", Pause = "",

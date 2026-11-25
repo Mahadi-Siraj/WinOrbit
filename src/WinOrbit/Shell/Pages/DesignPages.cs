@@ -96,6 +96,10 @@ public sealed class HomePage : PageBase
             return;
         }
 
+        // ---------- updates: a new version, or the one-time question ----------
+        Children.Add(_updates);
+        ShowUpdates();
+
         // ---------- hero ----------
         var hero = Ui.Grid("2*,16,*", "auto");
         hero.Margin = new Thickness(0, 0, 0, 16);
@@ -240,6 +244,34 @@ public sealed class HomePage : PageBase
             net ? "T.Warn" : "T.Good", Kit.Btn("Review", () => Owner?.Navigate("about"))));
     }
 
+    private readonly StackPanel _updates = new();
+
+    private void ShowUpdates()
+    {
+        _updates.Children.Clear();
+        var p = Hub.Settings.Privacy;
+        if (Updates.Available is { } v)
+        {
+            var n = v.ToString(3);
+            _updates.Children.Add(Kit.Notice(Glyph.Download, $"WinOrbit {n} is out",
+                Paths.Portable ? $"You have {Updates.Norm(Updates.Current).ToString(3)}. Download the new portable zip, close WinOrbit and unzip it over this copy; your settings are kept."
+                               : $"You have {Updates.Norm(Updates.Current).ToString(3)}. Download the installer and run it; your settings are kept.",
+                "T.Accent", Kit.Buttons(
+                    Kit.Btn("Skip this version", () => { Updates.Skip(); ShowUpdates(); }),
+                    Kit.Btn("What's new", () => Island.IslandWindow.OpenUri(Updates.ReleasesUrl)),
+                    Kit.Btn("Download", () => Island.IslandWindow.OpenUri(Updates.DownloadUrl(v, Paths.Portable)), Glyph.Download, true))));
+        }
+        else if (!p.UpdateAsked)
+        {
+            _updates.Children.Add(Kit.Notice(Glyph.Download, "Get told when there's an update?",
+                "Every 48 hours WinOrbit would ask GitHub for the latest version number, and show a card with a direct download link when there's a new one. Nothing else is sent and nothing installs by itself. Change it any time in Settings › Privacy & network.",
+                "T.Accent", Kit.Buttons(
+                    Kit.Btn("No thanks", () => { Updates.SetAutomatic(false); ShowUpdates(); }),
+                    Kit.Btn("Yes, tell me", () => { Updates.SetAutomatic(true); ShowUpdates(); }, Glyph.Check, true))));
+        }
+        _updates.Margin = _updates.Children.Count > 0 ? new Thickness(0, 0, 0, 16) : new Thickness(0);
+    }
+
     private Grid Header(string glyph, string title, Action? more)
     {
         var g = Ui.Grid("auto,*,auto");
@@ -284,6 +316,7 @@ public sealed class HomePage : PageBase
         }
         Media();
         Live(() => Hub.Media.Changed += Media, () => Hub.Media.Changed -= Media);
+        Live(() => Updates.AvailableChanged += ShowUpdates, () => Updates.AvailableChanged -= ShowUpdates);
     }
 }
 
@@ -362,13 +395,9 @@ public sealed class AppearancePage : PageBase
                 Hub.Theme.LiquidShowing, v => { Hub.Theme.SetLiquidGlass(v); Rebuild(); }, false, Glyph.Drop),
             Kit.Adv(Kit.ToggleRow("Curved glass edges", "The wallpaper bends round the rim of the island, widgets and launcher like thick glass, and the edge catches the light under the pointer. Uses the graphics card; turns itself off if WinOrbit falls back to software rendering.",
                 Hub.Settings.General.CurvedGlass, v => { Hub.Settings.General.CurvedGlass = v; Hub.Store.Save(); Hub.Theme.Apply(); Rebuild(); })),
-            Kit.Adv(Kit.ToggleRow("Live glass", LiveGlass.Supported
-                    ? "The island, widgets and launcher show the windows behind them, blurred, instead of only your wallpaper. WinOrbit watches the screen with Windows' screen-capture API, only while its glass is showing and only when something changes. The picture is shrunk to an eighth on the graphics card (a quarter for nearly clear looks such as Liquid Clear) and blurred, kept in memory, never saved or sent. "
-                      + "While this is on, WinOrbit's island, widgets and launcher are left out of screenshots, recordings and screen sharing (otherwise the glass would capture itself). Off by default."
-                      + (Hub.LiveGlass?.Problem is { } problem ? " Currently off: " + problem : "")
-                    : "Needs Windows 11: earlier versions mark a captured screen with a yellow frame.",
-                Hub.Settings.General.LiveGlass, v => { Hub.Settings.General.LiveGlass = v; Hub.Store.Save(); Hub.LiveGlass?.Apply(); }, true)
-                .With(r => r.IsEnabled = LiveGlass.Supported))));
+            Kit.Row("Surface", "Glass isn't for everyone. Pick what the island and widgets are made of: Glass, Gradient (a soft fade from your accent colour into your wallpaper's colours), Smoked, Solid or plain Black. You can still set them apart under Dynamic Island and Widgets.",
+                SurfacePicker(), true, Glyph.Color),
+            LiveGlassRow()));
         Children.Add(Kit.Adv(Kit.Section("Window material", "The material behind this settings window.",
             Kit.Row("Backdrop", "Acrylic blurs what is behind the window, Mica tints from the wallpaper, Glass uses WinOrbit's own frosted wallpaper.",
                 Kit.Segmented(new[] { "Acrylic", "Mica", "Glass" }, Math.Max(0, Array.IndexOf(materials, Hub.Settings.General.WindowMaterial)), i =>
@@ -379,6 +408,32 @@ public sealed class AppearancePage : PageBase
 
     /// <summary>Whether the look on now shows the liquid lens when liquid glass is on.</summary>
     private static bool HasLiquidLook(Theme t) => ThemeEngine.HasLiquid(t);
+
+    /// <summary>One surface for the island and the widgets together (each can still be set on its own page).</summary>
+    internal static FrameworkElement SurfacePicker()
+    {
+        var m = GlassSurface.Materials;
+        return Kit.Segmented(m, Math.Max(0, Array.IndexOf(m, GlassSurface.Material(Hub.Settings.Island.Material))), i => SetSurface(m[i]), "Surface");
+    }
+
+    internal static void SetSurface(string material)
+    {
+        Hub.Settings.Island.Material = material;
+        Hub.Settings.Layout.WidgetMaterial = material;
+        Hub.Store.Save();
+        Hub.Island.Apply();
+        Hub.Widgets.Apply();
+    }
+
+    /// <summary>The Live glass switch, here and on the first start.</summary>
+    internal static FrameworkElement LiveGlassRow(bool divider = true) =>
+        Kit.ToggleRow("Live glass", LiveGlass.Supported
+                ? "The island, widgets and launcher show the windows behind them, blurred, instead of only your wallpaper. WinOrbit watches the screen with Windows' screen-capture API, only while its glass is showing and only when something changes. The picture is shrunk to an eighth on the graphics card (a quarter for nearly clear looks such as Liquid Clear) and blurred, kept in memory, never saved or sent. "
+                  + "While this is on, WinOrbit's island, widgets and launcher are left out of screenshots, recordings and screen sharing (otherwise the glass would capture itself). Only matters for the Glass surface. Off by default."
+                  + (Hub.LiveGlass?.Problem is { } problem ? " Currently off: " + problem : "")
+                : "Needs Windows 11: earlier versions mark a captured screen with a yellow frame.",
+            Hub.Settings.General.LiveGlass, v => { Hub.Settings.General.LiveGlass = v; Hub.Store.Save(); Hub.LiveGlass?.Apply(); }, divider, Glyph.View)
+            .With(r => r.IsEnabled = LiveGlass.Supported);
 
     private static TextBox TimeBox(string value, Action<string> changed)
     {

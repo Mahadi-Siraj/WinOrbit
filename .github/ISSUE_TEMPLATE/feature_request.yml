@@ -4,7 +4,9 @@ labels: [enhancement]
 body:
   - type: markdown
     attributes:
-      value: Check the [roadmap](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/docs/ROADMAP.md) first — it may already be planned.
+      value: |
+        Check the [roadmap](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/docs/ROADMAP.md) first — it may already be planned.
+        **No GitHub account?** Email mahadisiraj.06@gmail.com or message [@mssatalite on Instagram](https://ig.me/m/mssatalite).
   - type: textarea
     id: problem
     attributes:

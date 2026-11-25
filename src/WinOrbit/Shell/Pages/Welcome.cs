@@ -76,7 +76,7 @@ public sealed class WelcomeFlow : Border
         var (title, text) = _step switch
         {
             0 => ("Pick a look", "Each look is a desktop set: a clock with the pieces made for it, a theme and the island's glance. Tap one to see it on your desktop; you can change it any time in Widgets › Desktop sets."),
-            1 => ("Glass and colour", "The sample below is live: it changes the moment you switch. Liquid glass bends the wallpaper like a lens (drawn by your graphics card); classic glass is plain frosted glass."),
+            1 => ("Glass and colour", "The sample below is live: it changes the moment you switch. Liquid glass bends the wallpaper like a lens (drawn by your graphics card); classic glass is plain frosted glass. Rather have no glass at all? Pick another surface below."),
             _ => ("How many settings?", "Simple shows the settings most people change. Everything else stays one click away (Settings › Settings mode), and search always finds every setting."),
         };
         _body.Children.Add(Ui.Text(title, "Text.Title", 24).With(t => t.Margin = new Thickness(0, 10, 0, 4)));
@@ -161,16 +161,19 @@ public sealed class WelcomeFlow : Border
         var pill = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         pill.Children.Add(Ui.Icon(Glyph.Music, 10, "T.Accent").With(t => t.Margin = new Thickness(0, 0, 6, 0)));
         pill.Children.Add(Ui.Text(DateTime.Now.ToString("HH:mm"), "Text.Body", 10.5, FontWeights.SemiBold));
-        sample.AddGlass(0.38, 0.05, 0.24, 0.12, pill, 14);
+        var island = sample.AddGlass(0.38, 0.05, 0.24, 0.12, pill, 14);
         var clock = new StackPanel { Margin = new Thickness(16, 12, 16, 12) };
         clock.Children.Add(Ui.Text(DateTime.Now.ToString("HH:mm"), "Text.Display", 34));
         clock.Children.Add(Ui.Text(DateTime.Now.ToString("dddd d MMMM", CultureInfo.InvariantCulture), "Text.Caption", 11));
-        sample.AddGlass(0.06, 0.3, 0.34, 0.5, clock, 18);
+        var clockCard = sample.AddGlass(0.06, 0.3, 0.34, 0.5, clock, 18);
         var music = new StackPanel { Margin = new Thickness(16, 12, 16, 12) };
         music.Children.Add(Ui.Text("NOW PLAYING", "Text.Label", 9.5));
         music.Children.Add(Ui.Text("Your music", "Text.Body", 13, FontWeights.SemiBold).With(t => t.Margin = new Thickness(0, 6, 0, 2)));
         music.Children.Add(new ProgressBar { Value = 42, Height = 3, Margin = new Thickness(0, 8, 0, 0) });
-        sample.AddGlass(0.56, 0.36, 0.38, 0.4, music, 18);
+        var musicCard = sample.AddGlass(0.56, 0.36, 0.38, 0.4, music, 18);
+        Dress(island, Hub.Settings.Island.Material);
+        Dress(clockCard, Hub.Settings.Layout.WidgetMaterial);
+        Dress(musicCard, Hub.Settings.Layout.WidgetMaterial);
         var frame = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, BorderThickness = new Thickness(1), Child = sample, Margin = new Thickness(0, 0, 0, 14) };
         frame.SetResourceReference(BorderBrushProperty, "T.Stroke");
         frame.SizeChanged += (_, _) => frame.Clip = new RectangleGeometry(new Rect(0, 0, frame.ActualWidth, frame.ActualHeight), 16, 16);
@@ -187,12 +190,25 @@ public sealed class WelcomeFlow : Border
             liquid, "Turn liquid glass on", () => { Hub.Theme.SetLiquidGlass(true); Render(); }));
         choices.Children.Add(Choice(Option(Glyph.Picture, "Classic glass", "Frosted glass with a gentle curve at the rim and no lens. Lighter work for older graphics cards."),
             !liquid, "Turn liquid glass off", () => { Hub.Theme.SetLiquidGlass(false); Render(); }).At(0, 2));
-        root.Children.Add(choices);
+        root.Children.Add(choices.With(g => g.Margin = new Thickness(0, 0, 0, 6)));
 
+        var m = GlassSurface.Materials;
+        root.Children.Add(Kit.Row("Surface", "Not a glass person? Gradient fades from your accent colour into your wallpaper's colours, Smoked is a deep tint, Solid is one plain colour and Black is true black. For the island and widgets.",
+            Kit.Segmented(m, Math.Max(0, Array.IndexOf(m, GlassSurface.Material(Hub.Settings.Island.Material))), i => { AppearancePage.SetSurface(m[i]); Render(); }, "Surface"), false, Glyph.Color));
         var modes = new[] { ThemeMode.Auto, ThemeMode.Dark, ThemeMode.Light };
         root.Children.Add(Kit.Row("Colour mode", "Auto follows Windows' own light or dark setting.",
             Kit.Segmented(new[] { "Auto", "Dark", "Light" }, Math.Max(0, Array.IndexOf(modes, Hub.Theme.Current.Mode)), i => Hub.Theme.Edit(t => t.Mode = modes[i]), "Colour mode"), true, Glyph.Moon));
+        root.Children.Add(AppearancePage.LiveGlassRow());
         return root;
+    }
+
+    /// <summary>Show the sample in the surface picked (Glass keeps the stage's own wallpaper slice).</summary>
+    private static void Dress(GlassSurface g, string material)
+    {
+        var m = GlassSurface.Material(material);
+        if (m == "Glass") return;
+        g.UseMaterial(m);
+        if (m == "Black") WidgetWindow.PutInk(g.Resources, true);
     }
 
     // ----- step 3: settings -----
@@ -211,6 +227,8 @@ public sealed class WelcomeFlow : Border
             v => { s.Island.ClipboardHistory = v; Hub.Store.Save(); Hub.Clipboard.Apply(); }, false, Glyph.Copy));
         root.Children.Add(Kit.ToggleRow("Synced lyrics", "Uses the internet (LRCLIB) to fetch lyrics for the song that's playing. Turns on the network switch.", s.Privacy.LyricsEnabled && s.Privacy.NetworkAllowed,
             v => { s.Privacy.LyricsEnabled = v; if (v) s.Privacy.NetworkAllowed = true; Hub.Store.Save(); }, true, Glyph.Music));
+        root.Children.Add(Kit.ToggleRow("Tell me about updates", "Every 48 hours WinOrbit asks GitHub for the latest version number, and a card links you straight to the download when there's a new one. Nothing is installed by itself. Turns on the network switch.", s.Privacy.UpdateCheck && s.Privacy.NetworkAllowed,
+            v => Updates.SetAutomatic(v), true, Glyph.Download));
         root.Children.Add(Ui.Text($"Press {s.General.HotkeyLauncher} anywhere to search apps and settings.", "Text.Caption", 12).With(t => t.Margin = new Thickness(2, 10, 0, 0)));
         return root;
     }

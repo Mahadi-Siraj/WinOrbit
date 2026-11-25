@@ -7,6 +7,7 @@ body:
       value: |
         Thanks for reporting! Please check the [open issues](https://github.com/Mahadi-Siraj/WinOrbit/issues) first.
         **Security problems:** don't post them here — see [SECURITY.md](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/SECURITY.md).
+        **No GitHub account?** Email mahadisiraj.06@gmail.com or message [@mssatalite on Instagram](https://ig.me/m/mssatalite). In WinOrbit, About & Diagnostics › Report a bug or share an idea › Email fills in the details for you.
   - type: textarea
     id: what
     attributes:

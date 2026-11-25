@@ -210,6 +210,7 @@ public sealed class ThemeEngine
         var stops = t.Gradient.FromWallpaper || t.Gradient.Stops.Count < 2 ? palette.ToGradientStops() : t.Gradient.Stops;
         r["T.Wash"] = BuildGradient(t.Gradient, stops, t.Gradient.Opacity * (dark ? 0.55 : 0.42));
         r["T.WashStrong"] = BuildGradient(t.Gradient, stops, 1);
+        r["G.TintGradient"] = GradientTint(t.Gradient, stops, tint, Accent, dark);
 
         var radius = Math.Clamp(t.CornerRadius, 0, 40);
         r["R.Card"] = new CornerRadius(radius);
@@ -274,6 +275,31 @@ public sealed class ThemeEngine
         }
         return opacity;
     }
+
+    /// <summary>
+    /// The Gradient surface: from the accent into the look's gradient (wallpaper colours by default), mixed into the
+    /// tint so it stays opaque and text on it stays readable: about a third of the colour on dark looks, a quarter on
+    /// light ones. Starting from the accent keeps it a visible gradient on a grey or black wallpaper too.
+    /// </summary>
+    internal static Brush GradientTint(GradientDef def, IList<GradientStopDef> stops, Color tint, Color accent, bool dark)
+    {
+        var mix = GradientMix(dark);
+        var baseColor = Color.FromRgb(tint.R, tint.G, tint.B);
+        string Mixed(Color c) => ColorMath.Hex(ColorMath.Lerp(baseColor, Color.FromRgb(c.R, c.G, c.B), mix));
+        var blended = new List<GradientStopDef> { new(Mixed(accent), 0) };
+        var ordered = stops.OrderBy(s => s.Offset).ToList();
+        // The wallpaper's colours fill the far half; with none, the gradient fades from the accent into the plain tint.
+        if (ordered.Count == 0) blended.Add(new(ColorMath.Hex(baseColor), 1));
+        else for (var i = 0; i < ordered.Count; i++)
+            blended.Add(new(Mixed(ColorMath.Parse(ordered[i].Color, Colors.Gray)), ordered.Count == 1 ? 1 : 0.5 + 0.5 * i / (ordered.Count - 1)));
+        var linear = def.Clone();
+        linear.Kind = GradientKind.Linear;
+        linear.Saturation = 1;
+        return BuildGradient(linear, blended, 1);
+    }
+
+    /// <summary>How much wallpaper colour the Gradient surface takes.</summary>
+    internal static double GradientMix(bool dark) => dark ? 0.34 : 0.26;
 
     public static Brush BuildGradient(GradientDef def, IList<GradientStopDef> stops, double opacity)
     {

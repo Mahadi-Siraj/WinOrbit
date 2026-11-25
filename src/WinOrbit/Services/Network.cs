@@ -9,8 +9,8 @@ namespace WinOrbit.Services;
 /// The ONLY place in WinOrbit that can open a network connection.
 /// It refuses unless the user turned on the master network switch, sends no cookies,
 /// no identifiers and no custom headers, and records every request in a ledger the user can read.
-/// There is no telemetry, analytics, crash upload or automatic update check anywhere in the app
-/// (Settings' "Check now" asks for the latest version number only when clicked — see Services/Updates.cs).
+/// There is no telemetry, analytics or crash upload anywhere in the app. Update checks read the latest version
+/// number only: "Check now" when clicked, and the automatic check (off by default) every 48 hours — see Services/Updates.cs.
 /// </summary>
 public sealed class NetworkGate
 {

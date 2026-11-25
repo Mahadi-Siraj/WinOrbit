@@ -333,13 +333,7 @@ public partial class IslandWindow : Window
     private void ApplyMaterial()
     {
         Pill.Opacity = Math.Clamp(S.Opacity, 0.3, 1);
-        switch (S.Material)
-        {
-            case "Smoked": Pill.SampleWallpaper = false; Pill.SetResourceReference(GlassSurface.TintProperty, "G.TintSmoked"); break;
-            case "Solid": Pill.SampleWallpaper = false; Pill.SetResourceReference(GlassSurface.TintProperty, "G.TintSolid"); break;
-            case "Black": Pill.SampleWallpaper = false; Pill.Tint = Brushes.Black; break;
-            default: Pill.SampleWallpaper = true; Pill.SetResourceReference(GlassSurface.TintProperty, "G.Tint"); break;
-        }
+        Pill.UseMaterial(S.Material);
         MatchLook(Pill);
         ApplyRim();
     }
@@ -350,10 +344,8 @@ public partial class IslandWindow : Window
     /// </summary>
     private void MatchLook(GlassSurface g)
     {
-        var black = S.Material == "Black";
-        if (!ReferenceEquals(g, Pill)) { g.SampleWallpaper = Pill.SampleWallpaper; g.Tint = Pill.Tint; }
-        g.WashOpacity = black ? 0 : 1;
-        g.OrnamentOpacity = black ? 0 : 1;
+        var black = GlassSurface.Material(S.Material) == "Black";
+        if (!ReferenceEquals(g, Pill)) g.UseMaterial(S.Material);
         var merged = g.Resources.MergedDictionaries;
         if (black && !merged.Contains(BlackInk)) merged.Add(BlackInk);
         else if (!black) merged.Remove(BlackInk);

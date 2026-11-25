@@ -140,7 +140,7 @@ Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (da
 
 ### 🧊 Liquid-glass desktop
 * **Liquid glass that moves** — the **Liquid Clear** and **Liquid Frosted** themes have a thick, rounded rim that bends the wallpaper beyond the glass's edge with a hint of prism, flexes when the island grows or shrinks, and sweeps light round the rim as it opens. Runs on the graphics card.
-* **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers. Optional **Live glass** (Windows 11) shows the windows behind it instead, and **curved edges** bend the light at the rim. Island materials: Glass, Smoked, Solid or **Black**.
+* **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers. Optional **Live glass** (Windows 11) shows the windows behind it instead, and **curved edges** bend the light at the rim. Not a glass person? The island and widgets can be **Gradient**, Smoked, Solid or plain **Black** instead.
 * **13 widgets** with one design — four sizes that line up, the same margins and headers everywhere, big light numbers, monospaced data and segmented HUD meters, on a glass card or **bare** on the wallpaper (their text colour follows the wallpaper under them). **Seventeen clock styles**, among them desktop skins drawn in WinOrbit's own geometric **Orbit letters**, a poster numeral, a boxed label and an LED-style dot matrix, with a live gallery to pick from and text-only **matching pieces** (now playing, system, weather, recycle bin, launcher) that take the clock's lettering, plus calendar, world clock, system monitor, now playing, focus, notes, tasks, launcher, recycle bin, weather and more.
 * **12 themes**, a live **Liquid Glass Editor**, dark / light / auto / scheduled modes, wallpaper-generated gradients.
 * **Profiles** (Study, Gaming, Productivity, Minimal, Night) with optional automation.
@@ -175,7 +175,7 @@ All changeable in Settings.
 
 ✅ implemented and verified on one desktop PC (Windows 11, Core i5-12400F, single monitor) · 🧪 implemented and unit-tested, not yet tried on that hardware · ⚠️ known limitation.
 
-**Help test it:** if you run WinOrbit on a laptop, multiple monitors, high display scaling or Windows 10, please [open an issue](../../issues/new/choose) with what worked and what didn't.
+**Help test it:** if you run WinOrbit on a laptop, multiple monitors, high display scaling or Windows 10, please [open an issue](../../issues/new/choose) with what worked and what didn't. No GitHub account? Email **mahadisiraj.06@gmail.com** or message **[@mssatalite](https://ig.me/m/mssatalite)** on Instagram; in the app, **About & Diagnostics › Report a bug or share an idea** fills in the details for you.
 
 | Area | Status |
 |---|---|

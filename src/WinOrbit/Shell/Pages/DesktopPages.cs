@@ -262,9 +262,9 @@ public sealed class IslandPage : PageBase
             Kit.Adv(Kit.ToggleRow("Keep centred", "Dragging only changes the distance from the edge.", S.KeepCentred, v => { S.KeepCentred = v; if (v) Hub.Island.Centre(); Save(); Rebuild(); })),
             Kit.Row("Reset position", "Back to the top centre on every display.", Kit.Btn("Reset", () => { S.Edge = "Top"; S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Save(); Rebuild(); }, Glyph.Refresh))));
 
-        var materials = new[] { "Glass", "Smoked", "Solid", "Black" };
+        var materials = GlassSurface.Materials;
         Children.Add(Kit.Section("Appearance", null,
-            Kit.Row("Material", "Glass frosts your wallpaper, Smoked is a deep tint, Solid is fully opaque in the theme's colour, Black is plain true black with a fine edge (the cleanest and cheapest to draw).", Kit.Segmented(materials, Math.Max(0, Array.IndexOf(materials, S.Material)), i => { S.Material = materials[i]; Save(); }), false),
+            Kit.Row("Material", "Glass frosts your wallpaper, Gradient fades from your accent colour into your wallpaper's colours (opaque), Smoked is a deep tint, Solid is fully opaque in the theme's colour, Black is plain true black with a fine edge (the cleanest and cheapest to draw).", Kit.Segmented(materials, Math.Max(0, Array.IndexOf(materials, GlassSurface.Material(S.Material))), i => { S.Material = materials[i]; Save(); }), false),
             Kit.SliderRow("Size", null, 0.8, 1.4, S.Scale, v => { S.Scale = Math.Round(v, 2); Save(); }, v => $"{v * 100:0}%"),
             Kit.Adv(Kit.SliderRow("Opacity", null, 0.3, 1, S.Opacity, v => { S.Opacity = Math.Round(v, 2); Save(); }, v => $"{v * 100:0}%")),
             Kit.Adv(Kit.Row("Rim", "A coloured edge around the island. Glass keeps the material's own light rim.",
@@ -480,6 +480,8 @@ public sealed class WidgetsPage : PageBase
 
         Children.Add(Kit.Section("Layout", null,
             Kit.ToggleRow("Show widgets", $"Shortcut: {Hub.Settings.General.HotkeyWidgets}", L.WidgetsVisible, v => { L.WidgetsVisible = v; Hub.Store.Save(); Hub.Widgets.Apply(); }, false),
+            Kit.Row("Material", "What widget cards are made of. Glass frosts your wallpaper, Gradient fades from your accent colour into your wallpaper's colours, Smoked is a deep tint, Solid is the theme's colour, Black is true black. Bare widgets stay straight on the wallpaper.",
+                Kit.Segmented(GlassSurface.Materials, Math.Max(0, Array.IndexOf(GlassSurface.Materials, GlassSurface.Material(L.WidgetMaterial))), i => { L.WidgetMaterial = GlassSurface.Materials[i]; Hub.Store.Save(); Hub.Widgets.Apply(); }, "Widget material")),
             Kit.Adv(Kit.ToggleRow("Match the clock's lettering", "Widgets take their letters from your clock: mono with Mono and Dot matrix, condensed with Poster, Label, Week, Heavy and Script, airy with Orbit, Hairline, Spaced and Story.", L.MatchClockLettering, v => { L.MatchClockLettering = v; Hub.Store.Save(); Hub.Widgets.RefreshLettering(); })),
             Kit.ToggleRow("Lock layout", "Prevents accidental moving and resizing.", L.Locked, v => { L.Locked = v; Hub.Store.Save(); }),
             Kit.Adv(Kit.ToggleRow("Snap to grid", "Widgets also snap magnetically to the screen margins.", L.SnapToGrid, v => { L.SnapToGrid = v; Hub.Store.Save(); })),

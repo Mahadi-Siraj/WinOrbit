@@ -208,14 +208,17 @@ public sealed class SettingsPage : PageBase
         weatherBody.Children.Add(Kit.Row("Temperature unit", null, Kit.Segmented(new[] { "°C", "°F" }, P.WeatherFahrenheit ? 1 : 0, i => { P.WeatherFahrenheit = i == 1; Hub.Store.Save(); Hub.Weather.Invalidate(); Hub.Widgets.Apply(); })));
         weatherBody.Children.Add(Kit.ToggleRow("Synced lyrics", "Shows the line being sung in the island. Uses LRCLIB (free, open, no account). Sends only the song's title, artist, album and length when a new song starts; results stay in memory.",
             P.LyricsEnabled, v => { P.LyricsEnabled = v; Hub.Store.Save(); }, true, Glyph.Music));
-        Children.Add(Kit.Section("Privacy & network", "WinOrbit has no telemetry, analytics, crash uploads, accounts or automatic update checks. This switch is the only way it can ever reach the internet.",
+        Children.Add(Kit.Section("Privacy & network", "WinOrbit has no telemetry, analytics, crash uploads or accounts, and checks for updates only if you turn that on. This switch is the only way it can ever reach the internet.",
             Kit.ToggleRow("Allow optional internet features", "Off by default. While off, WinOrbit cannot open any network connection.", P.NetworkAllowed, v =>
             {
-                P.NetworkAllowed = v; Hub.Store.Save(); Hub.Weather.Invalidate(); Hub.Widgets.Apply();
+                P.NetworkAllowed = v; Hub.Store.Save(); Hub.Weather.Invalidate(); Hub.Widgets.Apply(); Updates.Apply();
                 weatherBody.IsEnabled = v; weatherBody.Opacity = v ? 1 : 0.5;
             }, false, Glyph.Globe),
             weatherBody,
-            Kit.Row("Updates", "WinOrbit never checks for updates by itself. Check now asks GitHub once for the latest version number (needs the switch above); it downloads and installs nothing.",
+            Kit.ToggleRow("Tell me about updates", "Asks GitHub for the latest version number when WinOrbit starts (if 48 hours have passed) and every 48 hours. When there's a new version, a card on the island and a note on Home link straight to the download. Nothing else is sent, and nothing is downloaded or installed by itself. Turns on the switch above."
+                    + (P.UpdateLastCheck is { } last ? $" Last checked {last:d MMM, HH:mm}." : ""),
+                P.UpdateCheck, v => { Updates.SetAutomatic(v); Rebuild(); }, true, Glyph.Download),
+            Kit.Row("Check for updates now", "Asks once, right now (needs the switch above).",
                 Kit.Btn("Check now", CheckForUpdate, Glyph.Refresh))));
 
         // ---- data ----
@@ -239,8 +242,10 @@ public sealed class SettingsPage : PageBase
         var message = Updates.Message(latest, Updates.Current);
         if (latest is not null && Updates.IsNewer(latest, Updates.Current))
         {
-            if (Dialogs.Confirm("Update available", message, "Open download page", "Not now", "The release page opens in your browser. Run the new installer there; your settings are kept."))
-                Island.IslandWindow.OpenUri(Updates.ReleasesUrl);
+            if (Dialogs.Confirm("Update available", message, "Download", "Not now", Paths.Portable
+                    ? "Your browser downloads the new portable zip. Close WinOrbit, then unzip it over this copy; your settings are kept."
+                    : "Your browser downloads the new installer. Run it; your settings are kept."))
+                Island.IslandWindow.OpenUri(Updates.DownloadUrl(latest, Paths.Portable));
         }
         else Dialogs.Message("Check for updates", message);
     }
@@ -372,7 +377,14 @@ public sealed class AboutPage : PageBase
         head.Children.Add(t.At(0, 1));
         Children.Add(Kit.Card(head, new Thickness(22, 18, 22, 18)).With(c => c.Margin = new Thickness(0, 0, 0, 16)));
 
-        _ram = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold); _cpu = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold);
+        // No GitHub account needed: email and Instagram come first, GitHub is there for people who use it.
+        var ways = new List<UIElement> { Kit.Btn("Email", EmailFeedback, Glyph.Mail, true, AppInfo.Email) };
+        if (AppInfo.InstagramMessageUrl is { } dm) ways.Add(Kit.Btn("Instagram  @" + AppInfo.Instagram.TrimStart('@'), () => Island.IslandWindow.OpenUri(dm), null, false, "Send a direct message on Instagram"));
+        ways.Add(Kit.Btn("GitHub", () => Island.IslandWindow.OpenUri(AppInfo.IssuesUrl), null, false, "Open an issue on GitHub (needs a GitHub account)"));
+        Children.Add(Kit.Section("Report a bug or share an idea", "No GitHub account needed. Email starts a message with your setup summary already in it (versions, displays and settings; nothing personal), so you only have to say what happened. You can read and change it before sending.",
+            Kit.Row("Get in touch", $"{AppInfo.Email} · Instagram @{AppInfo.Instagram.TrimStart('@')} · or GitHub if you use it.", Kit.Buttons(ways.ToArray()), false)));
+
+        _ram =Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold); _cpu = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold);
         _threads = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold); _rm = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold);
         _uptime = Ui.Text("—", "Text.Body", 14, FontWeights.SemiBold);
         Children.Add(Kit.Section("Resource use (live)", "Measured from Windows' own process counters every 2 seconds while this page is open.",
@@ -412,6 +424,21 @@ public sealed class AboutPage : PageBase
             Kit.Buttons(Kit.Btn("Refresh", () => log.Text = Log.Tail(40), Glyph.Refresh), Kit.Btn("Open log folder", () => Process.Start("explorer.exe", $"\"{Paths.Logs}\""), Glyph.Folder),
                 CopyButton()).With(b => b.Margin = new Thickness(0, 12, 0, 8))));
         Children.Add(Ui.Text("“Copy for a bug report” copies versions, displays and how the island is set up — no names of networks, devices, files or places, and no log lines. Read it before you post it anywhere.", "Text.Caption", 12, brush: "T.Text3").With(x => { x.TextWrapping = TextWrapping.Wrap; x.Margin = new Thickness(4, -4, 4, 12); }));
+    }
+
+    /// <summary>A new email in the user's own mail app, with the setup summary in it. Without a mail app, the address is copied.</summary>
+    private static void EmailFeedback()
+    {
+        var version = Updates.Norm(Updates.Current).ToString(3);
+        var body = "What happened, or your idea:\n\n\n\nSteps to make it happen again (for a bug):\n\n\n\n-- Setup summary (no personal details; delete anything you'd rather not share) --\n" + Summary();
+        try { Process.Start(new ProcessStartInfo(AppInfo.MailTo(AppInfo.Email, $"WinOrbit {version}: bug or idea", body)) { UseShellExecute = true }); }
+        catch (Exception ex)
+        {
+            Log.Info("No mail app for mailto: " + ex.Message);
+            try { Clipboard.SetText(AppInfo.Email); } catch { }
+            Dialogs.Message("No email app set up", $"Windows has no email app for this. The address {AppInfo.Email} is copied: paste it into Gmail, Outlook or any email in your browser.",
+                "“Copy for a bug report” on this page copies your setup summary to paste in too.");
+        }
     }
 
     private static Button CopyButton()
