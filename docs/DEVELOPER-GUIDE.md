@@ -10,7 +10,7 @@ Requirements: Windows 10 2004+ or 11, the .NET 10 SDK. Optional: Inno Setup 6 fo
 
 ```powershell
 dotnet build WinOrbit.sln                         # debug build
-dotnet test tests\WinOrbit.Tests                  # 445 unit tests, under a second
+dotnet test tests\WinOrbit.Tests                  # 449 unit tests, under a second
 src\WinOrbit\bin\Debug\net10.0-windows10.0.19041.0\WinOrbit.exe --startup   # start without opening the main window
 .\tools\build-release.ps1                         # tests + installer + portable zip into .\artifacts
 ```
@@ -118,7 +118,7 @@ The class is split into partial files:
 
 ## 5. Testing
 
-* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 445 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
+* **Unit tests** (`tests/WinOrbit.Tests`, xUnit, 449 tests). Logic that decides something is kept in small `internal static` functions so it can be tested without a window: `ShapeCorners`, `WindowSpot`, `EdgeNear`, `ShouldHide`, `ParseEvent`, `ReminderDue`, `SkyColors`, the weather parser, colour maths, the calculator and others. Add a test with every new rule like these.
 * **Old settings keep loading.** `Files_written_by_1_3_2_still_load` reads settings, data and a theme that the real 1.3.2 build wrote (`tests/WinOrbit.Tests/Fixtures`). If it fails, a change to `Core/Models.cs` would reset people's setup after an update: add the new property with a default instead of renaming or retyping the old one.
 * **`Live*Tests`** touch the real machine (quick controls, Rainmeter, lyrics) and skip themselves when the hardware or app is not there.
 * **On-screen checks** are PowerShell scripts that drive the running app through UI Automation and screenshot the island window: `tools/qa-pages.ps1` (every settings page), `tools/test-fullscreen.ps1` (hide and return timing), `tools/bench.ps1` (idle CPU and memory), `tools/capture.ps1`, `tools/input.ps1`.

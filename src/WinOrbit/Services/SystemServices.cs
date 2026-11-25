@@ -664,4 +664,16 @@ public static class Fmt
     public static string Uptime(TimeSpan t) => t.TotalDays >= 1 ? $"{(int)t.TotalDays}d {t.Hours}h" : $"{t.Hours}h {t.Minutes}m";
 
     public static string Time(DateTime t, bool h24) => t.ToString(h24 ? "HH:mm" : "h:mm");
+
+    /// <summary>
+    /// The culture WinOrbit runs in: English everywhere (day and month names, AM/PM, numbers), whatever language
+    /// Windows uses, so a clock never mixes "quarta-feira" with "It's 2:31 at night". Only the first day of the week
+    /// comes from the user's region, since that is about the calendar, not the language.
+    /// </summary>
+    public static System.Globalization.CultureInfo English(System.Globalization.CultureInfo region)
+    {
+        var c = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.GetCultureInfo("en-US").Clone();
+        c.DateTimeFormat.FirstDayOfWeek = region.DateTimeFormat.FirstDayOfWeek;
+        return System.Globalization.CultureInfo.ReadOnly(c);
+    }
 }

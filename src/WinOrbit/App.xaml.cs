@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,6 +32,9 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // English everywhere, on every thread, whatever language Windows uses (the week still starts on the region's first day).
+        var english = Fmt.English(CultureInfo.CurrentCulture);
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = english;
 
         // ---- helper that links to classic Windows Media Player (started by the running WinOrbit) ----
         var link = Array.FindIndex(e.Args, a => a.Equals("--wmp-link", StringComparison.OrdinalIgnoreCase));

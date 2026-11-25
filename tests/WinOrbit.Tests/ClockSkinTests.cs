@@ -125,6 +125,25 @@ public class ClockSkinTests
     }
 }
 
+public class EnglishEverywhereTests
+{
+    [Theory]
+    [InlineData("de-DE", DayOfWeek.Monday)]
+    [InlineData("pt-BR", DayOfWeek.Sunday)]
+    [InlineData("en-GB", DayOfWeek.Monday)]
+    [InlineData("en-US", DayOfWeek.Sunday)]
+    public void WinOrbit_speaks_English_whatever_the_Windows_language(string windows, DayOfWeek firstDay)
+    {
+        var c = WinOrbit.Services.Fmt.English(CultureInfo.GetCultureInfo(windows));
+        var wednesday = new DateTime(2026, 11, 25, 14, 31, 0);
+        Assert.Equal("Wednesday, 25 November", wednesday.ToString("dddd, d MMMM", c));
+        Assert.Equal("PM", wednesday.ToString("tt", c));
+        Assert.Equal("3.9", 3.9.ToString("0.0", c));
+        Assert.Equal(firstDay, c.DateTimeFormat.FirstDayOfWeek);   // only the week's first day follows the region
+        Assert.True(c.IsReadOnly);
+    }
+}
+
 public class MatchingWidgetTests
 {
     [Theory]
