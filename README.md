@@ -95,7 +95,7 @@
 
 <p align="center">
   <img src="docs/assets/shot-vibes.png" alt="Six looks: Midnight (black island, ocean rim), Ink (square shape, mono rim), Neon rain (smoked glass, aurora rim), Synthwave (drop shape, sunset rim), Cosmic (notch shape, prism rim, themed widgets) and Golden hour (solid island, warm accent)" width="100%">
-  <br><sub>12 themes, 8 rim colours, 5 shapes, 4 materials and 3 sizes. Six of the combinations, over Wallpaper Engine wallpapers.</sub>
+  <br><sub>13 themes, 8 rim colours, 5 shapes, 5 surfaces and 3 sizes. Six of the combinations, over Wallpaper Engine wallpapers.</sub>
 </p>
 
 <sub>Screenshots: the island at 1.4× size with the Black material and Midnight theme, using WinOrbit's built-in previews. The songs are silent demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are from Wallpaper Engine; credit to their creators.</sub>

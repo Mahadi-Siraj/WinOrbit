@@ -476,7 +476,15 @@ public sealed class AppearancePage : PageBase
         return wrap;
     }
 
-    /// <summary>A small rendering of a theme: its gradient over the wallpaper with its dark tint, plus a light chip.</summary>
+    /// <summary>
+    /// How a theme's glass is drawn on its small card: the frost scaled to the card (a full-screen blur of 44 is about
+    /// 5 px on a 214 px card), the tint as strong as the theme's (with a floor so the lines stay readable), and a thick
+    /// rim for liquid looks.
+    /// </summary>
+    internal static (double Blur, double Tint, double Rim) SwatchLook(GlassParams p) =>
+        (Math.Clamp(p.Blur * 0.12, 0, 8), Math.Clamp(p.TintOpacity, 0.14, 1), p.Liquid > 0 ? 2.5 : 1);
+
+    /// <summary>A small rendering of a theme: its gradient over the wallpaper, and a chip of its glass.</summary>
     private static Grid Swatch(Theme t)
     {
         var g = new Grid { Height = 96 };
@@ -488,13 +496,28 @@ public sealed class AppearancePage : PageBase
         g.Children.Add(new Border { Background = ThemeEngine.BuildGradient(t.Gradient, stops, Math.Min(1, t.Gradient.Opacity + 0.25)) });
         var dark = t.Mode != ThemeMode.Light;
         var p = dark ? t.Dark : t.Light;
-        var tint = ColorMath.Parse(p.Tint).Alpha(Math.Max(0.35, p.TintOpacity));
-        var chip = new Border { Width = 110, Height = 46, CornerRadius = new CornerRadius(Math.Min(16, t.CornerRadius * 0.6)), Background = new SolidColorBrush(tint), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(14, 0, 0, 14), BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Colors.White.Alpha(0.25 + p.BorderIntensity * 0.35)) };
+        var look = SwatchLook(p);
+        var radius = Math.Min(16, t.CornerRadius * 0.6);
+        var chip = new Border { Width = 110, Height = 46, CornerRadius = new CornerRadius(radius), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(14, 0, 0, 14), BorderThickness = new Thickness(look.Rim) };
+        chip.BorderBrush = look.Rim > 1
+            ? new LinearGradientBrush(Colors.White.Alpha(0.85), Colors.White.Alpha(0.12), 70)   // the liquid looks' thick, lit rim
+            : new SolidColorBrush(Colors.White.Alpha(0.25 + p.BorderIntensity * 0.35));
+        // The glass itself: the wallpaper behind the chip, frosted as much as the theme frosts it, under its real tint.
+        var body = new Grid { ClipToBounds = true };
+        body.Clip = new RectangleGeometry(new Rect(0, 0, 110 - 2 * look.Rim, 46 - 2 * look.Rim), Math.Max(0, radius - look.Rim), Math.Max(0, radius - look.Rim));
+        if (wall is not null)
+        {
+            var behind = new Image { Source = wall, Stretch = Stretch.UniformToFill, Width = 214, Height = 96, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(-14 - look.Rim, -36 - look.Rim, 0, 0) };
+            if (look.Blur > 0.5) behind.Effect = new System.Windows.Media.Effects.BlurEffect { Radius = look.Blur, KernelType = System.Windows.Media.Effects.KernelType.Gaussian };
+            body.Children.Add(new Canvas { ClipToBounds = false, Children = { behind } });
+        }
+        body.Children.Add(new Border { Background = new SolidColorBrush(ColorMath.Parse(p.Tint).Alpha(look.Tint)) });
         var accent = t.AccentFromWallpaper ? ColorMath.ForMode(Hub.Wallpaper.Palette.Accent, dark) : ColorMath.Parse(dark ? t.AccentDark : t.AccentLight);
         var inner = new StackPanel { Margin = new Thickness(10, 9, 10, 0) };
         inner.Children.Add(new Border { Height = 5, Width = 54, CornerRadius = new CornerRadius(3), Background = new SolidColorBrush((dark ? Colors.White : Colors.Black).Alpha(0.7)), HorizontalAlignment = HorizontalAlignment.Left });
         inner.Children.Add(new Border { Height = 5, Width = 76, CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(accent), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 8, 0, 0) });
-        chip.Child = inner;
+        body.Children.Add(inner);
+        chip.Child = body;
         g.Children.Add(chip);
         g.Children.Add(new Border { Width = 26, Height = 26, CornerRadius = new CornerRadius(13), Background = new SolidColorBrush(accent), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 14, 14) });
         return g;

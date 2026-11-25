@@ -143,6 +143,33 @@ public class ThemeLineupTests
     }
 }
 
+public class PolishTests
+{
+    [Fact]
+    public void Theme_cards_show_each_looks_own_frost_tint_and_rim()
+    {
+        var clear = WinOrbit.Shell.Pages.AppearancePage.SwatchLook(Presets.All.Single(t => t.Id == "liquid-clear").Dark);
+        var frosted = WinOrbit.Shell.Pages.AppearancePage.SwatchLook(Presets.All.Single(t => t.Id == "liquid-frosted").Dark);
+        var pure = WinOrbit.Shell.Pages.AppearancePage.SwatchLook(Presets.All.Single(t => t.Id == "pure-liquid-glass").Dark);
+        var amoled = WinOrbit.Shell.Pages.AppearancePage.SwatchLook(Presets.All.Single(t => t.Id == "amoled-black").Dark);
+        Assert.True(clear.Blur < frosted.Blur && frosted.Blur < pure.Blur);   // clear is sharpest, pure the most frosted
+        Assert.True(clear.Tint < pure.Tint && pure.Tint < amoled.Tint);
+        Assert.Equal(1, amoled.Tint);
+        Assert.Equal(0, amoled.Blur);
+        Assert.True(clear.Rim > pure.Rim);                                    // liquid looks get the thick rim
+        Assert.InRange(clear.Tint, 0.14, 0.2);                                // floor keeps the lines readable
+    }
+
+    [Fact]
+    public void Wide_controls_go_under_their_label_only_when_the_row_is_narrow()
+    {
+        Assert.False(WinOrbit.Shell.Pages.Kit.StackControl(700, 290));   // Surface picker in a normal window
+        Assert.True(WinOrbit.Shell.Pages.Kit.StackControl(500, 290));    // the same in a narrow one
+        Assert.False(WinOrbit.Shell.Pages.Kit.StackControl(500, 46));    // a switch never moves
+        Assert.False(WinOrbit.Shell.Pages.Kit.StackControl(0, 290));     // not laid out yet
+    }
+}
+
 public class ProfileBrightnessTests
 {
     [Fact]

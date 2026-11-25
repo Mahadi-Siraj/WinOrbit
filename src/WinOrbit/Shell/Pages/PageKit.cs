@@ -136,6 +136,25 @@ public static class Kit
         g.Children.Add(left.At(0, col));
         if (control is FrameworkElement fe) fe.VerticalAlignment = VerticalAlignment.Center;
         g.Children.Add(control.At(0, col + 1));
+        // A wide control (a segmented picker) moves under its label in a narrow window, instead of squeezing the text.
+        if (control is FrameworkElement wide)
+        {
+            while (g.RowDefinitions.Count < 2) g.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var align = wide.HorizontalAlignment; var margin = wide.Margin;
+            var stacked = false;
+            g.SizeChanged += (_, e) =>
+            {
+                var stack = StackControl(e.NewSize.Width, wide.DesiredSize.Width);
+                if (stack == stacked) return;
+                stacked = stack;
+                Grid.SetRow(wide, stack ? 1 : 0);
+                Grid.SetColumn(wide, stack ? col : col + 1);
+                Grid.SetColumnSpan(wide, stack ? 2 : 1);
+                wide.HorizontalAlignment = stack ? HorizontalAlignment.Left : align;
+                wide.Margin = stack ? new Thickness(0, 0, 0, 12) : margin;
+                left.Margin = stack ? new Thickness(0, 10, 0, 8) : new Thickness(0, 10, 18, 10);
+            };
+        }
         if (divider)
         {
             var line = new Border { Height = 1, VerticalAlignment = VerticalAlignment.Top };
@@ -145,6 +164,9 @@ public static class Kit
         }
         return g;
     }
+
+    /// <summary>Whether a row's control goes under its label: when it would take more than 45 % of the row.</summary>
+    internal static bool StackControl(double rowWidth, double controlWidth) => rowWidth > 0 && controlWidth > rowWidth * 0.45;
 
     public static ToggleButton Switch(bool value, Action<bool> changed, string? name = null)
     {
