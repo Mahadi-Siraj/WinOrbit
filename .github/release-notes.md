@@ -35,6 +35,7 @@ Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScree
 - 🔤 **English everywhere**: day and month names, AM/PM and numbers are English whatever language Windows uses, so a clock never mixes languages. The week still starts on your region's first day
 - 🐛 **Fixed: flat previews.** The glass in WinOrbit's own previews (Home, the first-start sample) lost its frost, so it never looked like the real thing
 - 🐛 **Fixed: a blank settings window that never recovered.** With some graphics drivers Windows lists no monitor under the graphics card, so WinOrbit thought the screen was off: the check that rescues a blank window never ran, and Live glass showed the wallpaper instead of the windows behind. It now asks Windows' display configuration too
+- 🪟 **Fixed: Live glass sometimes showing the wallpaper instead of the window behind.** A capture started while a window was being moved or shown was refused by Windows, and a graphics-driver reset stopped it too; either way it stayed off until you turned it off and on. It now starts captures a moment later and gets back up by itself after a failure
 - 🕑 **Fixed: clocks stuck in the old time zone.** After Windows moved to another time zone (travelling, or changed by hand), WinOrbit's clocks kept the old zone until it was restarted. They now update at once
 - 🗂️ **Your settings carry over**: old widgets keep their size and glass, and the island keeps the clock
 

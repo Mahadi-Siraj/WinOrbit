@@ -56,9 +56,58 @@ public sealed class LiveGlass
     public LiveGlass(Dispatcher ui)
     {
         _ui = ui;
-        Hub.Foreground.FullscreenChanged += () => _ui.BeginInvoke(Reconcile);
-        Hub.Power.ScreenChanged += () => _ui.BeginInvoke(Reconcile);
-        Hub.Shell.DisplayChanged += () => _ui.BeginInvoke(() => { StopFeeds(); Reconcile(); });
+        Hub.Foreground.FullscreenChanged += QueueReconcile;
+        Hub.Power.ScreenChanged += QueueReconcile;
+        Hub.Shell.DisplayChanged += () => _ui.BeginInvoke(() => { StopFeeds(); QueueReconcile(); });
+    }
+
+    private bool _reconcileQueued;
+
+    /// <summary>
+    /// Reconcile a moment later, on its own turn of the message loop. Starting a capture is a COM call, and Windows
+    /// refuses those while WinOrbit is answering an input-synchronous message (a window being moved or shown), which
+    /// used to switch live glass off until it was turned off and on again.
+    /// </summary>
+    private void QueueReconcile()
+    {
+        if (_reconcileQueued) return;
+        _reconcileQueued = true;
+        _ui.BeginInvoke(DispatcherPriority.Background, () => { _reconcileQueued = false; Reconcile(); });
+    }
+
+    // ----- getting back up after a failure -----
+    private readonly List<DateTime> _failures = new();
+    private DispatcherTimer? _retry;
+
+    /// <summary>
+    /// How long to wait before starting again after a failure, or null to stay off. Failures in the last ten minutes
+    /// count: 3, 6, 12 then 24 seconds, and after four of them it stays off (shown in Settings) so a broken driver
+    /// can't keep it cycling.
+    /// </summary>
+    internal static TimeSpan? RetryAfter(IReadOnlyList<DateTime> failures, DateTime now)
+    {
+        var recent = failures.Count(f => now - f < TimeSpan.FromMinutes(10) && f <= now);
+        return recent >= 4 ? null : TimeSpan.FromSeconds(3 * Math.Pow(2, recent));
+    }
+
+    /// <summary>Stop after a failure and, unless it keeps failing, start again by itself a few seconds later.</summary>
+    private void Recover(string problem)
+    {
+        var now = DateTime.Now;
+        var wait = RetryAfter(_failures, now);
+        _failures.Add(now);
+        _failures.RemoveAll(f => now - f >= TimeSpan.FromMinutes(10));
+        Stop(wait is null ? problem + " It failed several times, so it stays off until you turn it off and on." : problem);
+        if (wait is not { } w) return;
+        _retry?.Stop();
+        _retry = new DispatcherTimer(w, DispatcherPriority.Background, (_, _) =>
+        {
+            _retry?.Stop(); _retry = null;
+            if (_on || !Hub.Settings.General.LiveGlass) return;
+            Log.Info("Live glass: trying again");
+            Apply();
+        }, _ui);
+        _retry.Start();
     }
 
     /// <summary>Windows 11, with screen capture available.</summary>
@@ -141,19 +190,19 @@ public sealed class LiveGlass
             w.LocationChanged += OnWindowMoved;
             w.Closed -= OnWindowClosed;   // once per window, however often live glass is turned on
             w.Closed += OnWindowClosed;
-            Reconcile();
+            QueueReconcile();
         }
         return _pictures.TryGetValue(mon.Device, out var pic) ? pic : null;
     }
 
-    private void OnWindowChanged(object? sender, DependencyPropertyChangedEventArgs e) => Reconcile();
-    private void OnWindowMoved(object? sender, EventArgs e) => Reconcile();
+    private void OnWindowChanged(object? sender, DependencyPropertyChangedEventArgs e) => QueueReconcile();
+    private void OnWindowMoved(object? sender, EventArgs e) => QueueReconcile();
 
     private void OnWindowClosed(object? sender, EventArgs e)
     {
         // The handle is gone by now, so find the window's entry by the window itself.
         foreach (var hwnd in _kept.Where(k => ReferenceEquals(k.Value, sender)).Select(k => k.Key).ToList()) _kept.Remove(hwnd);
-        Reconcile();
+        QueueReconcile();
     }
 
     /// <summary>Capture exactly the screens where WinOrbit glass is showing; none while the screen is off.</summary>
@@ -170,9 +219,9 @@ public sealed class LiveGlass
             try { _feeds[mon.Device] = new Feed(this, _gpu, mon); }
             catch (Exception ex)
             {
-                var problem = ex is NotSupportedException ? ex.Message : "Windows didn't allow the screen to be captured.";
                 Log.Warn("Live glass: " + ex.Message);
-                Stop(problem);
+                if (ex is NotSupportedException) Stop(ex.Message);
+                else Recover("Windows didn't allow the screen to be captured.");
                 return;
             }
         }
@@ -248,7 +297,7 @@ public sealed class LiveGlass
     private void Fail(Exception ex)
     {
         Log.Error("Live glass", ex);
-        _ui.BeginInvoke(() => Stop("It stopped after a graphics error; turn it off and on to try again."));
+        _ui.BeginInvoke(() => { if (_on) Recover("It stopped after a graphics error."); });
     }
 
     // ------------------------------------------------------------------ the graphics card

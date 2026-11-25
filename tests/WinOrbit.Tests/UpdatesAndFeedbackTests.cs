@@ -86,6 +86,21 @@ public class FeedbackLinkTests
     }
 }
 
+public class LiveGlassRecoveryTests
+{
+    [Fact]
+    public void Live_glass_retries_with_growing_waits_and_gives_up_after_four_recent_failures()
+    {
+        var now = new DateTime(2026, 11, 25, 13, 0, 0);
+        Assert.Equal(TimeSpan.FromSeconds(3), LiveGlass.RetryAfter(Array.Empty<DateTime>(), now));
+        Assert.Equal(TimeSpan.FromSeconds(6), LiveGlass.RetryAfter(new[] { now.AddMinutes(-1) }, now));
+        Assert.Equal(TimeSpan.FromSeconds(24), LiveGlass.RetryAfter(new[] { now.AddMinutes(-3), now.AddMinutes(-2), now.AddMinutes(-1) }, now));
+        Assert.Null(LiveGlass.RetryAfter(new[] { now.AddMinutes(-4), now.AddMinutes(-3), now.AddMinutes(-2), now.AddMinutes(-1) }, now));
+        // Old failures (more than ten minutes ago, or "in the future" after a clock change) don't count.
+        Assert.Equal(TimeSpan.FromSeconds(3), LiveGlass.RetryAfter(new[] { now.AddHours(-1), now.AddMinutes(-11), now.AddMinutes(-30), now.AddMinutes(-50), now.AddMinutes(5) }, now));
+    }
+}
+
 public class SurfaceTests
 {
     [Fact]
