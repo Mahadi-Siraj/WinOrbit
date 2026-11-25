@@ -53,6 +53,9 @@ public sealed class LiveGlass
     private Gpu? _gpu;
     private bool _on;
 
+    /// <summary>The WinOrbit windows Windows currently leaves out of captures (for "Screenshot with WinOrbit").</summary>
+    public IReadOnlyCollection<Window> HiddenFromCapture => _kept.Values.ToList();
+
     public LiveGlass(Dispatcher ui)
     {
         _ui = ui;

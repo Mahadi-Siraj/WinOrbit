@@ -161,7 +161,7 @@ public class LiquidLensTests
     public void Only_the_liquid_presets_use_the_lens_so_every_other_look_is_unchanged()
     {
         var liquid = Presets.All.Where(t => t.Dark.Liquid > 0 || t.Light.Liquid > 0).Select(t => t.Id).ToList();
-        Assert.Equal(new[] { "liquid-clear", "liquid-frosted" }, liquid);
+        Assert.Equal(new[] { "liquid-clear", "liquid-frosted", "neon", "sakura" }, liquid);
         Assert.All(Presets.All.Where(t => liquid.Contains(t.Id)), t => Assert.True(t.Dark.Liquid > 0 && t.Light.Liquid > 0));
     }
 

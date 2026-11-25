@@ -58,7 +58,7 @@ public static class DesktopSets
         },
         new DesktopSet
         {
-            Id = "set-terminal", Name = "Terminal", BuiltIn = true, ThemeId = "minimal-dark", LiquidGlass = false, Glance = "system",
+            Id = "set-terminal", Name = "Terminal", BuiltIn = true, ThemeId = "amoled-black", LiquidGlass = false, Glance = "system",
             Description = "Monospaced time, a slashes readout of CPU, memory and graphics, the song as a caption. Everything in terminal letters.",
             Widgets = new()
             {

@@ -103,6 +103,7 @@ public sealed class HomePage : PageBase
         // ---------- hero ----------
         var hero = Ui.Grid("2*,16,*", "auto");
         hero.Margin = new Thickness(0, 0, 0, 16);
+        hero.ColumnDefinitions[2].MinWidth = 236;   // narrow windows: the preview gives way, so labels don't break mid-word
 
         var stage = new PreviewStage { MinHeight = 300 };
         var pill = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
@@ -395,7 +396,7 @@ public sealed class AppearancePage : PageBase
                 Hub.Theme.LiquidShowing, v => { Hub.Theme.SetLiquidGlass(v); Rebuild(); }, false, Glyph.Drop),
             Kit.Adv(Kit.ToggleRow("Curved glass edges", "The wallpaper bends round the rim of the island, widgets and launcher like thick glass, and the edge catches the light under the pointer. Uses the graphics card; turns itself off if WinOrbit falls back to software rendering.",
                 Hub.Settings.General.CurvedGlass, v => { Hub.Settings.General.CurvedGlass = v; Hub.Store.Save(); Hub.Theme.Apply(); Rebuild(); })),
-            Kit.Row("Surface", "Glass isn't for everyone. Pick what the island and widgets are made of: Glass, Gradient (a soft fade from your accent colour into your wallpaper's colours), Smoked, Solid or plain Black. You can still set them apart under Dynamic Island and Widgets.",
+            Kit.Row("Surface", "What the island and widgets are made of. Gradient fades your accent into the wallpaper's colours; Smoked, Solid and Black are calmer. Set them apart under Dynamic Island and Widgets.",
                 SurfacePicker(), true, Glyph.Color),
             LiveGlassRow()));
         Children.Add(Kit.Adv(Kit.Section("Window material", "The material behind this settings window.",
@@ -428,8 +429,8 @@ public sealed class AppearancePage : PageBase
     /// <summary>The Live glass switch, here and on the first start.</summary>
     internal static FrameworkElement LiveGlassRow(bool divider = true) =>
         Kit.ToggleRow("Live glass", LiveGlass.Supported
-                ? "The island, widgets and launcher show the windows behind them, blurred, instead of only your wallpaper. WinOrbit watches the screen with Windows' screen-capture API, only while its glass is showing and only when something changes. The picture is shrunk to an eighth on the graphics card (a quarter for nearly clear looks such as Liquid Clear) and blurred, kept in memory, never saved or sent. "
-                  + "While this is on, WinOrbit's island, widgets and launcher are left out of screenshots, recordings and screen sharing (otherwise the glass would capture itself). Only matters for the Glass surface. Off by default."
+                ? "Glass shows the windows behind it, not just your wallpaper. Uses Windows' screen capture only while glass is showing and something changes; the small blurred picture stays in memory, never saved or sent. "
+                  + "While it's on, normal screenshots and screen sharing leave WinOrbit out (or the glass would capture itself): use Screenshot with WinOrbit in the tray menu to include it. Glass surface only. Off by default."
                   + (Hub.LiveGlass?.Problem is { } problem ? " Currently off: " + problem : "")
                 : "Needs Windows 11: earlier versions mark a captured screen with a yellow frame.",
             Hub.Settings.General.LiveGlass, v => { Hub.Settings.General.LiveGlass = v; Hub.Store.Save(); Hub.LiveGlass?.Apply(); }, divider, Glyph.View)
@@ -449,7 +450,7 @@ public sealed class AppearancePage : PageBase
     private WrapPanel ThemeGallery()
     {
         var wrap = Kit.Gallery();
-        foreach (var theme in Hub.Theme.All)
+        foreach (var theme in Hub.Theme.Offered)
         {
             var active = theme.Id == Hub.Theme.Current.Id;
             var card = new Border { Width = 214, Margin = new Thickness(6), CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(active ? 2 : 1), Cursor = Cursors.Hand, Padding = new Thickness(0) };

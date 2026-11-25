@@ -101,6 +101,80 @@ public class LiveGlassRecoveryTests
     }
 }
 
+public class ThemeLineupTests
+{
+    [Fact]
+    public void Retired_themes_still_load_but_are_only_offered_while_in_use()
+    {
+        Assert.All(Presets.Retired, id => Assert.Contains(Presets.All, t => t.Id == id));   // old settings keep their look
+        var offered = Presets.Offered(Presets.All, "neon").Select(t => t.Id).ToList();
+        Assert.DoesNotContain("frosted-glass", offered);
+        Assert.DoesNotContain("minimal-dark", offered);
+        Assert.Contains("frosted-glass", Presets.Offered(Presets.All, "frosted-glass").Select(t => t.Id));
+        // A user's own theme with a retired id-like name is never hidden.
+        var mine = new Theme { Id = "minimal-dark", BuiltIn = false, Name = "Mine" };
+        Assert.Contains(mine, Presets.Offered(new[] { mine }, "neon"));
+    }
+
+    [Fact]
+    public void Built_in_themes_have_unique_ids_and_the_new_looks_have_their_own_colour()
+    {
+        Assert.Equal(Presets.All.Count, Presets.All.Select(t => t.Id).Distinct().Count());
+        foreach (var id in new[] { "neon", "sakura", "ember" })
+        {
+            var t = Presets.All.Single(p => p.Id == id);
+            Assert.False(t.AccentFromWallpaper);
+            Assert.False(t.Gradient.FromWallpaper);
+            Assert.Equal(3, t.Gradient.Stops.Count);
+        }
+        // Offered accents don't repeat, so no two fixed-colour looks are the same colour.
+        var fixedAccents = Presets.Offered(Presets.All, "").Where(t => !t.AccentFromWallpaper).Select(t => t.AccentDark.ToUpperInvariant()).ToList();
+        Assert.Equal(fixedAccents.Count, fixedAccents.Distinct().Count());
+    }
+
+    [Fact]
+    public void Profiles_and_sets_only_use_themes_that_are_offered()
+    {
+        Assert.Equal(ProfileService.BuiltIn.Count, ProfileService.BuiltIn.Select(p => p.Id).Distinct().Count());
+        var offered = Presets.Offered(Presets.All, "").Select(t => t.Id).ToHashSet();
+        Assert.All(ProfileService.BuiltIn, p => Assert.Contains(p.ThemeId, offered));
+        Assert.All(DesktopSets.BuiltIn.Where(s => s.ThemeId.Length > 0), s => Assert.Contains(s.ThemeId, offered));
+        Assert.Contains(ProfileService.BuiltIn, p => p.Id == "lofi" && p.ThemeId == "neon");
+    }
+}
+
+public class ProfileBrightnessTests
+{
+    [Fact]
+    public void Leaving_a_dimming_profile_puts_the_brightness_back_once()
+    {
+        Assert.Equal((35, true, false), ProfileService.BrightnessPlan(35, null));    // Night: remember, then dim
+        Assert.Equal((35, false, false), ProfileService.BrightnessPlan(35, 80));     // Night again: keep the first level
+        Assert.Equal((80, false, true), ProfileService.BrightnessPlan(null, 80));    // Study after Night: back to 80
+        Assert.Equal(((int?)null, false, false), ProfileService.BrightnessPlan(null, null));   // nothing to do
+        Assert.Equal("lofi", ProfileService.Find(ProfileService.BuiltIn, "Lo-fi")!.Id);
+        Assert.Equal("lofi", ProfileService.Find(ProfileService.BuiltIn, "LOFI")!.Id);
+        Assert.Equal("night", ProfileService.Find(ProfileService.BuiltIn, " night ")!.Id);
+        Assert.Null(ProfileService.Find(ProfileService.BuiltIn, "--"));
+        Assert.Null(ProfileService.Find(ProfileService.BuiltIn, "party"));
+        Assert.Null(System.Text.Json.JsonSerializer.Deserialize<AppSettings>("""{ "ActiveThemeId": "neon" }""", Json.Options)!.BrightnessBeforeProfile);
+    }
+}
+
+public class SnapshotTests
+{
+    [Fact]
+    public void Snapshots_get_sortable_names_and_windows_land_where_they_sit()
+    {
+        Assert.Equal("WinOrbit 2026-11-25 093005.png", Snapshot.FileName(new DateTime(2026, 11, 25, 9, 30, 5)));
+        // A second screen to the left makes the picture start at a negative x.
+        var r = Snapshot.Place(new WinOrbit.Interop.Native.RECT { Left = 860, Top = 10, Right = 1060, Bottom = 50 }, -1920, 0);
+        Assert.Equal(new System.Windows.Int32Rect(2780, 10, 200, 40), r);
+        var empty = Snapshot.Place(new WinOrbit.Interop.Native.RECT { Left = 5, Top = 5, Right = 3, Bottom = 3 }, 0, 0);
+        Assert.Equal(0, empty.Width);
+    }
+}
+
 public class SurfaceTests
 {
     [Fact]

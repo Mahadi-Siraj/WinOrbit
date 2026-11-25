@@ -120,10 +120,44 @@ public sealed class ProfileService
         s.ActiveProfileId = p.Id;
         Hub.Store.Save();
         Hub.ApplyAll();
-        if (copy.Brightness is { } b) _ = Task.Run(() => Brightness.Set(b));
+        ApplyBrightness(copy.Brightness);
         Log.Info($"Profile applied: {p.Name}{(automatic ? " (automation)" : "")}");
         Changed?.Invoke();
         Hub.Island.Peek(Glyph.Profiles, $"{p.Name} profile");
+    }
+
+    /// <summary>A profile by id or by name, ignoring case and spaces ("lofi", "Lo-fi", "night").</summary>
+    internal static Profile? Find(IEnumerable<Profile> all, string key)
+    {
+        static string Norm(string s) => new(s.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        var k = Norm(key);
+        if (k.Length == 0) return null;
+        var list = all.ToList();
+        return list.FirstOrDefault(p => Norm(p.Id) == k) ?? list.FirstOrDefault(p => Norm(p.Name) == k);
+    }
+
+    /// <summary>
+    /// What a profile does to the screen brightness: its own level (remembering the current one first, unless one is
+    /// already remembered), or, for a profile without one, the remembered level back, so leaving Night undims the screen.
+    /// </summary>
+    internal static (int? Set, bool RememberFirst, bool Forget) BrightnessPlan(int? profile, int? remembered) =>
+        profile is { } b ? (b, remembered is null, false)
+        : remembered is { } back ? (back, false, true)
+        : (null, false, false);
+
+    private void ApplyBrightness(int? profile)
+    {
+        var s = Hub.Settings;
+        var (set, rememberFirst, forget) = BrightnessPlan(profile, s.BrightnessBeforeProfile);
+        if (forget) { s.BrightnessBeforeProfile = null; Hub.Store.Save(); }
+        if (set is not { } level) return;
+        var ui = System.Windows.Application.Current.Dispatcher;
+        _ = Task.Run(() =>
+        {
+            var before = rememberFirst ? Brightness.Get() : null;
+            Brightness.Set(level);
+            if (before is { } n) ui.BeginInvoke(() => { s.BrightnessBeforeProfile = n; Hub.Store.Save(); });
+        });
     }
 
     public bool CanRestorePrevious => Hub.Settings.Previous is not null;
@@ -153,14 +187,16 @@ public sealed class ProfileService
         var mon = Monitors.Primary;
         double scale = mon.Scale, margin = p.Layout.Margin * scale, gap = p.Layout.Spacing * scale;
         double right = mon.Work.Right - mon.Bounds.Left - margin, top = mon.Work.Top - mon.Bounds.Top + margin + 46 * scale;
-        double y = top;
+        double y = top, centreY = mon.Bounds.Height * 0.3;
         foreach (var w in p.Widgets)
         {
             w.Monitor = mon.Device;
             if (w.Opt("place") == "center")
             {
+                // Centred widgets stack down the middle (a clock with its music under it).
                 w.X = Math.Round((mon.Bounds.Width - w.Width * scale) / 2);
-                w.Y = Math.Round(mon.Bounds.Height * 0.3);
+                w.Y = Math.Round(centreY);
+                centreY += w.Height * scale + gap;
                 continue;
             }
             w.X = Math.Round(right - w.Width * scale);
@@ -202,6 +238,14 @@ public sealed class ProfileService
             Island = new IslandSettings { Modules = new() { "media", "calendar", "focus", "notes", "system", "controls" } },
             Widgets = new() { W("calendar", 272, 268), W("tasks", 272, 250), W("media", 336, 128), W("system", 272, 250) },
             Layout = new LayoutSettings { Margin = 24, Spacing = 14 }
+        },
+        new Profile
+        {
+            Id = "lofi", Name = "Lo-fi", BuiltIn = true, Glyph = Glyph.Music, ThemeId = "neon",
+            Description = "Music up front: a big clock, a visualiser and now playing in Neon glass. New songs pop up on the island.",
+            Island = new IslandSettings { ShowMedia = true, PeekOnMediaChange = true, Modules = new() { "media", "calendar", "controls" } },
+            Widgets = new() { W("clock", 336, 160, "heavy", ("place", "center")), W("visualiser", 512, 96, "", ("place", "center")), W("media", 336, 128, "", ("place", "center")) },
+            Layout = new LayoutSettings { Margin = 32, Spacing = 16 }
         },
         new Profile
         {

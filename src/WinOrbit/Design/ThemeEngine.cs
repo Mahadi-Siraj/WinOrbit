@@ -21,6 +21,8 @@ public sealed class ThemeEngine
     public GlassParams Glass => IsDark ? Current.Dark : Current.Light;
     public List<Theme> UserThemes { get; } = new();
     public IEnumerable<Theme> All => Presets.All.Concat(UserThemes);
+    /// <summary>The themes the gallery and tray offer (retired look-alikes only while in use).</summary>
+    public IEnumerable<Theme> Offered => Presets.Offered(All, Current.Id);
 
     /// <summary>Resources were rebuilt.</summary>
     public event Action? Applied;
@@ -512,6 +514,16 @@ public static class Motion
 /// <summary>The built-in themes. Each one is a complete, hand-tuned set for both dark and light.</summary>
 public static class Presets
 {
+    /// <summary>
+    /// Built-in themes that looked too much like another one. They keep working for anyone using them (and for their
+    /// copies), but the gallery and tray menu only show them while one is in use.
+    /// </summary>
+    public static readonly HashSet<string> Retired = new(StringComparer.Ordinal) { "frosted-glass", "minimal-dark" };
+
+    /// <summary>The themes to offer: everything except retired built-ins, unless that one is the theme in use.</summary>
+    internal static IEnumerable<Theme> Offered(IEnumerable<Theme> all, string currentId) =>
+        all.Where(t => !(t.BuiltIn && Retired.Contains(t.Id)) || t.Id == currentId);
+
     private static Theme T(string id, string name, string desc, ThemeMode mode, Action<Theme> tune)
     {
         var t = new Theme { Id = id, Name = name, Description = desc, BuiltIn = true, Mode = mode };
@@ -558,7 +570,8 @@ public static class Presets
         }),
         T("soft-light", "Soft Light", "Airy, warm-white glass with gentle shadows. Designed for daylight.", ThemeMode.Light, t =>
         {
-            t.Light = new GlassParams { Tint = "#FFFDF9", TintOpacity = 0.6, Blur = 48, BackdropSaturation = 1.15, BorderIntensity = 0.85, HighlightIntensity = 0.8, Glow = 0.1, ShadowIntensity = 0.22, Refraction = 0.04 };
+            // Opaque enough to stay white over a dark wallpaper instead of turning grey.
+            t.Light = new GlassParams { Tint = "#FFFDF9", TintOpacity = 0.76, Blur = 48, BackdropSaturation = 1.15, BorderIntensity = 0.85, HighlightIntensity = 0.8, Glow = 0.1, ShadowIntensity = 0.22, Refraction = 0.04 };
             t.Gradient.Opacity = 0.5; t.CornerRadius = 24;
         }),
         T("midnight", "Midnight", "Inky blue-black glass with a cool indigo accent for late hours.", ThemeMode.Dark, t =>
@@ -567,6 +580,24 @@ public static class Presets
             t.Dark = new GlassParams { Tint = "#080B16", TintOpacity = 0.66, Blur = 46, BackdropSaturation = 0.95, BorderIntensity = 0.4, HighlightIntensity = 0.3, Glow = 0.3, ShadowIntensity = 0.55, Refraction = 0.04 };
             t.Gradient.FromWallpaper = false; t.Gradient.Angle = 140; t.Gradient.Opacity = 0.6;
             t.Gradient.Stops = new() { new("#4B5BFF", 0), new("#27307A", 0.5), new("#0B1030", 1) };
+        }),
+        T("neon", "Neon", "Synthwave after dark: violet liquid glass, a hot-pink glow and a pink-to-cyan sheen.", ThemeMode.Dark, t =>
+        {
+            t.AccentFromWallpaper = false; t.AccentDark = "#FF5FD2"; t.AccentLight = "#C2188F";
+            t.Dark = new GlassParams { Tint = "#120A1F", TintOpacity = 0.6, Blur = 36, BackdropSaturation = 1.25, BorderIntensity = 0.55, HighlightIntensity = 0.4, Glow = 0.48, ShadowIntensity = 0.5, Refraction = 0.05, Liquid = 0.6 };
+            t.Light.Liquid = 0.6;   // a dark-only look, but a copy switched to light keeps the rim
+            t.Gradient.FromWallpaper = false; t.Gradient.Angle = 125; t.Gradient.Opacity = 0.55;
+            t.Gradient.Stops = new() { new("#FF3EA5", 0), new("#7B2FF7", 0.5), new("#00C8FF", 1) };
+            t.CornerRadius = 20;
+        }),
+        T("sakura", "Sakura", "Cherry-blossom liquid glass: blush pink by day, deep plum at night.", ThemeMode.Auto, t =>
+        {
+            t.AccentFromWallpaper = false; t.AccentDark = "#FF9EC4"; t.AccentLight = "#C23A78";
+            t.Dark = new GlassParams { Tint = "#1D1219", TintOpacity = 0.6, Blur = 40, BackdropSaturation = 1.15, BorderIntensity = 0.45, HighlightIntensity = 0.4, Glow = 0.3, ShadowIntensity = 0.42, Refraction = 0.04, Liquid = 0.6 };
+            t.Light = new GlassParams { Tint = "#FFF4F8", TintOpacity = 0.7, Blur = 40, BackdropSaturation = 1.1, BorderIntensity = 0.8, HighlightIntensity = 0.75, Glow = 0.12, ShadowIntensity = 0.22, Refraction = 0.04, Liquid = 0.6 };
+            t.Gradient.FromWallpaper = false; t.Gradient.Angle = 160; t.Gradient.Opacity = 0.45;
+            t.Gradient.Stops = new() { new("#FFB7D5", 0), new("#C86B98", 0.5), new("#3A1F35", 1) };
+            t.CornerRadius = 24; t.Animation = 0.9;
         }),
         T("amoled-black", "AMOLED Black", "True black, zero translucency. The lowest-cost, highest-contrast option.", ThemeMode.Dark, t =>
         {
@@ -587,6 +618,14 @@ public static class Presets
             t.Gradient.FromWallpaper = false; t.Gradient.Opacity = 0.3;
             t.Gradient.Stops = new() { new("#19C2A0", 0), new("#1B3A4B", 0.55), new("#0B0D11", 1) };
             t.CornerRadius = 12; t.Animation = 0.5;
+        }),
+        T("ember", "Ember", "Charcoal glass with a molten-orange glow. Built for late-night games.", ThemeMode.Dark, t =>
+        {
+            t.AccentFromWallpaper = false; t.AccentDark = "#FF7A3D"; t.AccentLight = "#C2410C";
+            t.Dark = new GlassParams { Tint = "#140C09", TintOpacity = 0.74, Blur = 30, BackdropSaturation = 1.1, BorderIntensity = 0.4, HighlightIntensity = 0.25, Glow = 0.4, ShadowIntensity = 0.45, Refraction = 0.02 };
+            t.Gradient.FromWallpaper = false; t.Gradient.Angle = 135; t.Gradient.Opacity = 0.4;
+            t.Gradient.Stops = new() { new("#FF5A1F", 0), new("#7A1E12", 0.5), new("#140C09", 1) };
+            t.CornerRadius = 14; t.Animation = 0.8;
         }),
         T("study", "Study", "Warm, low-stimulation paper tones that stay out of the way.", ThemeMode.Auto, t =>
         {

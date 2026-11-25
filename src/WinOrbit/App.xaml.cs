@@ -58,6 +58,8 @@ public partial class App : Application
         _mutex = new Mutex(true, MutexName, out var first);
         var requestedPage = e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase) ? "quit"
             : ArgAfter(e.Args, "--demo") is { } demo ? "demo:" + demo   // "--demo call" plays an island preview (for testing)
+            : ArgAfter(e.Args, "--profile") is { } profile ? "profile:" + profile   // "--profile night" switches profile (Stream Deck, Task Scheduler)
+            : e.Args.Contains("--screenshot", StringComparer.OrdinalIgnoreCase) ? "screenshot:" + (ArgAfter(e.Args, "--screenshot") ?? "")   // optional folder
             : PageArg(e.Args);
         if (first && requestedPage == "quit") { Shutdown(); return; }
         if (!first)
@@ -78,6 +80,8 @@ public partial class App : Application
                 string? page = null;
                 try { if (File.Exists(ActivationFile)) { page = File.ReadAllText(ActivationFile).Trim(); File.Delete(ActivationFile); } } catch { }
                 if (page == "quit") { Dispatcher.BeginInvoke(Quit); continue; }
+                if (page?.StartsWith("profile:") == true) { var name = page[8..]; Dispatcher.BeginInvoke(() => { if (ProfileService.Find(Hub.Profiles.All, name) is { } p) Hub.Profiles.Apply(p); else Log.Warn($"No profile called '{name}'"); }); continue; }
+                if (page?.StartsWith("screenshot:") == true) { var dir = page[11..]; Dispatcher.BeginInvoke(() => TakeSnapshot(dir)); continue; }
                 if (page?.StartsWith("demo:") == true) { var what = page[5..]; Dispatcher.BeginInvoke(() => Hub.Island.Demo(what)); continue; }
                 Dispatcher.BeginInvoke(() => ShowMain(string.IsNullOrEmpty(page) ? null : page));
             }
@@ -238,6 +242,15 @@ public partial class App : Application
     private Launcher.LauncherWindow? _launcher;
 
     /// <summary>Open the launcher, or close it if it's already open.</summary>
+    /// <summary>Screenshot with WinOrbit in it, a moment after the tray menu has gone.</summary>
+    private void TakeSnapshot() => TakeSnapshot(null);
+    private void TakeSnapshot(string? folder)
+    {
+        var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+        t.Tick += (_, _) => { t.Stop(); Snapshot.Take(string.IsNullOrWhiteSpace(folder) ? null : folder); };
+        t.Start();
+    }
+
     public void ToggleLauncher()
     {
         _launcher ??= new Launcher.LauncherWindow();
@@ -283,9 +296,10 @@ public partial class App : Application
         foreach (var p in Hub.Profiles.All) profiles.Items.Add(Item(p.Name, () => Hub.Profiles.Apply(p), p.Id == Hub.Settings.ActiveProfileId));
         m.Items.Add(profiles);
         var themes = new MenuItem { Header = "Theme" };
-        foreach (var t in Hub.Theme.All) themes.Items.Add(Item(t.Name, () => Hub.Theme.Use(t.Id), t.Id == Hub.Settings.ActiveThemeId));
+        foreach (var t in Hub.Theme.Offered) themes.Items.Add(Item(t.Name, () => Hub.Theme.Use(t.Id), t.Id == Hub.Settings.ActiveThemeId));
         m.Items.Add(themes);
         m.Items.Add(new Separator());
+        m.Items.Add(Item("Screenshot with WinOrbit", TakeSnapshot));
         m.Items.Add(Item("Report a bug or idea…", () => ShowMain("about")));
         m.Items.Add(Item("Quit WinOrbit", Quit));
         m.Placement = PlacementMode.MousePoint;

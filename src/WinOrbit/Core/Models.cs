@@ -378,6 +378,8 @@ public sealed class AppSettings
     public string ActiveProfileId { get; set; } = "";
     /// <summary>The desktop set applied last (empty once the desktop is changed some other way).</summary>
     public string ActiveSetId { get; set; } = "";
+    /// <summary>The screen brightness before a profile (Night) changed it, put back by the next profile that doesn't set one.</summary>
+    public int? BrightnessBeforeProfile { get; set; }
     public bool WallpaperAutoExtract { get; set; } = true;
     /// <summary>When Wallpaper Engine or Lively draws the desktop, snapshot that layer (in memory only) so glass matches it.</summary>
     public bool LiveWallpaperCapture { get; set; } = true;
