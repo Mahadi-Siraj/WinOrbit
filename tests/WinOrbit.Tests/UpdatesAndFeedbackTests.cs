@@ -124,6 +124,20 @@ public class SurfaceTests
         var light = Assert.IsType<LinearGradientBrush>(ThemeEngine.GradientTint(def, stops, Color.FromRgb(0xF6, 0xF8, 0xFC), Color.FromRgb(0x24, 0x63, 0xEB), false));
         Assert.All(light.GradientStops, s => Assert.True(WinOrbit.Wallpaper.ColorMath.Luminance(s.Color) > 0.4));
 
+        // Bright wallpaper colours keep their hue and colour (deep orange, not brown); greys stay close to the tint.
+        var orange = ThemeEngine.GradientShade(darkTint, Color.FromRgb(0xFF, 0x96, 0x28), true);
+        var (oh, os, ol) = WinOrbit.Wallpaper.ColorMath.ToHsl(orange);
+        Assert.InRange(oh, 20, 40);
+        Assert.True(os >= 0.35 && ol < 0.25);
+        var grey = ThemeEngine.GradientShade(darkTint, Color.FromRgb(0x80, 0x80, 0x80), true);
+        Assert.True(WinOrbit.Wallpaper.ColorMath.Luminance(grey) < 0.08);
+        foreach (var hue in new[] { 0, 60, 120, 180, 240, 300 })
+        {
+            var vivid = WinOrbit.Wallpaper.ColorMath.FromHsl(hue, 1, 0.5);
+            Assert.True(WinOrbit.Wallpaper.ColorMath.Luminance(ThemeEngine.GradientShade(darkTint, vivid, true)) < 0.12);   // white text reads
+            Assert.True(WinOrbit.Wallpaper.ColorMath.Luminance(ThemeEngine.GradientShade(Color.FromRgb(0xF6, 0xF8, 0xFC), vivid, false)) > 0.5);   // dark text reads
+        }
+
         // With no wallpaper colours it still fades from the accent into the plain tint.
         var plain = Assert.IsType<LinearGradientBrush>(ThemeEngine.GradientTint(def, new List<GradientStopDef>(), darkTint, accent, true));
         Assert.Equal(2, plain.GradientStops.Count);

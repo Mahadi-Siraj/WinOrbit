@@ -283,9 +283,8 @@ public sealed class ThemeEngine
     /// </summary>
     internal static Brush GradientTint(GradientDef def, IList<GradientStopDef> stops, Color tint, Color accent, bool dark)
     {
-        var mix = GradientMix(dark);
         var baseColor = Color.FromRgb(tint.R, tint.G, tint.B);
-        string Mixed(Color c) => ColorMath.Hex(ColorMath.Lerp(baseColor, Color.FromRgb(c.R, c.G, c.B), mix));
+        string Mixed(Color c) => ColorMath.Hex(GradientShade(baseColor, c, dark));
         var blended = new List<GradientStopDef> { new(Mixed(accent), 0) };
         var ordered = stops.OrderBy(s => s.Offset).ToList();
         // The wallpaper's colours fill the far half; with none, the gradient fades from the accent into the plain tint.
@@ -298,8 +297,22 @@ public sealed class ThemeEngine
         return BuildGradient(linear, blended, 1);
     }
 
-    /// <summary>How much wallpaper colour the Gradient surface takes.</summary>
+    /// <summary>How much of a grey wallpaper colour the Gradient surface takes.</summary>
     internal static double GradientMix(bool dark) => dark ? 0.34 : 0.26;
+
+    /// <summary>
+    /// One colour of the Gradient surface. A coloured stop keeps its hue and much of its saturation at a fixed deep
+    /// (dark looks) or pale (light looks) lightness, so a sunset wallpaper gives deep purple and magenta, not the brown
+    /// that mixing bright colours into a dark tint gives. Greys (and near-greys) are mixed into the tint instead.
+    /// </summary>
+    internal static Color GradientShade(Color tint, Color c, bool dark)
+    {
+        c = Color.FromRgb(c.R, c.G, c.B);
+        var (h, s, _) = ColorMath.ToHsl(c);
+        if (s < 0.12) return ColorMath.Lerp(Color.FromRgb(tint.R, tint.G, tint.B), c, GradientMix(dark));
+        return dark ? ColorMath.FromHsl(h, Math.Clamp(s * 0.8, 0.35, 0.68), 0.2)
+                    : ColorMath.FromHsl(h, Math.Clamp(s * 0.7, 0.3, 0.6), 0.87);
+    }
 
     public static Brush BuildGradient(GradientDef def, IList<GradientStopDef> stops, double opacity)
     {
