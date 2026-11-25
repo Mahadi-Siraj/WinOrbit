@@ -34,25 +34,25 @@
 
 <table>
   <tr>
-    <td colspan="2"><img src="docs/assets/shot-liquid.jpg" alt="The island opened in the Liquid Clear theme: on the left the now-playing panel over a black-hole wallpaper, on the right the Control Centre over a full moon, both bending the wallpaper at their thick, rounded rims"></td>
+    <td colspan="2"><img src="docs/assets/shot-liquid.jpg" alt="The island opened in the Liquid Clear theme: the Control Centre over a colourful fantasy wallpaper and the now-playing panel over an anime portrait, both clear enough to see the art through. Below, a close-up of the same corner with the liquid lens off (a flat pane) and on (the rim bends the art behind it, with a prism fringe)"></td>
   </tr>
   <tr>
-    <td colspan="2"><b>True liquid glass</b><br><sub>Liquid Clear and Liquid Frosted bend the wallpaper at a thick, rounded rim with a hint of prism, like a real lens. Runs on the graphics card.</sub></td>
+    <td colspan="2"><b>True liquid glass</b><br><sub>Liquid Clear is nearly clear glass with a thick, rounded rim that bends the wallpaper like a real lens, with a hint of prism. Bottom: the same corner with the lens off and on. Runs on the graphics card.</sub></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/assets/shot-desktop.jpg" alt="A whole desktop in the Orbit set: WEDNESDAY in wide Orbit letters, a music line and what's playing under it, CPU, RAM and GPU as slashes in the corner, and the island showing a song, over a sunset drive wallpaper"></td>
+    <td colspan="2"><img src="docs/assets/shot-desktop.jpg" alt="A whole desktop in the Orbit set: WEDNESDAY in wide Orbit letters, a music line and what's playing under it, CPU, RAM and GPU as slashes in the corner, and the island showing a song, over an anime wallpaper"></td>
   </tr>
   <tr>
     <td colspan="2"><b>Widgets that live on your wallpaper</b><br><sub>The Orbit set: clock, music line, now playing and system pieces drawn straight on the wallpaper, their ink following what's under them.</sub></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/assets/shot-sets.jpg" alt="Six desktops: the Orbit, Poster, Terminal, Heavy night and Hairline desktop sets and the Lo-fi profile, each over a different wallpaper"></td>
+    <td colspan="2"><img src="docs/assets/shot-sets.jpg" alt="Six desktops: the Orbit, Poster, Terminal, Heavy night and Hairline desktop sets and the Lo-fi profile, each over a different anime wallpaper"></td>
   </tr>
   <tr>
     <td colspan="2"><b>Desktop sets and profiles</b><br><sub>A whole look in one click: a clock skin with its matching pieces, a theme and the island's glance. Share yours as a <code>.winorbitset</code> file.</sub></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/assets/shot-clocks.jpg" alt="Sixteen clock styles over a wallpaper: Orbit, Poster, Hairline, Heavy, Week, Story, Label, Dot matrix, Mono, Stacked, Spaced, Big date, Outline, Script, Ambient date and Minimal"></td>
+    <td colspan="2"><img src="docs/assets/shot-clocks.jpg" alt="Sixteen clock styles over anime wallpapers: Orbit, Poster, Hairline, Heavy, Week, Story, Label, Dot matrix, Mono, Stacked, Spaced, Big date, Outline, Script, Ambient date and Minimal"></td>
   </tr>
   <tr>
     <td colspan="2"><b>Seventeen clock styles</b><br><sub>Sixteen of them here, from Orbit letters to an LED dot matrix, picked from a live gallery.</sub></td>
@@ -116,7 +116,7 @@
   <br><sub>13 themes, 8 rim colours, 5 shapes, 5 surfaces and 3 sizes. Six of the themes, each with one of the island's live cards.</sub>
 </p>
 
-<sub>Screenshots: the island at 1.25× to 1.4× size, using WinOrbit's built-in previews. The songs are demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are frames of Wallpaper Engine wallpapers (Sunset Drive by Visualdon, Eternal sunset, Ultrawide Singularity, Luxury Rain Apartment and others); credit to their creators.</sub>
+<sub>Screenshots: the island at 1.25× to 1.4× size, using WinOrbit's built-in previews. The songs are demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are frames of Wallpaper Engine wallpapers from the Steam Workshop (Spirit Blossom Kindred, Minimal Sukuna 4K, Pain Yahiko, Samurai vs ShadowDragon, Ichigo Bleach, Itadori Yuji, Goku Ultra Instinct); credit to their artists and creators.</sub>
 
 ---
 
