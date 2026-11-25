@@ -19,8 +19,10 @@ namespace WinOrbit.Services;
 ///
 /// How: Windows' screen-capture API (Windows.Graphics.Capture) hands over a frame only when something on that screen
 /// changed. The frame stays on the graphics card, which shrinks it to an eighth of its size (mipmaps); only that small
-/// picture — 240 × 135 for a 1080p screen — comes back to the CPU, where it gets the theme's blur and saturation and
-/// replaces the backdrop in place. At most 10 updates a second; nothing at all while the screen is still. Nearly clear
+/// picture — 240 × 135 for a 1080p screen — comes back to the CPU, where it gets the theme's blur and saturation. Each
+/// glass window keeps its own copy of it, and a new picture is written only into the part that window's glass reads,
+/// and only if that part changed: every write makes WPF redraw the whole window, which costs far more than the
+/// capture. At most 10 updates a second; nothing at all while the screen is still. Nearly clear
 /// looks (little blur, such as Liquid Clear) take a quarter-size picture instead (480 × 270) up to 20 times a second,
 /// so what moves behind the glass stays sharp and smooth. Nothing is saved or sent anywhere.
 ///
@@ -47,7 +49,9 @@ public sealed class LiveGlass
 
     private readonly Dispatcher _ui;
     private readonly Dictionary<string, Feed> _feeds = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, WriteableBitmap> _pictures = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Frame> _latest = new(StringComparer.OrdinalIgnoreCase);   // each screen's newest picture
+    private readonly Dictionary<(IntPtr Window, string Device), Picture> _pictures = new();         // each window's copy of it
+    private readonly List<Sample> _samples = new();                                                  // what each glass reads from its copy
     private readonly Dictionary<IntPtr, Window> _kept = new();      // windows kept out of captures
     private readonly HashSet<IntPtr> _refused = new();              // windows Windows wouldn't keep out: they use the wallpaper
     private Gpu? _gpu;
@@ -157,7 +161,7 @@ public sealed class LiveGlass
             Native.SetWindowDisplayAffinity(hwnd, Native.WDA_NONE);
             w.IsVisibleChanged -= OnWindowChanged; w.LocationChanged -= OnWindowMoved;
         }
-        _kept.Clear(); _refused.Clear(); _pictures.Clear();
+        _kept.Clear(); _refused.Clear(); _latest.Clear(); _pictures.Clear(); _samples.Clear();
         _gpu?.Dispose(); _gpu = null;
         Log.Info(problem is null ? "Live glass off" : "Live glass stopped: " + problem);
         Hub.Wallpaper.NotifyBackdrops();
@@ -195,7 +199,40 @@ public sealed class LiveGlass
             w.Closed += OnWindowClosed;
             QueueReconcile();
         }
-        return _pictures.TryGetValue(mon.Device, out var pic) ? pic : null;
+        if (!_latest.TryGetValue(mon.Device, out var frame)) return null;
+        if (!_pictures.TryGetValue((hwnd, mon.Device), out var pic))
+        {
+            // The window's own copy starts as the newest picture.
+            pic = new Picture(new WriteableBitmap(frame.Width, frame.Height, 96, 96, PixelFormats.Bgr32, null), frame.Width, frame.Height);
+            pic.Bitmap.WritePixels(pic.All, frame.Pixels, frame.Width * 4, 0);
+            pic.Current = pic.All;
+            _pictures[(hwnd, mon.Device)] = pic;
+        }
+        return pic.Bitmap;
+    }
+
+    /// <summary>
+    /// A glass inside <paramref name="visual"/> now shows <paramref name="view"/> (fractions of the picture) of
+    /// <paramref name="image"/>. Called by <see cref="Design.GlassSurface.Slice"/> before the glass draws with it. A window's
+    /// copy of the picture is only kept up to date where its glass reads it, so if this glass now reads further, the copy
+    /// catches up first: what it draws is always the newest picture.
+    /// </summary>
+    public void Sampled(Visual visual, ImageSource image, Rect view)
+    {
+        foreach (var (key, pic) in _pictures)
+        {
+            if (!ReferenceEquals(pic.Bitmap, image)) continue;
+            var area = Area(view, pic.Width, pic.Height);
+            var sample = _samples.Find(s => s.Visual.TryGetTarget(out var v) && ReferenceEquals(v, visual));
+            if (sample is null) _samples.Add(sample = new Sample(new WeakReference<Visual>(visual)));
+            sample.Window = key.Window; sample.Device = key.Device; sample.Area = area;
+            if (!Contains(pic.Current, area) && _latest.TryGetValue(key.Device, out var frame) && frame.Width == pic.Width && frame.Height == pic.Height)
+            {
+                pic.Bitmap.WritePixels(pic.All, frame.Pixels, frame.Width * 4, 0);
+                pic.Current = pic.All;
+            }
+            return;
+        }
     }
 
     private void OnWindowChanged(object? sender, DependencyPropertyChangedEventArgs e) => QueueReconcile();
@@ -204,7 +241,12 @@ public sealed class LiveGlass
     private void OnWindowClosed(object? sender, EventArgs e)
     {
         // The handle is gone by now, so find the window's entry by the window itself.
-        foreach (var hwnd in _kept.Where(k => ReferenceEquals(k.Value, sender)).Select(k => k.Key).ToList()) _kept.Remove(hwnd);
+        foreach (var hwnd in _kept.Where(k => ReferenceEquals(k.Value, sender)).Select(k => k.Key).ToList())
+        {
+            _kept.Remove(hwnd);
+            foreach (var key in _pictures.Keys.Where(k => k.Window == hwnd).ToList()) _pictures.Remove(key);
+            _samples.RemoveAll(s => s.Window == hwnd);
+        }
         QueueReconcile();
     }
 
@@ -275,8 +317,110 @@ public sealed class LiveGlass
         return worst;
     }
 
+    /// <summary>
+    /// Whether some 8 × 8 patch changed by at least <paramref name="threshold"/> on average: the same answer as
+    /// <c>Change(a, b, w, h) >= threshold</c>, but it stops looking at the first such patch.
+    /// </summary>
+    internal static bool Changed(byte[] a, byte[] b, int w, int h, double threshold, int block = 8)
+    {
+        if (threshold <= 0) return true;
+        if (a.Length != b.Length || a.Length < w * h * 4) return 255 >= threshold;
+        for (var by = 0; by < h; by += block)
+            for (var bx = 0; bx < w; bx += block)
+            {
+                long sum = 0; var n = 0;
+                for (var y = by; y < Math.Min(by + block, h); y++)
+                    for (int x = bx, i = (y * w + bx) * 4; x < Math.Min(bx + block, w); x++, i += 4)
+                    {
+                        sum += Math.Abs(a[i] - b[i]) + Math.Abs(a[i + 1] - b[i + 1]) + Math.Abs(a[i + 2] - b[i + 2]);
+                        n += 3;
+                    }
+                if (n > 0 && (double)sum / n >= threshold) return true;
+            }
+        return false;
+    }
+
     /// <summary>The size of mipmap <paramref name="level"/> for a screen of this size.</summary>
     internal static (int Width, int Height) Shrunk(int width, int height, int level = Level) => (Math.Max(1, width >> level), Math.Max(1, height >> level));
+
+    // ----- each window's copy of the picture -----
+    // WPF redraws every window whose picture changes, and redrawing a see-through window is what costs. So each window
+    // gets its own copy, updated only where its glass reads it and only when something there changed: a window whose
+    // part of the screen stayed the same isn't redrawn, and what every glass draws is still the newest picture.
+
+    /// <summary>Pixels round what a glass shows that smooth scaling also reads (bilinear needs 1; the rest is to spare).</summary>
+    internal const int Margin = 3;
+
+    /// <summary>
+    /// The pixels of a <paramref name="width"/> × <paramref name="height"/> picture that a brush showing
+    /// <paramref name="view"/> (fractions of the picture) can read, with <paramref name="margin"/> more on every side,
+    /// within the picture. An unusable view counts as the whole picture.
+    /// </summary>
+    internal static Int32Rect Area(Rect view, int width, int height, int margin = Margin)
+    {
+        if (width < 1 || height < 1) return default;
+        if (view.IsEmpty || !double.IsFinite(view.X) || !double.IsFinite(view.Y) || !double.IsFinite(view.Width) || !double.IsFinite(view.Height))
+            return new Int32Rect(0, 0, width, height);
+        var left = (int)Math.Clamp(Math.Floor(view.X * width) - margin, 0, width);
+        var top = (int)Math.Clamp(Math.Floor(view.Y * height) - margin, 0, height);
+        var right = (int)Math.Clamp(Math.Ceiling(view.Right * width) + margin, 0, width);
+        var bottom = (int)Math.Clamp(Math.Ceiling(view.Bottom * height) + margin, 0, height);
+        return right > left && bottom > top ? new Int32Rect(left, top, right - left, bottom - top) : default;
+    }
+
+    private static bool None(Int32Rect r) => r.Width <= 0 || r.Height <= 0;
+
+    /// <summary>Whether <paramref name="inner"/> lies inside <paramref name="outer"/> (nothing lies inside anything).</summary>
+    internal static bool Contains(Int32Rect outer, Int32Rect inner) =>
+        None(inner) || (!None(outer) && inner.X >= outer.X && inner.Y >= outer.Y && inner.X + inner.Width <= outer.X + outer.Width && inner.Y + inner.Height <= outer.Y + outer.Height);
+
+    /// <summary>The smallest rectangle round both.</summary>
+    internal static Int32Rect Union(Int32Rect a, Int32Rect b)
+    {
+        if (None(a)) return None(b) ? default : b;
+        if (None(b)) return a;
+        int left = Math.Min(a.X, b.X), top = Math.Min(a.Y, b.Y);
+        return new Int32Rect(left, top, Math.Max(a.X + a.Width, b.X + b.Width) - left, Math.Max(a.Y + a.Height, b.Y + b.Height) - top);
+    }
+
+    /// <summary>Whether two pictures <paramref name="width"/> pixels wide have the same bytes inside <paramref name="r"/>.</summary>
+    internal static bool Same(byte[] a, byte[] b, int width, Int32Rect r)
+    {
+        if (None(r)) return true;
+        int stride = width * 4, run = r.Width * 4;
+        for (var y = r.Y; y < r.Y + r.Height; y++)
+        {
+            var at = y * stride + r.X * 4;
+            if (!a.AsSpan(at, run).SequenceEqual(b.AsSpan(at, run))) return false;
+        }
+        return true;
+    }
+
+    /// <summary>A screen's newest picture.</summary>
+    private sealed class Frame(byte[] pixels, int width, int height)
+    {
+        public readonly byte[] Pixels = pixels;
+        public readonly int Width = width, Height = height;
+    }
+
+    /// <summary>One window's copy of a screen's picture.</summary>
+    private sealed class Picture(WriteableBitmap bitmap, int width, int height)
+    {
+        public readonly WriteableBitmap Bitmap = bitmap;
+        public readonly int Width = width, Height = height;
+        public Int32Rect All => new(0, 0, Width, Height);
+        /// <summary>Where this copy is known to hold the newest picture.</summary>
+        public Int32Rect Current;
+    }
+
+    /// <summary>The part of a window's copy one glass reads (its brush's viewbox, with <see cref="Margin"/>).</summary>
+    private sealed class Sample(WeakReference<Visual> visual)
+    {
+        public readonly WeakReference<Visual> Visual = visual;
+        public IntPtr Window;
+        public string Device = "";
+        public Int32Rect Area;
+    }
 
     // A new picture for one screen, on the UI thread.
     private void Show(string device, byte[] px, int w, int h, Action done)
@@ -284,15 +428,29 @@ public sealed class LiveGlass
         try
         {
             if (!_on || !_feeds.ContainsKey(device)) return;
-            var fresh = false;
-            if (!_pictures.TryGetValue(device, out var pic) || pic.PixelWidth != w || pic.PixelHeight != h)
+            if (!_latest.TryGetValue(device, out var frame) || frame.Width != w || frame.Height != h)
             {
-                pic = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgr32, null);
-                _pictures[device] = pic;
-                fresh = true;
+                // The first picture of this screen, or a new size: every window starts a fresh copy of it.
+                _latest[device] = new Frame(px.AsSpan(0, w * h * 4).ToArray(), w, h);
+                foreach (var key in _pictures.Keys.Where(k => string.Equals(k.Device, device, StringComparison.OrdinalIgnoreCase)).ToList()) _pictures.Remove(key);
+                _samples.RemoveAll(s => string.Equals(s.Device, device, StringComparison.OrdinalIgnoreCase));
+                Hub.Wallpaper.NotifyBackdrops();   // glass switches from the wallpaper to this picture
+                return;
             }
-            pic.WritePixels(new Int32Rect(0, 0, w, h), px, w * 4, 0);
-            if (fresh) Hub.Wallpaper.NotifyBackdrops();   // glass switches from the wallpaper to this picture
+            _samples.RemoveAll(s => !s.Visual.TryGetTarget(out _));
+            foreach (var (key, pic) in _pictures)
+            {
+                if (!string.Equals(key.Device, device, StringComparison.OrdinalIgnoreCase)) continue;
+                // Everything this window's glass reads. Sampled keeps it inside Current, where the copy matches the last
+                // picture, so comparing with the last picture there tells whether the window would draw anything new.
+                var read = default(Int32Rect);
+                foreach (var s in _samples)
+                    if (s.Window == key.Window && string.Equals(s.Device, device, StringComparison.OrdinalIgnoreCase)) read = Union(read, s.Area);
+                if (!Same(px, frame.Pixels, w, read))
+                    pic.Bitmap.WritePixels(read, px, w * 4, read.X, read.Y);
+                pic.Current = read;
+            }
+            Buffer.BlockCopy(px, 0, frame.Pixels, 0, w * h * 4);
         }
         finally { done(); }
     }
@@ -377,7 +535,13 @@ public sealed class LiveGlass
         private byte[] _shown = Array.Empty<byte>();
         private long _lastTaken;
         private readonly byte[][] _buffers = new byte[2][];
+        private readonly byte[][] _scratch = new byte[2][];   // the blur's working space, one per buffer, kept between pictures
         private readonly bool[] _busy = new bool[2];
+        // The last picture read back, before blurring, and the look it was blurred with (see Repeats).
+        private byte[] _raw = Array.Empty<byte>();
+        private bool _rawValid;
+        private double _rawSaturation;
+        private int _rawRadius, _deciding;
 
         public Feed(LiveGlass owner, Gpu gpu, MonitorInfo mon)
         {
@@ -449,8 +613,29 @@ public sealed class LiveGlass
             Marshal.ThrowExceptionForHR(_gpu.CreateTexture2D(_gpu.Device, ref staging, IntPtr.Zero, out _staging));
             _buffers[0] = new byte[_sw * _sh * 4];
             _buffers[1] = new byte[_sw * _sh * 4];
+            _scratch[0] = new byte[_sw * _sh * 4];
+            _scratch[1] = new byte[_sw * _sh * 4];
             _shown = new byte[_sw * _sh * 4];
+            _raw = new byte[_sw * _sh * 4];
+            _rawValid = false;
             _first = true;
+        }
+
+        // Called under the GPU gate right after a picture is read back. A picture with the same bytes as the one read
+        // before, blurred the same way, comes out of blurring exactly as that one did: the glass already shows it, or it
+        // differed too little from what is shown to be shown. So it is treated as a still screen without blurring it
+        // again. Only while no other picture is half-way through, so the order of decisions is the same as before.
+        private bool Repeats(byte[] px, double saturation, int radius)
+        {
+            if (px.Length != _raw.Length) { _rawValid = false; return false; }
+            if (_rawValid && _deciding == 0 && saturation == _rawSaturation && radius == _rawRadius && px.AsSpan().SequenceEqual(_raw))
+            {
+                _calm = true;
+                return true;
+            }
+            Buffer.BlockCopy(px, 0, _raw, 0, px.Length);
+            _rawValid = true; _rawSaturation = saturation; _rawRadius = radius;
+            return false;
         }
 
         private void Release()
@@ -486,6 +671,7 @@ public sealed class LiveGlass
         private async Task Take()
         {
             var slot = -1;
+            var deciding = false;
             try
             {
                 int w, h, level;
@@ -527,6 +713,9 @@ public sealed class LiveGlass
 
                 // Read back once the card has finished, instead of spinning in Map while it works.
                 var px = _buffers[slot];
+                var scratch = _scratch[slot];
+                double saturation = 0;
+                int radius = 0;
                 for (var tries = 0; ; tries++)
                 {
                     int hr;
@@ -542,19 +731,24 @@ public sealed class LiveGlass
                                     Marshal.Copy(mapped.pData + y * (int)mapped.RowPitch, px, y * w * 4, w * 4);
                             }
                             finally { _gpu.Unmap(_gpu.Context, _staging, 0); _reading = false; }
+                            saturation = Hub.Wallpaper.Saturation;
+                            radius = BlurRadius(Hub.Wallpaper.Blur, level);
+                            if (Repeats(px, saturation, radius)) return;   // finally hands the buffer back
+                            _deciding++; deciding = true;
                         }
                     }
                     if (hr == 0) break;
                     if (hr != Native.DXGI_ERROR_WAS_STILL_DRAWING || tries > 100) Marshal.ThrowExceptionForHR(hr);
                     await Task.Delay(2).ConfigureAwait(false);
                 }
-                WallpaperEngine.Adjust(px, Hub.Wallpaper.Saturation);
-                WallpaperEngine.BoxBlur(px, w, h, BlurRadius(Hub.Wallpaper.Blur, level));
+                WallpaperEngine.Adjust(px, saturation);
+                WallpaperEngine.BoxBlur(px, w, h, radius, scratch);
                 // Skip pictures that barely differ from what the glass already shows (a gently animated wallpaper):
                 // no redraw, and the next look comes later. A real change anywhere — a window moving behind — shows.
                 lock (_gpu.Gate)
                 {
-                    var show = _first || Change(px, _shown, w, h) >= ChangeThreshold;
+                    _deciding--; deciding = false;
+                    var show = _first || Changed(px, _shown, w, h, ChangeThreshold);
                     _calm = !show;
                     if (!show) return;   // finally hands the buffer back
                     Buffer.BlockCopy(px, 0, _shown, 0, px.Length);
@@ -567,7 +761,11 @@ public sealed class LiveGlass
             catch (Exception ex) { _owner.Fail(ex); }
             finally
             {
-                if (slot >= 0) lock (_gpu.Gate) { _busy[slot] = false; _reading = false; }
+                if (slot >= 0 || deciding) lock (_gpu.Gate)
+                {
+                    if (slot >= 0) { _busy[slot] = false; _reading = false; }
+                    if (deciding) _deciding--;
+                }
             }
         }
 

@@ -1,4 +1,8 @@
+using System.Buffers;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -404,10 +408,38 @@ public sealed class WallpaperEngine
         return dst;
     }
 
-    internal static void Adjust(byte[] px, double saturation)
+    /// <summary>
+    /// Saturation. Where the processor has AVX, four pixels at a time: the same operations in the same order as one at a
+    /// time (no fused multiply-add, the same rounding), so the bytes are exactly the same.
+    /// </summary>
+    internal static void Adjust(byte[] px, double saturation) => Adjust(px, saturation, Avx.IsSupported);
+
+    internal static void Adjust(byte[] px, double saturation, bool vectors)
     {
         if (Math.Abs(saturation - 1) < 0.01) return;
-        for (var i = 0; i < px.Length; i += 4)
+        var i = 0;
+        if (vectors)
+        {
+            var span = px.AsSpan();
+            var s = Vector256.Create(saturation);
+            Vector256<double> kr = Vector256.Create(0.2126), kg = Vector256.Create(0.7152), kb = Vector256.Create(0.0722);
+            Vector256<double> zero = Vector256<double>.Zero, top = Vector256.Create(255.0);
+            Vector128<uint> low = Vector128.Create(0xFFu), alpha = Vector128.Create(0xFF000000u);
+            for (; i + 16 <= px.Length; i += 16)
+            {
+                var v = MemoryMarshal.Read<Vector128<uint>>(span[i..]);
+                var b = Avx.ConvertToVector256Double((v & low).AsInt32());
+                var g = Avx.ConvertToVector256Double(((v >> 8) & low).AsInt32());
+                var r = Avx.ConvertToVector256Double(((v >> 16) & low).AsInt32());
+                var grey = kr * r + kg * g + kb * b;
+                var ob = Avx.ConvertToVector128Int32WithTruncation(Vector256.Min(Vector256.Max(grey + (b - grey) * s, zero), top)).AsUInt32();
+                var og = Avx.ConvertToVector128Int32WithTruncation(Vector256.Min(Vector256.Max(grey + (g - grey) * s, zero), top)).AsUInt32();
+                var or = Avx.ConvertToVector128Int32WithTruncation(Vector256.Min(Vector256.Max(grey + (r - grey) * s, zero), top)).AsUInt32();
+                var result = (v & alpha) | ob | (og << 8) | (or << 16);
+                MemoryMarshal.Write(span[i..], in result);
+            }
+        }
+        for (; i + 2 < px.Length; i += 4)
         {
             double b = px[i], g = px[i + 1], r = px[i + 2];
             var grey = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -418,22 +450,75 @@ public sealed class WallpaperEngine
     }
 
     /// <summary>Three box-blur passes approximate a Gaussian; O(pixels) regardless of radius.</summary>
-    internal static void BoxBlur(byte[] px, int w, int h, int radius)
+    internal static void BoxBlur(byte[] px, int w, int h, int radius) => BoxBlur(px, w, h, radius, null);
+
+    /// <summary>
+    /// The same, working in <paramref name="scratch"/> (when it is at least as long as <paramref name="px"/>) instead of
+    /// a new buffer, for pictures blurred many times a second. Every byte of the scratch is written before it is read.
+    /// </summary>
+    internal static void BoxBlur(byte[] px, int w, int h, int radius, byte[]? scratch) =>
+        BoxBlur(px, w, h, radius, scratch, Vector128.IsHardwareAccelerated && Vector256.IsHardwareAccelerated);
+
+    /// <summary>
+    /// <paramref name="vectors"/> adds up a pixel's colours side by side along rows, and many columns at once down them,
+    /// and divides by an exact multiply-and-shift. The sums and quotients are the same as one at a time, so the bytes are.
+    /// </summary>
+    internal static void BoxBlur(byte[] px, int w, int h, int radius, byte[]? scratch, bool vectors)
     {
         if (radius < 1) return;
         radius = Math.Min(radius, Math.Min(w, h) / 2 - 1);
         if (radius < 1) return;
-        var tmp = new byte[px.Length];
-        for (var pass = 0; pass < 3; pass++)
+        var tmp = scratch is not null && scratch.Length >= px.Length ? scratch : new byte[px.Length];
+        var divide = DividerFor(radius * 2 + 1);
+        if (!vectors || divide.Multiplier == 0)
         {
-            BlurLine(px, tmp, w, h, radius, true);
-            BlurLine(tmp, px, w, h, radius, false);
+            for (var pass = 0; pass < 3; pass++)
+            {
+                BlurLine(px, tmp, w, h, radius, true, divide.Quotients);
+                BlurLine(tmp, px, w, h, radius, false, divide.Quotients);
+            }
+            return;
         }
+        var sums = ArrayPool<int>.Shared.Rent(w * 4);
+        try
+        {
+            for (var pass = 0; pass < 3; pass++)
+            {
+                BlurRows(px, tmp, w, h, radius, divide);
+                BlurColumns(tmp, px, w, h, radius, divide, sums);
+            }
+        }
+        finally { ArrayPool<int>.Shared.Return(sums); }
     }
 
-    private static void BlurLine(byte[] src, byte[] dst, int w, int h, int r, bool horizontal)
+    /// <summary>
+    /// Dividing one window's sum (at most 255 per pixel) by the window's size: every possible answer in a table, and a
+    /// multiplier m with (sum × m) >> <see cref="Shift"/> = sum ÷ size for every possible sum, checked, or 0 if none is.
+    /// </summary>
+    internal sealed class Divider(byte[] quotients, int multiplier)
     {
-        var win = r * 2 + 1;
+        public readonly byte[] Quotients = quotients;
+        public readonly int Multiplier = multiplier;
+    }
+
+    internal const int Shift = 22;
+    private static readonly Divider?[] Dividers = new Divider?[64];
+
+    internal static Divider DividerFor(int window)
+    {
+        if (window < Dividers.Length && Volatile.Read(ref Dividers[window]) is { } known) return known;
+        var table = new byte[255 * window + 1];
+        for (var s = 0; s < table.Length; s++) table[s] = (byte)(s / window);
+        var m = (int)(((1L << Shift) + window - 1) / window);
+        for (long s = 0; s < table.Length && m != 0; s++)
+            if (s * m > int.MaxValue || (s * m) >> Shift != table[s]) m = 0;
+        var made = new Divider(table, m);
+        if (window < Dividers.Length) Volatile.Write(ref Dividers[window], made);   // two threads at once only store equal ones
+        return made;
+    }
+
+    private static void BlurLine(byte[] src, byte[] dst, int w, int h, int r, bool horizontal, byte[] quotient)
+    {
         int outer = horizontal ? h : w, inner = horizontal ? w : h;
         int stepInner = horizontal ? 4 : w * 4, stepOuter = horizontal ? w * 4 : 4;
         for (var o = 0; o < outer; o++)
@@ -448,7 +533,7 @@ public sealed class WallpaperEngine
             for (var i = 0; i < inner; i++)
             {
                 var d = line + i * stepInner;
-                dst[d] = (byte)(sb / win); dst[d + 1] = (byte)(sg / win); dst[d + 2] = (byte)(sr / win); dst[d + 3] = 255;
+                dst[d] = quotient[sb]; dst[d + 1] = quotient[sg]; dst[d + 2] = quotient[sr]; dst[d + 3] = 255;
                 var add = line + Math.Min(i + r + 1, inner - 1) * stepInner;
                 var rem = line + Math.Max(i - r, 0) * stepInner;
                 sb += src[add] - src[rem]; sg += src[add + 1] - src[rem + 1]; sr += src[add + 2] - src[rem + 2];
@@ -456,6 +541,73 @@ public sealed class WallpaperEngine
         }
     }
 
+    // Along each row: a pixel's four colour sums side by side (the fourth, alpha, is summed and then replaced by 255).
+    private static void BlurRows(byte[] src, byte[] dst, int w, int h, int r, Divider divide)
+    {
+        var stride = w * 4;
+        var m = Vector128.Create(divide.Multiplier);
+        for (var y = 0; y < h; y++)
+        {
+            ReadOnlySpan<byte> s = src.AsSpan(y * stride, stride);
+            var d = dst.AsSpan(y * stride, stride);
+            var sum = Vector128<int>.Zero;
+            for (var i = -r; i <= r; i++) sum += Colours(s, Math.Clamp(i, 0, w - 1) * 4);
+            for (var i = 0; i < w; i++)
+            {
+                var q = (sum * m) >>> Shift;
+                var shorts = Vector128.Narrow(q, q);
+                var pixel = Vector128.Narrow(shorts, shorts).AsUInt32().ToScalar() | 0xFF000000u;
+                MemoryMarshal.Write(d[(i * 4)..], in pixel);
+                sum += Colours(s, Math.Min(i + r + 1, w - 1) * 4) - Colours(s, Math.Max(i - r, 0) * 4);
+            }
+        }
+    }
+
+    private static Vector128<int> Colours(ReadOnlySpan<byte> row, int at) =>
+        Vector128.WidenLower(Vector128.WidenLower(Vector128.CreateScalar(MemoryMarshal.Read<uint>(row[at..])).AsByte())).AsInt32();
+
+    // Down every column at once, a row at a time: the same sums as walking each column, in memory order, 8 pixels at a go.
+    private static void BlurColumns(byte[] src, byte[] dst, int w, int h, int r, Divider divide, int[] sums)
+    {
+        var stride = w * 4;
+        var sum = sums.AsSpan(0, stride);
+        sum.Clear();
+        for (var i = -r; i <= r; i++)
+        {
+            var row = src.AsSpan(Math.Clamp(i, 0, h - 1) * stride, stride);
+            for (var x = 0; x < row.Length; x++) sum[x] += row[x];
+        }
+        var m = Vector256.Create(divide.Multiplier);
+        var opaque = Vector256.Create(0xFF000000u).AsByte();
+        var quotient = divide.Quotients;
+        for (var y = 0; y < h; y++)
+        {
+            var d = dst.AsSpan(y * stride, stride);
+            ReadOnlySpan<byte> add = src.AsSpan(Math.Min(y + r + 1, h - 1) * stride, stride);
+            ReadOnlySpan<byte> rem = src.AsSpan(Math.Max(y - r, 0) * stride, stride);
+            var x = 0;
+            for (; x + 32 <= stride; x += 32)
+            {
+                var s0 = Vector256.Create<int>(sum.Slice(x, 8)); var s1 = Vector256.Create<int>(sum.Slice(x + 8, 8));
+                var s2 = Vector256.Create<int>(sum.Slice(x + 16, 8)); var s3 = Vector256.Create<int>(sum.Slice(x + 24, 8));
+                var bytes = Vector256.Narrow(Vector256.Narrow((s0 * m) >>> Shift, (s1 * m) >>> Shift), Vector256.Narrow((s2 * m) >>> Shift, (s3 * m) >>> Shift));
+                (bytes.AsUInt32().AsByte() | opaque).CopyTo(d.Slice(x, 32));
+                var (aLow, aHigh) = Vector256.Widen(Vector256.Create(add.Slice(x, 32)));
+                var (rLow, rHigh) = Vector256.Widen(Vector256.Create(rem.Slice(x, 32)));
+                var (a0, a1) = Vector256.Widen(aLow); var (a2, a3) = Vector256.Widen(aHigh);
+                var (r0, r1) = Vector256.Widen(rLow); var (r2, r3) = Vector256.Widen(rHigh);
+                (s0 + a0.AsInt32() - r0.AsInt32()).CopyTo(sum.Slice(x, 8));
+                (s1 + a1.AsInt32() - r1.AsInt32()).CopyTo(sum.Slice(x + 8, 8));
+                (s2 + a2.AsInt32() - r2.AsInt32()).CopyTo(sum.Slice(x + 16, 8));
+                (s3 + a3.AsInt32() - r3.AsInt32()).CopyTo(sum.Slice(x + 24, 8));
+            }
+            for (; x < stride; x += 4)
+            {
+                d[x] = quotient[sum[x]]; d[x + 1] = quotient[sum[x + 1]]; d[x + 2] = quotient[sum[x + 2]]; d[x + 3] = 255;
+                for (var c = 0; c < 4; c++) sum[x + c] += add[x + c] - rem[x + c];
+            }
+        }
+    }
     /// <summary>Set the desktop wallpaper through the documented shell API.</summary>
     public static bool SetWallpaper(string path)
     {
