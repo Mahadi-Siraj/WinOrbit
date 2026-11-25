@@ -83,43 +83,18 @@ public sealed class HomePage : PageBase
 
     private static string Greeting() => DateTime.Now.Hour switch { < 5 => "Good night", < 12 => "Good morning", < 18 => "Good afternoon", _ => "Good evening" };
 
-    /// <summary>First run: pick a starting style and the two opt-in extras, in one card. Shown until Done or Skip.</summary>
-    private UIElement WelcomeCard()
-    {
-        var body = new StackPanel();
-        body.Children.Add(Ui.Text("Welcome to WinOrbit 👋", "Text.Title", 22));
-        body.Children.Add(Ui.Text("Pick a starting style — you can change everything later. Press " + Hub.Settings.General.HotkeyLauncher + " anywhere to search apps and settings.", "Text.Muted").With(t => { t.Margin = new Thickness(0, 4, 0, 14); t.TextWrapping = TextWrapping.Wrap; }));
-        var styles = new UniformGrid { Columns = 4, Margin = new Thickness(-5, 0, -5, 6) };
-        foreach (var id in new[] { "minimal", "productivity", "gaming", "study" })
-        {
-            var p = Hub.Profiles.All.FirstOrDefault(x => x.Id == id);
-            if (p is null) continue;
-            var active = Hub.Settings.ActiveProfileId == p.Id;
-            var b = new Button { Margin = new Thickness(5), Padding = new Thickness(14, 14, 14, 12), HorizontalContentAlignment = HorizontalAlignment.Left, VerticalContentAlignment = VerticalAlignment.Top };
-            if (active) b.SetResourceReference(StyleProperty, "Button.Accent");
-            var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = p.Glyph, FontFamily = (FontFamily)FindResource("F.Icons"), FontSize = 20, Margin = new Thickness(0, 0, 0, 8) });
-            sp.Children.Add(new TextBlock { Text = p.Name, FontWeight = FontWeights.SemiBold, FontSize = 14 });
-            sp.Children.Add(new TextBlock { Text = p.Description, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Opacity = 0.75, Margin = new Thickness(0, 3, 0, 0), MaxHeight = 48 });
-            b.Content = sp;
-            b.Click += (_, _) => { Hub.Profiles.Apply(p); Rebuild(); OnEnter(); };
-            styles.Children.Add(b);
-        }
-        body.Children.Add(styles);
-        body.Children.Add(Kit.ToggleRow("Clipboard history", "Recent copies in the island. Memory only; private copies are skipped.", Hub.Settings.Island.ClipboardHistory,
-            v => { Hub.Settings.Island.ClipboardHistory = v; Hub.Store.Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy));
-        body.Children.Add(Kit.ToggleRow("Synced lyrics", "Uses the internet (LRCLIB) to fetch lyrics for the song that's playing. Turns on the network switch.", Hub.Settings.Privacy.LyricsEnabled && Hub.Settings.Privacy.NetworkAllowed,
-            v => { Hub.Settings.Privacy.LyricsEnabled = v; if (v) Hub.Settings.Privacy.NetworkAllowed = true; Hub.Store.Save(); }, true, Glyph.Music));
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 4) };
-        buttons.Children.Add(Kit.Btn("Skip", () => { Hub.Settings.General.WelcomeDone = true; Hub.Store.Save(); Rebuild(); OnEnter(); }));
-        buttons.Children.Add(Kit.Btn("Done", () => { Hub.Settings.General.WelcomeDone = true; Hub.Store.Save(); Rebuild(); OnEnter(); }, Glyph.Check, true).With(b => b.Margin = new Thickness(8, 0, 0, 0)));
-        body.Children.Add(buttons);
-        return Kit.Card(body, new Thickness(24, 20, 24, 16)).With(c => c.Margin = new Thickness(0, 0, 0, 16));
-    }
+    /// <summary>True while the first-start flow fills the page instead of the dashboard.</summary>
+    private bool _welcome;
 
     protected override void Build()
     {
-        if (!Hub.Settings.General.WelcomeDone) Children.Add(WelcomeCard());
+        // First start: the three-step look picker takes the whole page until Finish or Skip setup.
+        _welcome = !Hub.Settings.General.WelcomeDone;
+        if (_welcome)
+        {
+            Children.Add(new WelcomeFlow(() => Owner, () => { Rebuild(); OnEnter(); }));
+            return;
+        }
 
         // ---------- hero ----------
         var hero = Ui.Grid("2*,16,*", "auto");
@@ -291,6 +266,7 @@ public sealed class HomePage : PageBase
 
     protected override void OnEnter()
     {
+        if (_welcome) return;
         Live(Hub.Monitor.Subscribe(s =>
         {
             _stats["cpu"].Text = $"{s.Cpu:0}%";
@@ -364,36 +340,45 @@ public sealed class AppearancePage : PageBase
         var fontIndex = Math.Max(0, Array.FindIndex(Fonts, f => f == t.FontFamily));
         var installed = new HashSet<string>(System.Windows.Media.Fonts.SystemFontFamilies.Select(f => f.Source), StringComparer.OrdinalIgnoreCase);
         var available = Fonts.Where(f => installed.Contains(f) || f.StartsWith("Segoe UI")).ToList();
-        Children.Add(Kit.Section("Typography & shape", null,
+        Children.Add(Kit.Adv(Kit.Section("Typography & shape", null,
             Kit.Row("Typeface", "Fonts installed on this PC.", Kit.Combo(available, Math.Max(0, available.IndexOf(t.FontFamily)), i => Hub.Theme.Edit(x => x.FontFamily = available[i])), false),
             Kit.SliderRow("Text size", null, 0.85, 1.3, t.FontScale, v => Hub.Theme.Edit(x => x.FontScale = v), v => $"{v * 100:0}%"),
-            Kit.SliderRow("Corner radius", "Roundness of cards, widgets and panels.", 0, 36, t.CornerRadius, v => Hub.Theme.Edit(x => x.CornerRadius = Math.Round(v)), v => $"{v:0} px")));
+            Kit.SliderRow("Corner radius", "Roundness of cards, widgets and panels.", 0, 36, t.CornerRadius, v => Hub.Theme.Edit(x => x.CornerRadius = Math.Round(v)), v => $"{v:0} px"))));
 
         Children.Add(Kit.Section("Motion", null,
-            Kit.SliderRow("Animation intensity", "How lively transitions feel. 0 turns animations off.", 0, 1.5, t.Animation, v => Hub.Theme.Edit(x => x.Animation = v), v => v < 0.05 ? "Off" : $"{v * 100:0}%", false),
             Kit.ToggleRow("Reduce motion", "Removes movement everywhere in WinOrbit (the island, widgets and this window) without changing the look.", Hub.Settings.General.ReducedMotion, v =>
             {
                 Hub.Settings.General.ReducedMotion = v; Hub.Store.Save(); Hub.Theme.Apply();
-            })));
+            }, false),
+            Kit.Adv(Kit.SliderRow("Animation intensity", "How lively transitions feel. 0 turns animations off.", 0, 1.5, t.Animation, v => Hub.Theme.Edit(x => x.Animation = v), v => v < 0.05 ? "Off" : $"{v * 100:0}%"))));
 
         var materials = new[] { "acrylic", "mica", "glass" };
+        var lens = HasLiquidLook(t);
         Children.Add(Kit.Section("Glass", null,
-            Kit.ToggleRow("Curved glass edges", "The wallpaper bends round the rim of the island, widgets and launcher like thick glass, and the edge catches the light under the pointer. Uses the graphics card; turns itself off if WinOrbit falls back to software rendering.",
-                Hub.Settings.General.CurvedGlass, v => { Hub.Settings.General.CurvedGlass = v; Hub.Store.Save(); Hub.Theme.Apply(); }, false),
-            Kit.ToggleRow("Live glass", LiveGlass.Supported
+            Kit.ToggleRow("Liquid glass", !Hub.Settings.General.CurvedGlass
+                    ? "Off because Curved glass edges is off. Turning liquid glass on turns curved edges back on."
+                    : lens ?"A thick, rounded rim that bends your wallpaper round the edges of the island, widgets and launcher, and moves when the glass does. Off keeps a thin, calm frosted edge."
+                    : $"This look has a thin, calm edge. Turning liquid glass on switches to {Hub.Theme.Find(ThemeEngine.LiquidFallback)?.Name ?? "a liquid look"}, with a thick rim that bends your wallpaper.",
+                Hub.Theme.LiquidShowing, v => { Hub.Theme.SetLiquidGlass(v); Rebuild(); }, false, Glyph.Drop),
+            Kit.Adv(Kit.ToggleRow("Curved glass edges", "The wallpaper bends round the rim of the island, widgets and launcher like thick glass, and the edge catches the light under the pointer. Uses the graphics card; turns itself off if WinOrbit falls back to software rendering.",
+                Hub.Settings.General.CurvedGlass, v => { Hub.Settings.General.CurvedGlass = v; Hub.Store.Save(); Hub.Theme.Apply(); Rebuild(); })),
+            Kit.Adv(Kit.ToggleRow("Live glass", LiveGlass.Supported
                     ? "The island, widgets and launcher show the windows behind them, blurred, instead of only your wallpaper. WinOrbit watches the screen with Windows' screen-capture API, only while its glass is showing and only when something changes. The picture is shrunk to an eighth on the graphics card (a quarter for nearly clear looks such as Liquid Clear) and blurred, kept in memory, never saved or sent. "
                       + "While this is on, WinOrbit's island, widgets and launcher are left out of screenshots, recordings and screen sharing (otherwise the glass would capture itself). Off by default."
                       + (Hub.LiveGlass?.Problem is { } problem ? " Currently off: " + problem : "")
                     : "Needs Windows 11: earlier versions mark a captured screen with a yellow frame.",
                 Hub.Settings.General.LiveGlass, v => { Hub.Settings.General.LiveGlass = v; Hub.Store.Save(); Hub.LiveGlass?.Apply(); }, true)
-                .With(r => r.IsEnabled = LiveGlass.Supported)));
-        Children.Add(Kit.Section("Window material", "The material behind this settings window.",
+                .With(r => r.IsEnabled = LiveGlass.Supported))));
+        Children.Add(Kit.Adv(Kit.Section("Window material", "The material behind this settings window.",
             Kit.Row("Backdrop", "Acrylic blurs what is behind the window, Mica tints from the wallpaper, Glass uses WinOrbit's own frosted wallpaper.",
                 Kit.Segmented(new[] { "Acrylic", "Mica", "Glass" }, Math.Max(0, Array.IndexOf(materials, Hub.Settings.General.WindowMaterial)), i =>
                 {
                     Hub.Settings.General.WindowMaterial = materials[i]; Hub.Store.Save(); Owner?.RefreshBackdrop();
-                }), false)));
+                }), false))));
     }
+
+    /// <summary>Whether the look on now shows the liquid lens when liquid glass is on.</summary>
+    private static bool HasLiquidLook(Theme t) => ThemeEngine.HasLiquid(t);
 
     private static TextBox TimeBox(string value, Action<string> changed)
     {

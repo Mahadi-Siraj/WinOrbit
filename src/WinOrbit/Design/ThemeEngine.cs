@@ -47,6 +47,25 @@ public sealed class ThemeEngine
 
     public Theme? Find(string id) => All.FirstOrDefault(t => t.Id == id);
 
+    /// <summary>The look liquid glass switches to when it's turned on with a look that has no liquid lens.</summary>
+    public const string LiquidFallback = "liquid-frosted";
+
+    /// <summary>
+    /// Liquid glass on or off, for every look. Turning it on with a look that has no lens of its own switches to
+    /// Liquid Frosted, so the switch always shows; turning it off keeps the look and drops the lens.
+    /// </summary>
+    /// <summary>Liquid glass is on and this look has a lens to show (what the on/off switches display).</summary>
+    public bool LiquidShowing => _store.Settings.General.LiquidGlass && _store.Settings.General.CurvedGlass && HasLiquid(Current);
+
+    public void SetLiquidGlass(bool on)
+    {
+        _store.Settings.General.LiquidGlass = on;
+        if (on) _store.Settings.General.CurvedGlass = true;   // the lens is drawn by the curved-glass shader
+        _store.Save();
+        if (on && !HasLiquid(Current) && Find(LiquidFallback) is not null) Use(LiquidFallback);
+        else Apply();
+    }
+
     public void Use(string id)
     {
         var t = Find(id);
@@ -124,7 +143,7 @@ public sealed class ThemeEngine
         // Readability guard: if the wallpaper is too bright (dark mode) or too dark (light mode) for the
         // chosen translucency, quietly thicken the tint until text contrast is safe.
         var tint = ColorMath.Parse(g.Tint, dark ? Color.FromRgb(0x12, 0x15, 0x1C) : Color.FromRgb(0xF6, 0xF8, 0xFC));
-        var liquid = Math.Clamp(g.Liquid, 0, 1);
+        var liquid = EffectiveLiquid(g.Liquid, _store.Settings.General.LiquidGlass);
         var tintOpacity = ReadableTintOpacity(_wallpaper.Palette.AverageLuminance, ColorMath.Luminance(tint), g.TintOpacity, dark, liquid);
 
         var r = Application.Current.Resources;
@@ -229,6 +248,12 @@ public sealed class ThemeEngine
         fx.Freeze();
         return fx;
     }
+
+    /// <summary>The liquid lens strength actually used: the look's own, or none when liquid glass is switched off.</summary>
+    internal static double EffectiveLiquid(double themeLiquid, bool liquidGlassOn) => liquidGlassOn ? Math.Clamp(themeLiquid, 0, 1) : 0;
+
+    /// <summary>Whether a look has a liquid lens of its own, in dark or light (switching liquid glass on only shows on those).</summary>
+    internal static bool HasLiquid(Theme t) => t.Dark.Liquid > 0.01 || t.Light.Liquid > 0.01;
 
     /// <summary>
     /// Readability guard: if the wallpaper is too bright (dark looks) or too dark (light looks) for the chosen

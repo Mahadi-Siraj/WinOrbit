@@ -139,12 +139,27 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => { if (_current is not null) SettingsSearch.Reveal(_current, label); });
     }
 
-    /// <summary>Show the Rainmeter entry only when it's useful (see Settings › Rainmeter page).</summary>
+    /// <summary>Pages that only show with Settings › Show advanced settings on.</summary>
+    internal static readonly string[] AdvancedPages = { "studio", "wallpaper", "tweaks", "rainmeter" };
+
+    /// <summary>
+    /// Whether a page is listed in the sidebar: advanced pages only with advanced settings on, the Rainmeter page only when
+    /// it's useful (Settings › Rainmeter page; "Always show" lists it even with simple settings), and the open page always.
+    /// </summary>
+    internal static bool Listed(string id, bool advanced, bool rainmeterWanted, string rainmeterChoice, bool current) =>
+        current || id switch
+        {
+            "rainmeter" => rainmeterChoice == "always" || (advanced && rainmeterWanted),
+            _ => advanced || !AdvancedPages.Contains(id)
+        };
+
     public void UpdateOptionalPages()
     {
-        var index = _pages.FindIndex(p => p.Id == "rainmeter");
-        if (index >= 0 && Nav.Items[index] is ListBoxItem item)
-            item.Visibility = Hub.Rainmeter.PageWanted() || _currentId == "rainmeter" ? Visibility.Visible : Visibility.Collapsed;
+        var advanced = Hub.Settings.General.Advanced;
+        var wanted = Hub.Rainmeter.PageWanted();
+        for (var i = 0; i < _pages.Count && i < Nav.Items.Count; i++)
+            if (Nav.Items[i] is ListBoxItem item)
+                item.Visibility = Listed(_pages[i].Id, advanced, wanted, Hub.Settings.Rainmeter.PageVisibility, _pages[i].Id == _currentId) ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnKeys(object sender, KeyEventArgs e)
@@ -211,6 +226,7 @@ public partial class MainWindow : Window
             PageHost.Content = _current;
             Scroller.ScrollToTop();
             _current.Enter();
+            UpdateOptionalPages();   // an advanced page opened from search or a link stays listed while it's open
             Motion.Enter(Header, 8, 260);
             Motion.Enter(_current, 16, 340);
         }

@@ -19,7 +19,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Open the island with Ctrl+Alt+I
+        1. Open the island with Ctrl+Alt+Space
         2. ...
   - type: dropdown
     id: area
@@ -31,6 +31,9 @@ body:
         - Control Centre
         - Launcher
         - Widgets
+        - Clocks / matching pieces / desktop sets
+        - Liquid glass / themes
+        - First start / look picker
         - Clipboard / file shelf
         - Tweaks
         - Settings / installer
@@ -64,8 +67,8 @@ body:
   - type: textarea
     id: summary
     attributes:
-      label: Setup summary (optional)
-      description: In WinOrbit, About & Diagnostics → **Copy for a bug report**, then paste here. It has versions, displays and island settings — no personal names.
+      label: Setup summary
+      description: In WinOrbit, About & Diagnostics → **Copy for a bug report**, then paste here. It has versions, displays, the look and the island settings — no names of people, networks, devices, files or places. Read it before you post.
       render: text
   - type: textarea
     id: extra

@@ -70,13 +70,13 @@ public sealed class ProfilesPage : PageBase
             Hub.Store.Save(); Rebuild();
         }, Glyph.Add).With(b => { b.HorizontalAlignment = HorizontalAlignment.Left; b.Margin = new Thickness(0, 6, 0, 0); }));
 
-        Children.Add(Kit.Section("Automation", "Off by default. Rules only read which window is in front and the time; nothing is logged or sent anywhere.",
+        Children.Add(Kit.Adv(Kit.Section("Automation", "Off by default. Rules only read which window is in front and the time; nothing is logged or sent anywhere.",
             Kit.ToggleRow("Switch profiles automatically", null, a.Enabled, v =>
             {
                 a.Enabled = v; Hub.Store.Save(); Hub.Profiles.ArmTimeRules();
                 body.IsEnabled = v; body.Opacity = v ? 1 : 0.5;
             }, false),
-            body));
+            body)));
     }
 
     private Border Card(Profile p)
@@ -159,29 +159,32 @@ public sealed class SettingsPage : PageBase
 
     protected override void Build()
     {
+        Children.Add(Kit.Section("Settings mode", "Simple shows the settings most people use. Advanced adds the glass editor, wallpaper gradients, Windows tweaks and the fine-tuning rows on every page. Search always finds everything.",
+            Kit.Row("Show", null, Kit.Segmented(new[] { "Simple", "Advanced" }, G.Advanced ? 1 : 0, i => Kit.SetAdvanced(i == 1, Owner), "Settings mode"), false)));
+
         Children.Add(Kit.Section("General", null,
             Kit.ToggleRow("Start with Windows", "Adds WinOrbit to your sign-in apps (per-user, no admin). Starts quietly in the tray.", Startup.Enabled, v => { try { Startup.Set(v); G.RunAtStartup = v; Hub.Store.Save(); } catch (Exception ex) { Dialogs.Message("Couldn't change start-up", ex.Message); } }, false),
             Kit.ToggleRow("Keep running when the window is closed", "The island and widgets stay on your desktop; reopen from the tray icon.", G.CloseToTray, v => { G.CloseToTray = v; Hub.Store.Save(); }),
             Kit.ToggleRow("24-hour clock", null, G.Use24Hour, v => { G.Use24Hour = v; Hub.Store.Save(); Hub.Island.Apply(); Hub.Widgets.Apply(); foreach (var w in Hub.Widgets.Windows) w.Rebuild(); }),
-            Kit.ToggleRow("Pause during fullscreen apps", "Stops widget updates and system sampling while a game or fullscreen video is in front.", G.PauseInFullscreen, v => { G.PauseInFullscreen = v; Hub.Store.Save(); }),
-            Kit.ToggleRow("Software rendering for this window", "Only if this window ever appears blank. WinOrbit detects that automatically and switches for the session; this makes it permanent. Takes effect when the window is reopened.",
-                G.ForceSoftwareRendering, v => { G.ForceSoftwareRendering = v; Hub.Store.Save(); }),
-            Kit.Row("Rainmeter page", "Automatic shows it only when Rainmeter is installed or running.",
+            Kit.Adv(Kit.ToggleRow("Pause during fullscreen apps", "Stops widget updates and system sampling while a game or fullscreen video is in front.", G.PauseInFullscreen, v => { G.PauseInFullscreen = v; Hub.Store.Save(); })),
+            Kit.Adv(Kit.ToggleRow("Software rendering for this window", "Only if this window ever appears blank. WinOrbit detects that automatically and switches for the session; this makes it permanent. Takes effect when the window is reopened.",
+                G.ForceSoftwareRendering, v => { G.ForceSoftwareRendering = v; Hub.Store.Save(); })),
+            Kit.Adv(Kit.Row("Rainmeter page", "Automatic shows it only when Rainmeter is installed or running (with advanced settings on). Always show lists it in simple settings too.",
                 Kit.Combo(new[] { "Automatic", "Always show", "Hide" }, Array.IndexOf(new[] { "auto", "always", "never" }, Hub.Settings.Rainmeter.PageVisibility) is var i and >= 0 ? i : 0, i =>
                 {
                     Hub.Settings.Rainmeter.PageVisibility = new[] { "auto", "always", "never" }[i];
                     Hub.Store.Save();
                     (Owner as Shell.MainWindow)?.UpdateOptionalPages();
-                }, 170))));
+                }, 170)))));
 
         var failures = App.Current.HotkeyFailures;
         Children.Add(Kit.Section("Keyboard shortcuts", failures.Count > 0 ? $"Already used by another app: {string.Join(", ", failures)}. Choose a different combination." : "Global shortcuts. Use Ctrl, Alt, Shift or Win plus a key, for example Ctrl+Alt+Space.",
             HotkeyRow("Open the Dynamic Island", G.HotkeyIsland, v => G.HotkeyIsland = v, false),
             HotkeyRow("Search apps, settings and actions", G.HotkeyLauncher, v => G.HotkeyLauncher = v),
-            Kit.Row("Web search in the launcher", "When nothing matches, the launcher offers a web search that opens in your own browser. WinOrbit itself sends nothing.",
-                Kit.Combo(new[] { "DuckDuckGo", "Google", "Bing" }, Math.Max(0, Array.IndexOf(new[] { "duckduckgo", "google", "bing" }, G.SearchEngine)), i => { G.SearchEngine = new[] { "duckduckgo", "google", "bing" }[i]; Hub.Store.Save(); }, 150)),
-            HotkeyRow("Show or hide widgets", G.HotkeyWidgets, v => G.HotkeyWidgets = v),
-            HotkeyRow("Open WinOrbit", G.HotkeyMain, v => G.HotkeyMain = v)));
+            Kit.Adv(Kit.Row("Web search in the launcher", "When nothing matches, the launcher offers a web search that opens in your own browser. WinOrbit itself sends nothing.",
+                Kit.Combo(new[] { "DuckDuckGo", "Google", "Bing" }, Math.Max(0, Array.IndexOf(new[] { "duckduckgo", "google", "bing" }, G.SearchEngine)), i => { G.SearchEngine = new[] { "duckduckgo", "google", "bing" }[i]; Hub.Store.Save(); }, 150))),
+            Kit.Adv(HotkeyRow("Show or hide widgets", G.HotkeyWidgets, v => G.HotkeyWidgets = v)),
+            Kit.Adv(HotkeyRow("Open WinOrbit", G.HotkeyMain, v => G.HotkeyMain = v))));
 
         // ---- privacy ----
         var weatherBody = new StackPanel { IsEnabled = P.NetworkAllowed, Opacity = P.NetworkAllowed ? 1 : 0.5 };
@@ -217,8 +220,8 @@ public sealed class SettingsPage : PageBase
 
         // ---- data ----
         Children.Add(Kit.Section("Your data", $"Everything is stored in {Paths.Root}" + (Paths.Portable ? " (portable mode)." : "."),
-            Kit.Row("Open data folder", "Settings, themes, profiles, notes, logs and backups as plain JSON files.", Kit.Btn("Open", () => Process.Start("explorer.exe", $"\"{Paths.Root}\""), Glyph.Folder), false),
-            Kit.Row("Back up everything", "One .zip with your settings, themes, profiles, notes and tasks.", Kit.Btn("Export backup…", ExportBackup, Glyph.Export)),
+            Kit.Row("Back up everything", "One .zip with your settings, themes, profiles, desktop sets, notes and tasks.", Kit.Btn("Export backup…", ExportBackup, Glyph.Export), false),
+            Kit.Adv(Kit.Row("Open data folder", "Settings, themes, profiles, desktop sets, notes, logs and backups as plain JSON files.", Kit.Btn("Open", () => Process.Start("explorer.exe", $"\"{Paths.Root}\""), Glyph.Folder))),
             Kit.Row("Restore a backup", "Replaces current settings with a backup (your current files are saved first).", Kit.Btn("Restore…", RestoreBackup, Glyph.Import)),
             Kit.Row("Reset WinOrbit", "Back to first-run defaults. Notes, tasks and Windows settings are kept.", Kit.Btn("Reset…", Reset, Glyph.Refresh))));
     }
@@ -319,6 +322,7 @@ public sealed class SettingsPage : PageBase
             Hub.Store.Load();
             Hub.Theme.Load();
             Hub.Profiles.Load();
+            DesktopSets.Load();
             Hub.ApplyAll();
             Owner?.Reload();
             Dialogs.Message("Backup restored", "WinOrbit is now using the restored settings.");
@@ -387,7 +391,7 @@ public sealed class AboutPage : PageBase
         {
             ("settings.json", "Theme choice, island, widget layout, preferences, automation rules."),
             ("data.json", "Your notes, tasks and focus-session history."),
-            ("themes\\, profiles\\", "Themes and profiles you created."),
+            ("themes\\, profiles\\, sets\\", "Themes, profiles and desktop sets you created or imported."),
             ("backups\\", "Original Windows settings before WinOrbit changed them."),
             ("logs\\winorbit.log", "Local diagnostic log (max ~1 MB). Never uploaded."),
         };
@@ -454,6 +458,7 @@ public sealed class AboutPage : PageBase
             $"Live activities on: {string.Join(", ", on)}",
             $"Tabs: {string.Join(", ", i.Modules)}",
             $"Widgets: {Hub.Settings.Widgets.Count} · theme: {Hub.Theme.Current.Name} · Rainmeter: {(Hub.Rainmeter.Installed ? Hub.Rainmeter.Version : "not installed")}",
+            $"Look: liquid glass {(Hub.Settings.General.LiquidGlass ? "on" : "off")} · curved edges {(Hub.Settings.General.CurvedGlass ? "on" : "off")} · live glass {(Hub.Settings.General.LiveGlass ? "on" : "off")} · clock {Widgets.WidgetLook.LeadClock(Hub.Settings.Widgets) switch { null => "none", "" => "minimal", var c => c }} · set {(DesktopSets.Find(Hub.Settings.ActiveSetId)?.BuiltIn == true ? Hub.Settings.ActiveSetId : Hub.Settings.ActiveSetId.Length > 0 ? "own" : "none")} · settings {(Hub.Settings.General.Advanced ? "advanced" : "simple")}",
             $"Network: {(Hub.Settings.Privacy.NetworkAllowed ? "allowed" : "off")} · weather {(Hub.Settings.Privacy.WeatherEnabled ? "on" : "off")} · lyrics {(Hub.Settings.Privacy.LyricsEnabled ? "on" : "off")}",
             $"Start-up: {App.StartupTime.TotalMilliseconds:0} ms",
         };

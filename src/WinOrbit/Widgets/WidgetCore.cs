@@ -323,7 +323,12 @@ public sealed class WidgetWindow : Window
         _ink = light;
         var r = _body.Resources;
         foreach (var key in new[] { "T.Text", "T.Text2", "T.Text3", "T.Track", "W.BareShadow" }) r.Remove(key);
-        if (light is not { } l) return;
+        if (light is { } l) PutInk(r, l);
+    }
+
+    /// <summary>Text colours for content straight on the wallpaper: light ink on a dark picture, dark ink on a light one.</summary>
+    internal static void PutInk(ResourceDictionary r, bool l)
+    {
         var ink = l ? Color.FromRgb(0xF6, 0xF7, 0xFA) : Color.FromRgb(0x14, 0x17, 0x1E);
         SolidColorBrush B(Color c, double a) => Frozen(new SolidColorBrush(Color.FromArgb((byte)(a * 255), c.R, c.G, c.B)));
         r["T.Text"] = B(ink, 1);

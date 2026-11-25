@@ -34,12 +34,13 @@ public static class Paths
     public static string Data => Path.Combine(Root, "data.json");
     public static string Themes => Path.Combine(Root, "themes");
     public static string Profiles => Path.Combine(Root, "profiles");
+    public static string Sets => Path.Combine(Root, "sets");
     public static string Backups => Path.Combine(Root, "backups");
     public static string Logs => Path.Combine(Root, "logs");
 
     public static void Ensure()
     {
-        foreach (var d in new[] { Root, Themes, Profiles, Backups, Logs }) Directory.CreateDirectory(d);
+        foreach (var d in new[] { Root, Themes, Profiles, Sets, Backups, Logs }) Directory.CreateDirectory(d);
     }
 }
 
@@ -134,6 +135,8 @@ public sealed class Store
         var s = Json.Read<AppSettings>(Paths.Settings);
         IsFirstRun = s is null;
         Settings = s ?? new AppSettings();
+        // Simple settings for a new install; people upgrading keep every page they already use.
+        Settings.General.ShowAdvanced ??= !IsFirstRun;
         Data = Json.Read<UserData>(Paths.Data) ?? new UserData();
     }
 

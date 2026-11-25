@@ -333,7 +333,13 @@ public class GlassSurface : ContentControl
     /// <summary>Point the backdrop brush at the slice of blurred wallpaper that lies under this surface.</summary>
     public void UpdateBackdrop()
     {
-        if (!SampleWallpaper || !Hub.Ready || !IsLoaded || ActualWidth < 1 || ActualHeight < 1) { if (!SampleWallpaper && Backdrop is not null) Backdrop = null; return; }
+        if (!SampleWallpaper || !Hub.Ready || !IsLoaded || ActualWidth < 1 || ActualHeight < 1)
+        {
+            // Take back only the slice this surface sampled itself: a backdrop someone else set (the in-app previews
+            // hand their glass a slice of the wallpaper picture) stays, or those previews lose their blur and lens.
+            if (!SampleWallpaper && _brush is not null && ReferenceEquals(Backdrop, _brush)) { Backdrop = null; _brush = null; }
+            return;
+        }
         try
         {
             // The liquid lens bends in what lies beyond the edge, so it gets a margin of backdrop all round.

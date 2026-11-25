@@ -90,12 +90,22 @@ public sealed class ProfileService
         return copy;
     }
 
-    /// <summary>Switch the whole desktop to a profile. The previous state is kept for "Restore previous".</summary>
-    public void Apply(Profile p, bool automatic = false)
+    /// <summary>Keep the desktop as it is now for "Restore previous desktop" (before a profile or a desktop set replaces it).</summary>
+    public void RememberCurrent()
     {
         var s = Hub.Settings;
         s.Previous = Capture("Previous desktop");
         s.Previous.Id = s.ActiveProfileId;
+    }
+
+    public void NotifyChanged() => Changed?.Invoke();
+
+    /// <summary>Switch the whole desktop to a profile. The previous state is kept for "Restore previous".</summary>
+    public void Apply(Profile p, bool automatic = false)
+    {
+        var s = Hub.Settings;
+        RememberCurrent();
+        s.ActiveSetId = "";
         var copy = Json.Clone(p);
 
         // Built-in profiles describe widgets with placeholder positions; place them on the primary display.
@@ -131,6 +141,7 @@ public sealed class ProfileService
         s.Layout = prev.Layout;
         s.General.ReducedMotion = prev.ReducedMotion;
         s.ActiveProfileId = prev.Id;
+        s.ActiveSetId = "";
         s.Previous = current;
         Hub.Store.Save();
         Hub.ApplyAll();

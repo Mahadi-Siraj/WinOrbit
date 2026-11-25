@@ -134,6 +134,7 @@ public partial class App : Application
         Hub.Widgets = new WidgetManager(Dispatcher);
         Hub.Profiles = new ProfileService();
         Hub.Profiles.Load();
+        DesktopSets.Load();
         Hub.Media.Start();
         Hub.Audio.Start();
         Hub.Privacy.Start();
@@ -267,6 +268,11 @@ public partial class App : Application
         m.Items.Add(new Separator());
         m.Items.Add(Item("Dynamic Island", () => { Hub.Settings.Island.Enabled = !Hub.Settings.Island.Enabled; Hub.Store.Save(); Hub.Island.Apply(); }, Hub.Settings.Island.Enabled));
         m.Items.Add(Item("Desktop widgets", () => Hub.Widgets.ToggleAll(), Hub.Settings.Layout.WidgetsVisible));
+        var liquid = Hub.Theme.LiquidShowing;
+        m.Items.Add(Item("Liquid glass", () => Hub.Theme.SetLiquidGlass(!liquid), liquid));
+        var sets = new MenuItem { Header = "Desktop set" };
+        foreach (var d in DesktopSets.All) sets.Items.Add(Item(d.Name, () => DesktopSets.Apply(d), d.Id == Hub.Settings.ActiveSetId));
+        m.Items.Add(sets);
         var profiles = new MenuItem { Header = "Profile" };
         foreach (var p in Hub.Profiles.All) profiles.Items.Add(Item(p.Name, () => Hub.Profiles.Apply(p), p.Id == Hub.Settings.ActiveProfileId));
         m.Items.Add(profiles);

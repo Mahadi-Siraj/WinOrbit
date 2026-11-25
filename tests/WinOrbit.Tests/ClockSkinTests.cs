@@ -246,7 +246,8 @@ public class MatchingWidgetTests
         foreach (var (kind, variant, _, _, size) in WidgetCatalog.Companions)
         {
             Assert.NotNull(WidgetCatalog.Find(kind));
-            Assert.False(string.IsNullOrEmpty(variant));
+            // A style of an existing widget, or one of the pieces that are widgets of their own (one look each).
+            if (string.IsNullOrEmpty(variant)) Assert.Contains(kind, new[] { "battery", "drives", "visualiser", "quote" });
             Assert.Contains(size, sizes);
         }
     }

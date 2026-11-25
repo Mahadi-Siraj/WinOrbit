@@ -33,7 +33,11 @@ public static class WidgetCatalog
         new("tasks", "Tasks", "A checklist for tasks or daily objectives.", Glyph.List, "Productivity", 336, 336, 220, 160, i => new TasksWidget(i)),
         new("launcher", "Launcher", "Pin apps, files and folders. Drop items onto it to add them.", Glyph.Tiles, "Desktop", 336, 160, 150, 96, i => new LauncherWidget(i)),
         new("recyclebin", "Recycle Bin", "Item count and size, with open and empty actions.", Glyph.Delete, "Desktop", 160, 160, 150, 104, i => new RecycleBinWidget(i)),
+        new("battery", "Battery", "Charge, charging and time left, as a slim outline. Shows mains power on a PC without a battery.", Glyph.Battery, "System", 160, 160, 120, 64, i => new BatteryWidget(i)) { DefaultStyle = "bare" },
+        new("drives", "Drive space", "Each fixed drive as a diamond that fills up, with its free space.", "", "System", 336, 160, 200, 64, i => new DrivesWidget(i)) { DefaultStyle = "bare" },
+        new("visualiser", "Music line", "A thin line that moves with the music, only while something plays.", Glyph.Sound, "Media", 336, 160, 160, 48, i => new VisualiserWidget(i)) { DefaultStyle = "bare" },
         new("text", "Text", "A line of your own: a quote, a label or a reminder.", Glyph.Edit, "Aesthetic", 336, 160, 140, 64, i => new TextWidget(i)) { DefaultStyle = "bare" },
+        new("quote", "Quote", "A new quote each day, or your own. Next quote moves on.", Glyph.Note, "Aesthetic", 512, 160, 220, 96, i => new QuoteWidget(i)) { DefaultStyle = "bare" },
         new("ambient", "Ambient card", "A wallpaper-matched gradient card with a greeting and the date.", Glyph.Color, "Aesthetic", 336, 160, 200, 110, i => new AmbientWidget(i)),
         new("weather", "Weather", "Optional. Uses the internet only if you enable it in Settings › Privacy.", Glyph.Cloud, "Online (optional)", 336, 160, 230, 128, i => new WeatherWidget(i)),
     };
@@ -47,6 +51,11 @@ public static class WidgetCatalog
     public static readonly (string Kind, string Variant, string Name, string About, string Size)[] Companions =
     {
         ("media", "caption", "Now playing · Caption", "The song between two hairlines, centred. Controls show on hover.", "m"),
+        ("media", "listening", "Now you're listening", "The artist and the song under a spaced heading, the song in the accent colour.", "w"),
+        ("visualiser", "", "Music line", "A thin line that moves with what's playing. Rests flat when nothing plays.", "m"),
+        ("quote", "", "Quote", "A quote a day with its author in the accent colour, or your own.", "w"),
+        ("battery", "", "Battery", "Charge as a slim outline and a percentage, with time left.", "s"),
+        ("drives", "", "Drive space · Diamonds", "Each drive as a diamond that fills up, free space beside it.", "m"),
         ("system", "slashes", "System · Slashes", "CPU, RAM and GPU as a terminal readout of slashes.", "m"),
         ("weather", "line", "Weather · Line", "The place and the sky in spaced capitals. Needs weather turned on.", "m"),
         ("recyclebin", "label", "Recycle bin · Label", "Files and size beside the bin. Double-click opens it.", "m"),
@@ -743,9 +752,17 @@ internal sealed class MediaWidget : WidgetView
     private readonly StackPanel _controls = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(-6, 6, 0, 0) };
 
     private bool Caption => Instance.Variant == "caption";
+    private bool Listening => Instance.Variant == "listening";
+    private readonly System.Windows.Documents.Run _first = new(), _second = new();
 
     public MediaWidget(WidgetInstance i) : base(i)
     {
+        if (Listening)
+        {
+            _play = new Button();
+            _source = BuildListening();
+            return;
+        }
         if (Caption)
         {
             _play = Ui.IconButton(Glyph.Play, "Play or pause", () => Hub.Media.PlayPause(), 34, "Button.IconAccent");
@@ -802,10 +819,54 @@ internal sealed class MediaWidget : WidgetView
         return source;
     }
 
+    /// <summary>
+    /// The listening look, for desktop skins: "# Now you're listening #" in spaced capitals over a hairline, then the
+    /// artist and the song on one line, the song in the accent colour. Double-click plays or pauses.
+    /// </summary>
+    private TextBlock BuildListening()
+    {
+        Background = Brushes.Transparent;
+        var sp = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+        var head = WidgetLook.Caps("", 12.5, "T.Text").With(t => { t.HorizontalAlignment = HorizontalAlignment.Center; t.FontWeight = FontWeights.SemiBold; });
+        var rule = new Border { Height = 1.2, Margin = new Thickness(0, 7, 0, 7) };
+        rule.SetResourceReference(Border.BackgroundProperty, "T.Text");
+        var line = new TextBlock { FontSize = 12.5, HorizontalAlignment = HorizontalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, FontWeight = WidgetLook.Current.CapsWeight };
+        if (WidgetLook.Current.Text is { } family) line.FontFamily = family;
+        _first.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "T.Text");
+        _second.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "T.Accent");
+        line.Inlines.Add(_first); line.Inlines.Add(_second);
+        sp.Children.Add(head); sp.Children.Add(rule); sp.Children.Add(line);
+        Children.Add(sp);
+        MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2) { Hub.Media.PlayPause(); e.Handled = true; } };
+        return head;
+    }
+
+    /// <summary>
+    /// The listening look's lines: the heading, then the first part (artist, or the app when there is no artist, with a
+    /// dot after it) and the song. Nothing playing gives a quiet heading and a hint.
+    /// </summary>
+    internal static (string Head, string First, string Second) ListeningLines(bool hasTrack, string title, string artist, string source)
+    {
+        if (!hasTrack) return ("Nothing playing", "", "Start music in any app");
+        var who = !string.IsNullOrWhiteSpace(artist) ? artist.Trim() : source?.Trim() ?? "";
+        return ("# Now you're listening #", who.Length > 0 ? who + " • " : "", title.Trim());
+    }
+
+    private void UpdateListening()
+    {
+        var m = Hub.Media;
+        var (head, first, second) = ListeningLines(m.HasTrack, m.DisplayTitle, m.Artist, m.Source);
+        WidgetLook.SetCaps(_source, head);
+        _first.Text = ClockWidget.Track(first.ToUpper(CultureInfo.CurrentCulture), WidgetLook.Current.CapsGap);
+        _second.Text = ClockWidget.Track(second.ToUpper(CultureInfo.CurrentCulture), WidgetLook.Current.CapsGap);
+        _second.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, m.HasTrack ? "T.Accent" : "T.Text2");
+    }
+
     private double ControlsOpacity(bool hover) => Caption && !hover ? 0 : Hub.Media.HasTrack ? 1 : 0.45;
 
     private void Update()
     {
+        if (Listening) { UpdateListening(); return; }
         var m = Hub.Media;
         var has = m.HasTrack;
         _title.Text = has ? m.DisplayTitle : "Nothing playing";
@@ -821,7 +882,7 @@ internal sealed class MediaWidget : WidgetView
     protected override void OnStop() => Hub.Media.Changed -= Update;
     public override void BuildMenu(ItemCollection items)
     {
-        items.Add(Choice("Style", "variant", ("Artwork and controls", ""), ("Caption", "caption")));
+        items.Add(Choice("Style", "variant", ("Artwork and controls", ""), ("Caption", "caption"), ("Now you're listening", "listening")));
         items.Add(Item("Open sound output settings", () => Island.IslandWindow.OpenUri("ms-settings:sound")));
     }
 }

@@ -254,27 +254,27 @@ public sealed class IslandPage : PageBase
                 Kit.Combo(monitorOptions, selected, i => { S.Monitor = i == 0 ? "primary" : i == 1 ? "all" : monitors[i - 2].Device; Save(); })),
             Kit.Row("Screen edge", "Top, just above the taskbar, or against either side; it opens away from the edge. You can also drag the island right up to another edge.",
                 Kit.Segmented(WinOrbit.Island.IslandWindow.Edges, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Edges, S.Edge)), i => { S.Edge = WinOrbit.Island.IslandWindow.Edges[i]; S.OffsetX = 0; S.PerMonitorOffset.Clear(); Save(); Rebuild(); })),
-            Kit.SliderRow(Side ? "Vertical offset" : "Horizontal offset", "Distance from the middle of the edge. You can also drag the island.", -900, 900, S.OffsetX, v => { S.OffsetX = Math.Round(v); Save(); }, v => $"{v:0}"),
-            Kit.SliderRow($"Distance from {(S.Edge == "Top" ? "top" : S.Edge == "Bottom" ? "the taskbar" : "the edge")}", null, 0, 120, S.OffsetY, v => { S.OffsetY = Math.Round(v); Save(); }, v => $"{v:0} px"),
+            Kit.Adv(Kit.SliderRow(Side ? "Vertical offset" : "Horizontal offset", "Distance from the middle of the edge. You can also drag the island.", -900, 900, S.OffsetX, v => { S.OffsetX = Math.Round(v); Save(); }, v => $"{v:0}")),
+            Kit.Adv(Kit.SliderRow($"Distance from {(S.Edge == "Top" ? "top" : S.Edge == "Bottom" ? "the taskbar" : "the edge")}", null, 0, 120, S.OffsetY, v => { S.OffsetY = Math.Round(v); Save(); }, v => $"{v:0} px")),
             Kit.Row("Centre the island", S.OffsetX == 0 ? "It's exactly centred now." : $"It's {Math.Abs(S.OffsetX):0} px {(S.OffsetX < 0 ? (Side ? "above" : "left") : (Side ? "below" : "right"))} of centre.",
                 Kit.Btn("Centre now", () => { Hub.Island.Centre(); Rebuild(); }, Glyph.Check, true)),
-            Kit.ToggleRow("Snap to centre while dragging", "The island clicks into the exact centre when you drag it close.", S.SnapToCentre, v => { S.SnapToCentre = v; Save(); }),
-            Kit.ToggleRow("Keep centred", "Dragging only changes the distance from the edge.", S.KeepCentred, v => { S.KeepCentred = v; if (v) Hub.Island.Centre(); Save(); Rebuild(); }),
+            Kit.Adv(Kit.ToggleRow("Snap to centre while dragging", "The island clicks into the exact centre when you drag it close.", S.SnapToCentre, v => { S.SnapToCentre = v; Save(); })),
+            Kit.Adv(Kit.ToggleRow("Keep centred", "Dragging only changes the distance from the edge.", S.KeepCentred, v => { S.KeepCentred = v; if (v) Hub.Island.Centre(); Save(); Rebuild(); })),
             Kit.Row("Reset position", "Back to the top centre on every display.", Kit.Btn("Reset", () => { S.Edge = "Top"; S.OffsetX = 0; S.OffsetY = 10; S.PerMonitorOffset.Clear(); Save(); Rebuild(); }, Glyph.Refresh))));
 
         var materials = new[] { "Glass", "Smoked", "Solid", "Black" };
         Children.Add(Kit.Section("Appearance", null,
             Kit.Row("Material", "Glass frosts your wallpaper, Smoked is a deep tint, Solid is fully opaque in the theme's colour, Black is plain true black with a fine edge (the cleanest and cheapest to draw).", Kit.Segmented(materials, Math.Max(0, Array.IndexOf(materials, S.Material)), i => { S.Material = materials[i]; Save(); }), false),
             Kit.SliderRow("Size", null, 0.8, 1.4, S.Scale, v => { S.Scale = Math.Round(v, 2); Save(); }, v => $"{v * 100:0}%"),
-            Kit.SliderRow("Opacity", null, 0.3, 1, S.Opacity, v => { S.Opacity = Math.Round(v, 2); Save(); }, v => $"{v * 100:0}%"),
-            Kit.Row("Rim", "A coloured edge around the island. Glass keeps the material's own light rim.",
-                Kit.Segmented(WinOrbit.Island.IslandWindow.Rims.Select(r => r.Name).ToArray(), Math.Max(0, Array.FindIndex(WinOrbit.Island.IslandWindow.Rims, r => r.Id == S.Rim)), i => { S.Rim = WinOrbit.Island.IslandWindow.Rims[i].Id; Save(); }), false),
-            Kit.ToggleRow("Rim glow", "A soft halo in the rim's colours around the island.", S.RimGlow, v => { S.RimGlow = v; Save(); }, true),
+            Kit.Adv(Kit.SliderRow("Opacity", null, 0.3, 1, S.Opacity, v => { S.Opacity = Math.Round(v, 2); Save(); }, v => $"{v * 100:0}%")),
+            Kit.Adv(Kit.Row("Rim", "A coloured edge around the island. Glass keeps the material's own light rim.",
+                Kit.Segmented(WinOrbit.Island.IslandWindow.Rims.Select(r => r.Name).ToArray(), Math.Max(0, Array.FindIndex(WinOrbit.Island.IslandWindow.Rims, r => r.Id == S.Rim)), i => { S.Rim = WinOrbit.Island.IslandWindow.Rims[i].Id; Save(); }), false)),
+            Kit.Adv(Kit.ToggleRow("Rim glow", "A soft halo in the rim's colours around the island.", S.RimGlow, v => { S.RimGlow = v; Save(); }, true)),
             Kit.WideRow("Shape", "Capsule is fully round; Rounded and Square are soft and crisp rectangles; Notch sits flush against its screen edge like a camera notch; Drop is tighter at the edge and round away from it.",
                 Kit.Segmented(WinOrbit.Island.IslandWindow.Shapes, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Shapes, S.Shape)), i => { S.Shape = WinOrbit.Island.IslandWindow.Shapes[i]; Save(); })),
-            Kit.Row("Thickness", "How tall the collapsed island is.",
-                Kit.Segmented(WinOrbit.Island.IslandWindow.Thicknesses, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Thicknesses, S.Thickness)), i => { S.Thickness = WinOrbit.Island.IslandWindow.Thicknesses[i]; Save(); })),
-            Kit.Row("Colours", "The island uses the active theme's glass, accent and wallpaper gradient.", Kit.Btn("Edit glass", () => Owner?.Navigate("studio"), Glyph.Drop))));
+            Kit.Adv(Kit.Row("Thickness", "How tall the collapsed island is.",
+                Kit.Segmented(WinOrbit.Island.IslandWindow.Thicknesses, Math.Max(0, Array.IndexOf(WinOrbit.Island.IslandWindow.Thicknesses, S.Thickness)), i => { S.Thickness = WinOrbit.Island.IslandWindow.Thicknesses[i]; Save(); }))),
+            Kit.Adv(Kit.Row("Colours", "The island uses the active theme's glass, accent and wallpaper gradient.", Kit.Btn("Edit glass", () => Owner?.Navigate("studio"), Glyph.Drop)))));
 
         var glances = WinOrbit.Island.IslandWindow.Glances;
         Children.Add(Kit.Section("Collapsed capsule", "What the compact pill shows. Live activity (a timer, a download, or media) takes the left side.",
@@ -284,33 +284,33 @@ public sealed class IslandPage : PageBase
             Kit.ToggleRow("Date", "With Clock.", S.ShowDate, v => { S.ShowDate = v; Save(); }, true, Glyph.Calendar),
             Kit.ToggleRow("Now playing", null, S.ShowMedia, v => { S.ShowMedia = v; Save(); }, true, Glyph.Music),
             Kit.ToggleRow("Active timer", null, S.ShowTimer, v => { S.ShowTimer = v; Save(); }, true, Glyph.Stopwatch),
-            Kit.ToggleRow("CPU and memory", "Beside the clock. Samples system load only while visible.", S.ShowSystem, v => { S.ShowSystem = v; Save(); }, true, Glyph.Chip),
-            Kit.ToggleRow("Download activity", "Watches your Downloads folder for files that browsers are still downloading, and shows a card when one finishes — click it to open the file, or drag it into any app. Only file names are read, locally.", S.WatchDownloads, v => { S.WatchDownloads = v; Save(); }, true, Glyph.Download)));
+            Kit.Adv(Kit.ToggleRow("CPU and memory", "Beside the clock. Samples system load only while visible.", S.ShowSystem, v => { S.ShowSystem = v; Save(); }, true, Glyph.Chip)),
+            Kit.ToggleRow("Download activity","Watches your Downloads folder for files that browsers are still downloading, and shows a card when one finishes — click it to open the file, or drag it into any app. Only file names are read, locally.", S.WatchDownloads, v => { S.WatchDownloads = v; Save(); }, true, Glyph.Download)));
 
         Children.Add(Kit.Section("Live activities", "Things the island shows on its own, the moment they happen. Windows pushes these events; the lock-key check is the one exception, noted below.",
             Kit.ToggleRow("Volume and brightness meter", "Changing the volume — keyboard keys, the taskbar, scrolling on the island — or a laptop's brightness shows a glass meter in the capsule.", S.VolumeHud, v => { S.VolumeHud = v; Save(); }, false, Glyph.Volume),
             Kit.ToggleRow("Charging and battery", "On laptops: a moment in the capsule when you plug in or unplug, and a warning at 20 % and 10 %.", S.BatteryAlerts, v => { S.BatteryAlerts = v; Save(); }, true, Glyph.Battery),
             Kit.ToggleRow("Caps Lock, Num Lock and Scroll Lock", "A key cap with its light when you switch one. WinOrbit asks Windows whether the three lock lights are on about eight times a second; it never sees what you type.", S.LockKeyAlerts, v => { S.LockKeyAlerts = v; Save(); }, true, Glyph.Keyboard),
-            Kit.ToggleRow("Keyboard language", "A key cap with the language (EN, BN, FR…) when you switch keyboards with Win+Space, Alt+Shift or the taskbar. Only runs when you have more than one keyboard: WinOrbit then asks Windows which keyboard the app in front uses, four times a second. It never sees what you type.", S.LanguageAlerts, v => { S.LanguageAlerts = v; Save(); }, true, Glyph.Globe),
+            Kit.Adv(Kit.ToggleRow("Keyboard language", "A key cap with the language (EN, BN, FR…) when you switch keyboards with Win+Space, Alt+Shift or the taskbar. Only runs when you have more than one keyboard: WinOrbit then asks Windows which keyboard the app in front uses, four times a second. It never sees what you type.", S.LanguageAlerts, v => { S.LanguageAlerts = v; Save(); }, true, Glyph.Globe)),
             Kit.ToggleRow("Wi-Fi and Ethernet", "Connected (with the network's name) and disconnected. Read locally from Windows; nothing is sent anywhere.", S.NetworkAlerts, v => { S.NetworkAlerts = v; Save(); }, true, Glyph.Wifi),
             Kit.ToggleRow("Bluetooth devices", "Your paired headphones, keyboards, mice and phones connecting and disconnecting.", S.BluetoothAlerts, v => { S.BluetoothAlerts = v; Save(); }, true, Glyph.Bluetooth),
-            Kit.ToggleRow("USB devices", "Drives, mice, controllers and other USB devices plugged in or removed, by name.", S.UsbAlerts, v => { S.UsbAlerts = v; Save(); }, true, Glyph.Usb),
+            Kit.Adv(Kit.ToggleRow("USB devices", "Drives, mice, controllers and other USB devices plugged in or removed, by name.", S.UsbAlerts, v => { S.UsbAlerts = v; Save(); }, true, Glyph.Usb)),
             Kit.ToggleRow("Screenshots", "A card with a thumbnail when a screenshot lands in your Screenshots folder (Win+PrtScn, Snipping Tool). Click it to open the picture, drag it straight into a chat or email, or show it in its folder.", S.ScreenshotCards, v => { S.ScreenshotCards = v; Save(); }, true, Glyph.Photo),
-            Kit.ToggleRow("Rain soon", Hub.Weather.Enabled
+            Kit.Adv(Kit.ToggleRow("Rain soon", Hub.Weather.Enabled
                     ? "A card when rain or snow is likely within two hours while it's dry now, once per spell. Checks the forecast for your place every 30 minutes, even when no weather is on screen; each check shows in the network ledger."
                     : "Turn on Weather (with your place) in Settings › Privacy & network first. Then it checks the forecast every 30 minutes and shows a card when rain is likely within two hours.",
-                S.RainAlerts, v => { S.RainAlerts = v; Save(); }, true, Glyph.Cloud),
-            Kit.ToggleRow("Display and system modes", "Dark or light mode, night light and airplane mode switching on or off. Windows signals each change; nothing is checked on a timer.", S.SystemAlerts, v => { S.SystemAlerts = v; Save(); }, true, Glyph.Moon),
+                S.RainAlerts, v => { S.RainAlerts = v; Save(); }, true, Glyph.Cloud)),
+            Kit.Adv(Kit.ToggleRow("Display and system modes", "Dark or light mode, night light and airplane mode switching on or off. Windows signals each change; nothing is checked on a timer.", S.SystemAlerts, v => { S.SystemAlerts = v; Save(); }, true, Glyph.Moon)),
             Kit.ToggleRow("Event reminders", "A card ten minutes before, and when, an event you added in the island's calendar starts.", S.EventReminders, v => { S.EventReminders = v; Save(); }, true, Glyph.Calendar),
-            Kit.ToggleRow("Album colours", "While a song plays, the glass glows with the colours of its artwork and cross-fades when the track changes. The Album rim uses them too. Worked out on this PC from the artwork Windows already has.", S.AlbumTint, v => { S.AlbumTint = v; Save(); }, true, Glyph.Color),
-            Kit.ToggleRow("Bars follow the music", "The equaliser in the capsule moves with what's actually playing, tinted by the album art. Reads Windows' output level 20 times a second, only while music plays.", S.AudioReactive, v => { S.AudioReactive = v; Save(); }, true, Glyph.Music),
+            Kit.Adv(Kit.ToggleRow("Album colours", "While a song plays, the glass glows with the colours of its artwork and cross-fades when the track changes. The Album rim uses them too. Worked out on this PC from the artwork Windows already has.", S.AlbumTint, v => { S.AlbumTint = v; Save(); }, true, Glyph.Color)),
+            Kit.Adv(Kit.ToggleRow("Bars follow the music", "The equaliser in the capsule moves with what's actually playing, tinted by the album art. Reads Windows' output level 20 times a second, only while music plays.", S.AudioReactive, v => { S.AudioReactive = v; Save(); }, true, Glyph.Music)),
             Kit.ToggleRow("Privacy dots", "Orange while any app uses your microphone, green for the camera, blue for your location — hover to see which app. Read locally from Windows' own privacy records.", S.PrivacyDot, v => { S.PrivacyDot = v; Save(); }, true, Glyph.Shield),
-            Kit.ToggleRow("Microphone pill", "During a call (or whenever an app uses your microphone) the capsule shows the app, bars that follow your voice and a mute button. Mute is Windows' own microphone mute, so it works in every app. The level is read from Windows' meter; WinOrbit never records or opens the microphone itself.", S.CallPill, v => { S.CallPill = v; Save(); }, true, GlyphMicRow),
-            Kit.ToggleRow("Side bubble for short alerts", "While the capsule shows music, a call, a timer or a download, short alerts (Caps Lock, keyboard language, \"copied\", microphone muted…) split off into a small bubble beside it instead of replacing it, then flow back in.", S.SplitAlerts, v => { S.SplitAlerts = v; Save(); }, true, Glyph.Info),
-            Kit.ToggleRow("Cards from your scripts and apps", @"Lets programs you run on this PC show a short card on the island — ""Build finished"", ""Backup done"" — by writing one line of JSON to the local pipe \\.\pipe\WinOrbit.Island. Only programs running as you can connect; it is never reachable from the network. Each card names the program that sent it, shows plain text only (no links or buttons), and each program gets a few cards at a time. The user guide has a one-line example. Off by default.",
-                S.AppCards, v => { S.AppCards = v; Save(); }, true, Glyph.Info),
-            Kit.ToggleRow("Swipe to skip tracks", "Swipe sideways on the island with two fingers on a touchpad, or tilt the mouse wheel, to go to the next or previous track.", S.SwipeToSkip, v => { S.SwipeToSkip = v; Save(); }, true, Glyph.Music),
-            Kit.ToggleRow("Lyrics in the capsule", Hub.Settings.Privacy.LyricsEnabled ? "Shows the line being sung instead of the song title." : "Turn on Synced lyrics in Settings › Privacy & network first.", S.LyricsInCapsule, v => { S.LyricsInCapsule = v; Save(); }, true, Glyph.Note),
+            Kit.Adv(Kit.ToggleRow("Microphone pill", "During a call (or whenever an app uses your microphone) the capsule shows the app, bars that follow your voice and a mute button. Mute is Windows' own microphone mute, so it works in every app. The level is read from Windows' meter; WinOrbit never records or opens the microphone itself.", S.CallPill, v => { S.CallPill = v; Save(); }, true, GlyphMicRow)),
+            Kit.Adv(Kit.ToggleRow("Side bubble for short alerts", "While the capsule shows music, a call, a timer or a download, short alerts (Caps Lock, keyboard language, \"copied\", microphone muted…) split off into a small bubble beside it instead of replacing it, then flow back in.", S.SplitAlerts, v => { S.SplitAlerts = v; Save(); }, true, Glyph.Info)),
+            Kit.Adv(Kit.ToggleRow("Cards from your scripts and apps", @"Lets programs you run on this PC show a short card on the island — ""Build finished"", ""Backup done"" — by writing one line of JSON to the local pipe \\.\pipe\WinOrbit.Island. Only programs running as you can connect; it is never reachable from the network. Each card names the program that sent it, shows plain text only (no links or buttons), and each program gets a few cards at a time. The user guide has a one-line example. Off by default.",
+                S.AppCards, v => { S.AppCards = v; Save(); }, true, Glyph.Info)),
+            Kit.Adv(Kit.ToggleRow("Swipe to skip tracks", "Swipe sideways on the island with two fingers on a touchpad, or tilt the mouse wheel, to go to the next or previous track.", S.SwipeToSkip, v => { S.SwipeToSkip = v; Save(); }, true, Glyph.Music)),
+            Kit.Adv(Kit.ToggleRow("Lyrics in the capsule", Hub.Settings.Privacy.LyricsEnabled ? "Shows the line being sung instead of the song title." : "Turn on Synced lyrics in Settings › Privacy & network first.", S.LyricsInCapsule, v => { S.LyricsInCapsule = v; Save(); }, true, Glyph.Note)),
             Kit.ToggleRow("Clipboard history", "Keeps the last 40 copied items in memory for the Clipboard tab. Pinned text is saved; everything else is forgotten when WinOrbit quits. Private copies (password managers) are skipped.", S.ClipboardHistory, v => { S.ClipboardHistory = v; Save(); Hub.Clipboard.Apply(); }, true, Glyph.Copy),
             Kit.WideRow("Preview", "See what each live activity looks like on your island.", Kit.WrapButtons(
                 Kit.Btn("Charging", () => Hub.Island.Demo("charging")), Kit.Btn("Low battery", () => Hub.Island.Demo("low")),
@@ -325,7 +325,7 @@ public sealed class IslandPage : PageBase
                 Kit.Btn("Rain soon", () => Hub.Island.Demo("rain")), Kit.Btn("Keyboard language", () => Hub.Island.Demo("language"))))));
 
         var exe = AgentSetup.ExePath();
-        Children.Add(Kit.Section("Coding agents", "See what AI coding tools on this PC are doing — Claude Code, Codex or your own scripts — in an Agents tab on the island, with a card when one needs your OK and a short note when it's done. Off by default. WinOrbit doesn't change those tools' settings: copy the setup for each tool you use.",
+        Children.Add(Kit.Adv(Kit.Section("Coding agents", "See what AI coding tools on this PC are doing — Claude Code, Codex or your own scripts — in an Agents tab on the island, with a card when one needs your OK and a short note when it's done. Off by default. WinOrbit doesn't change those tools' settings: copy the setup for each tool you use.",
             Kit.ToggleRow("Coding agents", @"Adds the Agents tab and listens for the tools' updates on the local pipe \\.\pipe\WinOrbit.Island (programs running as you only; never reachable from the network). Each session shows a short title (its first request), its folder's name and a few words like ""Editing app.cs"". Nothing is saved: the list is in memory, sessions drop off after three hours of silence, and turning this off clears it.",
                 S.CodingAgents, v => { S.CodingAgents = v; Save(); }, false, GlyphAgentsRow),
             Kit.Row("Claude Code", @"Copy, then paste into %USERPROFILE%\.claude\settings.json (merge it with any hooks you already have) — or paste it into Claude Code and ask it to add these hooks. Claude never waits for WinOrbit: every hook runs in the background.",
@@ -334,7 +334,7 @@ public sealed class IslandPage : PageBase
                 CopyButton("Copy line", () => AgentSetup.Codex(exe))),
             Kit.Row("Your own tool", @"Send one line of JSON — session, state (working, needs-you, done or ended), title, text, folder — to ""WinOrbit.exe --agent <name>"". The button copies a PowerShell example.",
                 CopyButton("Copy example", () => AgentSetup.Own(exe))),
-            Kit.Row("Preview", "The card a session shows when it needs you.", Kit.Btn("Needs you", () => Hub.Island.Demo("agent")))));
+            Kit.Row("Preview", "The card a session shows when it needs you.", Kit.Btn("Needs you", () => Hub.Island.Demo("agent"))))));
 
         var modules = new StackPanel();
         foreach (var (id, glyph, name, desc) in new[]
@@ -356,7 +356,7 @@ public sealed class IslandPage : PageBase
         Children.Add(Kit.Section("Expanded panels", "Tabs available when the island opens. Use ←/→ or the number keys to switch with the keyboard.", modules));
 
         var imported = Hub.Store.Data.Events.Count(e => e.Source is not null);
-        Children.Add(Kit.Section("Calendar events", "Bring in events from Outlook, Google Calendar or Apple Calendar: export the calendar as an .ics file, then import it here. It is a one-time copy onto this PC — nothing syncs and nothing goes online.",
+        Children.Add(Kit.Adv(Kit.Section("Calendar events", "Bring in events from Outlook, Google Calendar or Apple Calendar: export the calendar as an .ics file, then import it here. It is a one-time copy onto this PC — nothing syncs and nothing goes online.",
             Kit.Row("Import an .ics file", "Repeating events are filled in from 30 days ago to a year ahead. Importing the same calendar again updates its events instead of doubling them.", Kit.Btn("Import…", ImportCalendar, Glyph.Import), false),
             Kit.Row("Remove imported events", imported == 0 ? "No imported events." : $"{imported} imported event{(imported == 1 ? "" : "s")}. Events you typed in the island stay.",
                 Kit.Btn("Remove", () =>
@@ -366,17 +366,17 @@ public sealed class IslandPage : PageBase
                     Hub.Store.SaveData();
                     Hub.Island.RefreshCalendar();
                     Rebuild();
-                }, Glyph.Delete).With(b => b.IsEnabled = imported > 0))));
+                }, Glyph.Delete).With(b => b.IsEnabled = imported > 0)))));
 
         Children.Add(Kit.Section("Behaviour", null,
             Kit.ToggleRow("Hide during fullscreen apps and games", "Gets out of the way the moment a game, video or presentation goes fullscreen on the island's screen, and drops back in when it ends.", S.HideInFullscreen, v => { S.HideInFullscreen = v; Save(); }, false),
-            Kit.WideRow("Keep showing over", "Fullscreen apps the island stays visible over — say, slides you time with the focus timer.", AppPicker(S.ShowOverFullscreenApps)),
-            Kit.WideRow("Always hide for", "Apps the island hides for whenever they're in front on its screen, fullscreen or not — a game in a window, a video editor, a screen recorder.", AppPicker(S.HideForApps)),
+            Kit.Adv(Kit.WideRow("Keep showing over", "Fullscreen apps the island stays visible over — say, slides you time with the focus timer.", AppPicker(S.ShowOverFullscreenApps))),
+            Kit.Adv(Kit.WideRow("Always hide for", "Apps the island hides for whenever they're in front on its screen, fullscreen or not — a game in a window, a video editor, a screen recorder.", AppPicker(S.HideForApps))),
             Kit.ToggleRow("Auto-hide", "Slides up out of view; touch the top edge of the screen to bring it back.", S.AutoHide, v => { S.AutoHide = v; Save(); }),
             Kit.ToggleRow("Expand on hover", "Opens after resting the pointer on it briefly.", S.ExpandOnHover, v => { S.ExpandOnHover = v; Save(); }),
-            Kit.SliderRow("Hover delay", "How long the pointer must rest before it opens, so sweeping past the top of the screen doesn't open it.", 0, 1200, S.HoverDelayMs, v => { S.HoverDelayMs = (int)Math.Round(v / 20) * 20; Save(); }, v => $"{v:0} ms", true, 20),
-            Kit.ToggleRow("Announce track changes", "Briefly shows the new song in the capsule.", S.PeekOnMediaChange, v => { S.PeekOnMediaChange = v; Save(); }),
-            Kit.SliderRow("Shrink after", "Seconds without any interaction before the open island shrinks back (2.5 s after the pointer leaves). 0 keeps it open until you click away.", 0, 30, S.AutoCollapseSeconds, v => { S.AutoCollapseSeconds = (int)v; Save(); }, v => v < 1 ? "Never" : $"{v:0} s", true, 1)));
+            Kit.Adv(Kit.SliderRow("Hover delay", "How long the pointer must rest before it opens, so sweeping past the top of the screen doesn't open it.", 0, 1200, S.HoverDelayMs, v => { S.HoverDelayMs = (int)Math.Round(v / 20) * 20; Save(); }, v => $"{v:0} ms", true, 20)),
+            Kit.Adv(Kit.ToggleRow("Announce track changes", "Briefly shows the new song in the capsule.", S.PeekOnMediaChange, v => { S.PeekOnMediaChange = v; Save(); })),
+            Kit.Adv(Kit.SliderRow("Shrink after", "Seconds without any interaction before the open island shrinks back (2.5 s after the pointer leaves). 0 keeps it open until you click away.", 0, 30, S.AutoCollapseSeconds, v => { S.AutoCollapseSeconds = (int)v; Save(); }, v => v < 1 ? "Never" : $"{v:0} s", true, 1))));
 
         Children.Add(Kit.Section("Accessibility", null,
             Kit.Row("Keyboard", $"{Hub.Settings.General.HotkeyIsland} opens the island and gives it keyboard focus. Tab moves between controls, Esc closes. The island never steals focus when clicked with the mouse.", Kit.Btn("Change shortcut", () => Owner?.Navigate("settings")), false),
@@ -399,6 +399,20 @@ public sealed class WidgetsPage : PageBase
         // Clocks first: the most asked-for desktop widget, in every style, live. Added Bare (straight on the wallpaper).
         foreach (var p in _previews) p.Stop();
         _previews.Clear();
+
+        // Desktop sets: a whole look (clock skin, matching pieces, theme, island glance, liquid glass) in one click.
+        var sets = Kit.Gallery();
+        foreach (var set in DesktopSets.All) sets.Children.Add(SetCard(set, _previews));
+        Children.Add(Kit.Section("Desktop sets", "A whole look in one click: a clock skin with the pieces made for it, a theme, the island's glance and liquid glass on or off. Using a set replaces the widgets on your desktop; Profiles › Restore previous desktop brings yours back.",
+            sets,
+            Kit.Buttons(
+                Kit.Btn("Save my desktop as a set…", () =>
+                {
+                    if (Hub.Settings.Widgets.Count(w => w.Visible) == 0) { Dialogs.Message("Nothing to save", "Put a few widgets on your desktop first; a set is made from the ones that are showing."); return; }
+                    if (Dialogs.Prompt("Save as a set", "Name", "My desktop") is { Length: > 0 } name) DesktopSets.SaveCurrentAs(name.Trim());
+                }, Glyph.Save),
+                Kit.Btn("Import a set…", ImportSet, Glyph.Import))));
+
         var clocks = Kit.Gallery();
         foreach (var (id, name, size) in ClockWidget.Styles)
         {
@@ -466,13 +480,13 @@ public sealed class WidgetsPage : PageBase
 
         Children.Add(Kit.Section("Layout", null,
             Kit.ToggleRow("Show widgets", $"Shortcut: {Hub.Settings.General.HotkeyWidgets}", L.WidgetsVisible, v => { L.WidgetsVisible = v; Hub.Store.Save(); Hub.Widgets.Apply(); }, false),
-            Kit.ToggleRow("Match the clock's lettering", "Widgets take their letters from your clock: mono with Mono and Dot matrix, condensed with Poster, Label, Week, Heavy and Script, airy with Orbit, Hairline, Spaced and Story.", L.MatchClockLettering, v => { L.MatchClockLettering = v; Hub.Store.Save(); Hub.Widgets.RefreshLettering(); }),
+            Kit.Adv(Kit.ToggleRow("Match the clock's lettering", "Widgets take their letters from your clock: mono with Mono and Dot matrix, condensed with Poster, Label, Week, Heavy and Script, airy with Orbit, Hairline, Spaced and Story.", L.MatchClockLettering, v => { L.MatchClockLettering = v; Hub.Store.Save(); Hub.Widgets.RefreshLettering(); })),
             Kit.ToggleRow("Lock layout", "Prevents accidental moving and resizing.", L.Locked, v => { L.Locked = v; Hub.Store.Save(); }),
-            Kit.ToggleRow("Snap to grid", "Widgets also snap magnetically to the screen margins.", L.SnapToGrid, v => { L.SnapToGrid = v; Hub.Store.Save(); }),
-            Kit.SliderRow("Grid size", null, 4, 48, L.GridSize, v => { L.GridSize = (int)v; Hub.Store.Save(); }, v => $"{v:0} px", true, 4),
-            Kit.SliderRow("Screen margin", "Space kept clear at the edges of the screen.", 0, 96, L.Margin, v => { L.Margin = (int)v; Hub.Store.Save(); }, v => $"{v:0} px", true, 2),
-            Kit.SliderRow("Spacing", "Gap between widgets when arranging.", 0, 48, L.Spacing, v => { L.Spacing = (int)v; Hub.Store.Save(); }, v => $"{v:0} px", true, 2),
-            Kit.Row("Tidy up", "Re-flow every visible widget into neat columns using the margin and spacing above.",
+            Kit.Adv(Kit.ToggleRow("Snap to grid", "Widgets also snap magnetically to the screen margins.", L.SnapToGrid, v => { L.SnapToGrid = v; Hub.Store.Save(); })),
+            Kit.Adv(Kit.SliderRow("Grid size", null, 4, 48, L.GridSize, v => { L.GridSize = (int)v; Hub.Store.Save(); }, v => $"{v:0} px", true, 4)),
+            Kit.Adv(Kit.SliderRow("Screen margin", "Space kept clear at the edges of the screen.", 0, 96, L.Margin, v => { L.Margin = (int)v; Hub.Store.Save(); }, v => $"{v:0} px", true, 2)),
+            Kit.Adv(Kit.SliderRow("Spacing", "Gap between widgets when arranging.", 0, 48, L.Spacing, v => { L.Spacing = (int)v; Hub.Store.Save(); }, v => $"{v:0} px", true, 2)),
+            Kit.Row("Tidy up", "Line every visible widget up in neat columns, along the left or the right of the screen.",
                 Kit.Buttons(Kit.Btn("Arrange left", () => Hub.Widgets.Arrange(false)), Kit.Btn("Arrange right", () => Hub.Widgets.Arrange(true), null, true)))));
 
         Children.Add(Kit.Notice(Glyph.Profiles, "Save layouts as profiles", "Profiles store your complete widget layout together with the theme and island. Restore any of them after a restart or switch between them in one click.", "T.Accent",
@@ -507,8 +521,118 @@ public sealed class WidgetsPage : PageBase
         }
     }
 
+    private void ImportSet()
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog { Filter = $"WinOrbit desktop set|*{DesktopSets.Extension}" };
+        if (dlg.ShowDialog() != true) return;
+        DesktopSet? set = null;
+        try { set = DesktopSets.Import(dlg.FileName); } catch (Exception ex) { Log.Error("Import set failed", ex); }
+        if (set is null) { Dialogs.Message("Not a desktop set", "That file isn't a WinOrbit desktop set, or none of its widgets are ones WinOrbit has."); return; }
+        if (Dialogs.Confirm("Set imported", $"“{set.Name}” is with your sets now. Use it?", "Use it", "Later", "The widgets on your desktop are replaced. Profiles › Restore previous desktop brings them back."))
+            DesktopSets.Apply(set);
+    }
+
+    private static void ExportSet(DesktopSet set)
+    {
+        var safe = string.Concat(set.Name.Where(c => !Path.GetInvalidFileNameChars().Contains(c))).Trim();
+        var dlg = new Microsoft.Win32.SaveFileDialog { FileName = (safe.Length > 0 ? safe : "Desktop set") + DesktopSets.Extension, Filter = $"WinOrbit desktop set|*{DesktopSets.Extension}" };
+        if (dlg.ShowDialog() != true) return;
+        try { DesktopSets.Export(set, dlg.FileName); }
+        catch (Exception ex) { Log.Error("Export set failed", ex); Dialogs.Message("Couldn't save the set", ex.Message); }
+    }
+
+    /// <summary>Put a set on the desktop after saying what happens to the widgets there now.</summary>
+    internal static bool ConfirmAndApply(DesktopSet set)
+    {
+        if (Hub.Settings.Widgets.Count > 0 && !Dialogs.Confirm($"Use the {set.Name} set?", "Your widgets are replaced by the set's, and the theme, the island's glance and liquid glass change with it.", "Use it", "Cancel",
+                "Profiles › Restore previous desktop brings back what you have now.")) return false;
+        DesktopSets.Apply(set);
+        return true;
+    }
+
+    /// <summary>A set's card: a live miniature of the desktop it makes, its name, what's in it, and its buttons.</summary>
+    private static Border SetCard(DesktopSet set, List<WidgetView> previews)
+    {
+        var active = Hub.Settings.ActiveSetId == set.Id;
+        var sp = new StackPanel();
+        var stage = new Button { Padding = new Thickness(0), BorderThickness = new Thickness(0), Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = $"Use the {set.Name} set", Content = SetPreview(set, 372, previews) };
+        stage.Click += (_, _) => ConfirmAndApply(set);
+        sp.Children.Add(stage);
+        var head = Ui.Grid("*,auto");
+        head.Margin = new Thickness(2, 11, 0, 2);
+        head.Children.Add(Ui.Text(set.Name, "Text.Body", 14, FontWeights.SemiBold));
+        if (active) head.Children.Add(Ui.Text("IN USE", "Text.Label", 9.5).With(t => { t.SetResourceReference(TextBlock.ForegroundProperty, "T.Accent"); t.VerticalAlignment = VerticalAlignment.Center; }).At(0, 1));
+        sp.Children.Add(head);
+        sp.Children.Add(Ui.Text(set.Description, "Text.Caption", 11.5).With(t => { t.Margin = new Thickness(2, 0, 0, 0); t.Height = 48; t.TextTrimming = TextTrimming.CharacterEllipsis; }));
+        var theme = set.ThemeId.Length > 0 ? Hub.Theme.Find(set.ThemeId)?.Name : null;
+        var facts = string.Join(" · ", new[] { theme, set.LiquidGlass switch { true => "liquid glass", false => "no liquid glass", _ => null }, $"{set.Widgets.Count} widgets" }.Where(s => s is not null));
+        sp.Children.Add(Ui.Text(facts, "Text.Label", 9.5).With(t => { t.Margin = new Thickness(2, 6, 0, 10); t.TextTrimming = TextTrimming.CharacterEllipsis; }));
+        var buttons = new List<UIElement> { Kit.Btn(active ? "Use again" : "Use", () => ConfirmAndApply(set), null, !active) };
+        buttons.Add(Ui.IconButton(Glyph.Share, "Share this set as a file", () => ExportSet(set)));
+        if (!set.BuiltIn)
+            buttons.Add(Ui.IconButton(Glyph.Delete, "Delete this set", () =>
+            {
+                if (Dialogs.Confirm("Delete this set?", $"“{set.Name}” is removed from your sets. Widgets on the desktop stay as they are.", "Delete")) DesktopSets.Delete(set);
+            }));
+        sp.Children.Add(Kit.Buttons(buttons.ToArray()));
+        var card = Kit.Card(sp, new Thickness(12));
+        card.Width = 398;
+        card.Margin = new Thickness(6);
+        if (active) { card.SetResourceReference(Border.BorderBrushProperty, "T.Accent"); card.BorderThickness = new Thickness(1.5); }
+        return card;
+    }
+
+    /// <summary>
+    /// A small picture of the desktop a set makes: your wallpaper with the set's own widgets on it, live, placed the way
+    /// <see cref="DesktopSets.Apply"/> places them on your main display and lettered after the set's clock.
+    /// </summary>
+    internal static FrameworkElement SetPreview(DesktopSet set, double width, List<WidgetView> previews)
+    {
+        var mon = Monitors.Primary;
+        var scale = mon.Scale > 0 ? mon.Scale : 1;
+        double dw = Math.Max(320, (mon.Bounds.Right - mon.Bounds.Left) / scale), dh = Math.Max(200, (mon.Bounds.Bottom - mon.Bounds.Top) / scale);
+        var work = DesktopSets.WorkArea(mon);
+        var workDip = new Rect(work.X / scale, work.Y / scale, work.Width / scale, work.Height / scale);
+        var canvas = new Canvas { Width = dw, Height = dh, ClipToBounds = true, IsHitTestVisible = false };
+        if (Hub.Wallpaper.Preview(mon.Device) is { } wall)
+            canvas.Children.Add(new Image { Source = wall, Stretch = Stretch.UniformToFill, Width = dw, Height = dh });
+        else
+            canvas.SetResourceReference(Panel.BackgroundProperty, "T.WashStrong");
+        // Bare pieces take light or dark ink from the picture, as they do on the desktop.
+        WidgetWindow.PutInk(canvas.Resources, WidgetWindow.LightInk(Hub.Wallpaper.Palette.AverageLuminance));
+
+        var keep = WidgetLook.Current;
+        WidgetLook.Current = WidgetLook.LetteringFor(WidgetLook.LeadClock(set.Widgets.Select(w => new WidgetInstance { Kind = w.Kind, Variant = w.Variant, Visible = true })));
+        try
+        {
+            var battery = DesktopSets.HasBattery();
+            foreach (var w in set.Widgets)
+            {
+                if (WidgetCatalog.Find(w.Kind) is not { } kind || (w.Kind == "battery" && !battery)) continue;
+                WidgetView view;
+                try { view = kind.Create(w.Clone()); } catch (Exception ex) { Log.Error($"Set preview: {w.Kind}", ex); continue; }
+                view.Width = w.Width;
+                view.Height = w.Height;
+                if (WidgetWindow.IsBare(w)) view.SetResourceReference(EffectProperty, "W.BareShadow");
+                var (x, y) = DesktopSets.ToPixels(w.X, w.Y, w.Width, w.Height, workDip);
+                Canvas.SetLeft(view, x);
+                Canvas.SetTop(view, y);
+                canvas.Children.Add(view);
+                previews.Add(view);
+            }
+        }
+        finally { WidgetLook.Current = keep; }
+
+        var height = Math.Round(width * dh / dw);
+        var frame = new Border { Width = width, Height = height, CornerRadius = new CornerRadius(10), ClipToBounds = true, BorderThickness = new Thickness(1), Child = new Viewbox { Stretch = Stretch.Uniform, Child = canvas } };
+        frame.SetResourceReference(Border.BorderBrushProperty, "T.Stroke");
+        frame.Clip = new RectangleGeometry(new Rect(0, 0, width, height), 10, 10);
+        return frame;
+    }
+
     protected override void OnEnter()
     {
+        Live(() => DesktopSets.Changed += Rebuild, () => DesktopSets.Changed -= Rebuild);
         Live(() => Hub.Widgets.Changed += RenderPlaced, () => Hub.Widgets.Changed -= RenderPlaced);
         // The previews tick once a minute, and only while this page is open.
         Live(() => { foreach (var p in _previews) p.Start(); }, () => { foreach (var p in _previews) p.Stop(); });

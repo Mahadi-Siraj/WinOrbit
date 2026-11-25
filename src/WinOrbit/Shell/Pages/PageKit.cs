@@ -25,8 +25,18 @@ public abstract class PageBase : StackPanel
 
     public void Enter()
     {
-        if (!_built) { _built = true; Build(); }
+        if (!_built) { _built = true; BuildAll(); }
         OnEnter();
+    }
+
+    private void BuildAll()
+    {
+        Build();
+        // Simple settings: say what's hidden on this page and offer to show it, instead of leaving people to wonder.
+        var hidden = Kit.HiddenAdvanced(this);
+        if (hidden > 0 && Hub.Ready && !Hub.Settings.General.Advanced)
+            Children.Add(Kit.Notice(Glyph.Settings, "Simple settings", $"{hidden} more advanced {(hidden == 1 ? "setting is" : "settings are")} hidden on this page. Search still finds every setting.", "T.Accent",
+                Kit.Btn("Show advanced settings", () => Kit.SetAdvanced(true, Owner))));
     }
 
     public void Leave()
@@ -47,7 +57,7 @@ public abstract class PageBase : StackPanel
     protected void Live(IDisposable d) => _live.Add(d);
     protected void Live(Action subscribe, Action unsubscribe) { subscribe(); _unsubscribe.Add(unsubscribe); }
 
-    protected void Rebuild() { Children.Clear(); Build(); }
+    protected void Rebuild() { Children.Clear(); BuildAll(); }
 }
 
 /// <summary>Composable building blocks for settings pages.</summary>
@@ -55,6 +65,39 @@ public static class Kit
 {
     /// <summary>Marks a setting row or section so Settings search can find it and jump to it.</summary>
     public sealed record SearchTag(string Label, string Description);
+
+    // ---- simple and advanced settings ----
+    public static readonly DependencyProperty AdvancedProperty = DependencyProperty.RegisterAttached("Advanced", typeof(bool), typeof(Kit), new PropertyMetadata(false));
+    public static bool GetAdvanced(DependencyObject d) => (bool)d.GetValue(AdvancedProperty);
+
+    /// <summary>Marks a section or row as advanced: hidden until Settings › Show advanced settings is on (search still finds it).</summary>
+    public static T Adv<T>(T element) where T : UIElement
+    {
+        element.SetValue(AdvancedProperty, true);
+        if (Hub.Ready && !Hub.Settings.General.Advanced) element.Visibility = Visibility.Collapsed;
+        return element;
+    }
+
+    /// <summary>How many advanced sections and rows a page is hiding (one count for a hidden section, not for each row in it).</summary>
+    internal static int HiddenAdvanced(DependencyObject root)
+    {
+        var n = 0;
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        {
+            if (child is UIElement u && GetAdvanced(u) && u.Visibility != Visibility.Visible) { n++; continue; }
+            n += HiddenAdvanced(child);
+        }
+        return n;
+    }
+
+    /// <summary>Switch between simple and advanced settings and redraw the window to match.</summary>
+    public static void SetAdvanced(bool on, MainWindow? window)
+    {
+        Hub.Settings.General.ShowAdvanced = on;
+        Hub.Store.Save();
+        window?.UpdateOptionalPages();
+        window?.Reload();
+    }
 
     /// <summary>A titled card containing rows.</summary>
     public static Border Section(string title, string? description, params UIElement[] content)

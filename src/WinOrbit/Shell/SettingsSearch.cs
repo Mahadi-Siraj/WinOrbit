@@ -69,6 +69,10 @@ public static class SettingsSearch
     {
         var target = Walk(page).FirstOrDefault(e => e.Tag is Kit.SearchTag t && t.Label == label);
         if (target is null) return;
+        // With simple settings, an advanced row is hidden: show that one (and the section it sits in) on its own.
+        for (DependencyObject? d = target; d is not null && d != page; d = LogicalTreeHelper.GetParent(d))
+            if (d is UIElement u && Kit.GetAdvanced(u) && u.Visibility != Visibility.Visible) u.Visibility = Visibility.Visible;
+        target.UpdateLayout();
         target.BringIntoView(new Rect(0, -40, target.ActualWidth, target.ActualHeight + 80));
         var color = (page.TryFindResource("T.AccentSoft") as SolidColorBrush)?.Color ?? Color.FromArgb(0x40, 0x5B, 0x9D, 0xFF);
         var brush = new SolidColorBrush(color);

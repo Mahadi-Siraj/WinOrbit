@@ -247,6 +247,36 @@ public sealed class Profile
     public int? Brightness { get; set; }
 }
 
+/// <summary>
+/// A desktop set: one whole look in one click: the clock skin, its matching pieces, the island's glance, the theme and
+/// liquid glass. Lighter than a profile: it leaves the island's other settings, the layout options and motion alone.
+/// Widget X and Y are the centre of each widget as a share (0..1) of the display's work area, so a set fits any screen
+/// and can be shared as a file.
+/// </summary>
+public sealed class DesktopSet
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
+    public string Name { get; set; } = "My set";
+    public string Description { get; set; } = "";
+    [JsonIgnore] public bool BuiltIn { get; set; }
+    /// <summary>The theme to switch to; empty keeps the current one.</summary>
+    public string ThemeId { get; set; } = "";
+    /// <summary>What the collapsed island shows; empty keeps the current choice.</summary>
+    public string Glance { get; set; } = "";
+    /// <summary>Liquid glass on or off; null keeps the current choice.</summary>
+    public bool? LiquidGlass { get; set; }
+    public List<WidgetInstance> Widgets { get; set; } = new();
+}
+
+/// <summary>A desktop set saved as a file to share (.winorbitset): the set, plus its theme when that is your own.</summary>
+public sealed class DesktopSetFile
+{
+    public string Format { get; set; } = "winorbit-desktop-set";
+    public int Version { get; set; } = 1;
+    public DesktopSet? Set { get; set; }
+    public Theme? Theme { get; set; }
+}
+
 public sealed class TimeRule
 {
     public bool Enabled { get; set; } = true;
@@ -295,6 +325,17 @@ public sealed class GeneralSettings
     public bool CurvedGlass { get; set; } = true;
     /// <summary>Glass shows the windows behind it (screen capture, Windows 11). Off by default.</summary>
     public bool LiveGlass { get; set; }
+    /// <summary>
+    /// Liquid glass on or off, whatever the theme: off keeps every look's classic thin edge instead of the thick liquid
+    /// lens. On by default; older settings files have none and load as on, so nothing changes for them.
+    /// </summary>
+    public bool LiquidGlass { get; set; } = true;
+    /// <summary>
+    /// Show the advanced pages and settings. Null in settings from before 2.0: those people already use them, so
+    /// <see cref="Store"/> turns it on for them and off for a new install.
+    /// </summary>
+    public bool? ShowAdvanced { get; set; }
+    [JsonIgnore] public bool Advanced => ShowAdvanced ?? true;
     public bool FirstRunDone { get; set; }
 }
 
@@ -325,6 +366,8 @@ public sealed class AppSettings
     public int Schema { get; set; } = 1;
     public string ActiveThemeId { get; set; } = "pure-liquid-glass";
     public string ActiveProfileId { get; set; } = "";
+    /// <summary>The desktop set applied last (empty once the desktop is changed some other way).</summary>
+    public string ActiveSetId { get; set; } = "";
     public bool WallpaperAutoExtract { get; set; } = true;
     /// <summary>When Wallpaper Engine or Lively draws the desktop, snapshot that layer (in memory only) so glass matches it.</summary>
     public bool LiveWallpaperCapture { get; set; } = true;
