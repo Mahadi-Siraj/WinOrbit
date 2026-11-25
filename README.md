@@ -34,10 +34,18 @@
 
 <table>
   <tr>
-    <td colspan="2"><img src="docs/assets/shot-liquid.jpg" alt="The island opened in the Liquid Clear theme: the Control Centre over a colourful fantasy wallpaper and the now-playing panel over an anime portrait, both clear enough to see the art through. Below, a close-up of the same corner with the liquid lens off (a flat pane) and on (the rim bends the art behind it, with a prism fringe)"></td>
+    <td colspan="2"><img src="docs/assets/shot-liquid.jpg" alt="The now-playing panel in the Liquid Clear theme, twice: over a black liquid-metal live wallpaper, tinted rose by the album cover, and over an anime portrait clear enough to see the art through. Below, a close-up of the same corner with the liquid lens off (a flat pane) and on (the rim bends the art behind it, with a prism fringe)"></td>
   </tr>
   <tr>
-    <td colspan="2"><b>True liquid glass</b><br><sub>Liquid Clear is nearly clear glass with a thick, rounded rim that bends the wallpaper like a real lens, with a hint of prism. Bottom: the same corner with the lens off and on. Runs on the graphics card.</sub></td>
+    <td colspan="2"><b>True liquid glass</b><br><sub>Liquid Clear is nearly clear glass with a thick, rounded rim that bends the wallpaper like a real lens, with a hint of prism. Top left is the developer's own desktop. Bottom: the same corner with the lens off and on. Runs on the graphics card.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/island-live.gif" alt="Recorded live: the pointer clicks the island over a moving liquid-metal wallpaper; it opens rose-tinted for the song, turns night blue on the weather tab, then dark for the calendar and system tabs"></td>
+    <td width="50%"><img src="docs/assets/album-tint.gif" alt="Recorded live: four songs in a row, and the glass flows to each cover's colours: violet and blue, teal, deep red, then rose"></td>
+  </tr>
+  <tr>
+    <td><b>Live, over a live wallpaper</b><br><sub>Click it and the glass follows what's inside: rose for the song, night blue for Tokyo's weather.</sub></td>
+    <td><b>Every song, its own colour</b><br><sub>Four songs in a row, recorded at real speed.</sub></td>
   </tr>
   <tr>
     <td colspan="2"><img src="docs/assets/shot-desktop.jpg" alt="A whole desktop in the Orbit set: WEDNESDAY in wide Orbit letters, a music line and what's playing under it, CPU, RAM and GPU as slashes in the corner, and the island showing a song, over an anime wallpaper"></td>
@@ -46,7 +54,7 @@
     <td colspan="2"><b>Widgets that live on your wallpaper</b><br><sub>The Orbit set: clock, music line, now playing and system pieces drawn straight on the wallpaper, their ink following what's under them.</sub></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/assets/shot-sets.jpg" alt="Six desktops: the Orbit, Poster, Terminal, Heavy night and Hairline desktop sets and the Lo-fi profile, each over a different anime wallpaper"></td>
+    <td colspan="2"><img src="docs/assets/shot-sets.jpg" alt="Six desktops: the Orbit, Poster, Terminal, Heavy night and Hairline desktop sets over anime wallpapers, and the Lo-fi profile over Los Angeles at dusk"></td>
   </tr>
   <tr>
     <td colspan="2"><b>Desktop sets and profiles</b><br><sub>A whole look in one click: a clock skin with its matching pieces, a theme and the island's glance. Share yours as a <code>.winorbitset</code> file.</sub></td>
@@ -101,7 +109,7 @@
   </tr>
   <tr>
     <td><img src="docs/assets/shot-agents.png" alt="Coding agents: one session needs you (orange), one is working, one is done, from Claude Code and Codex"></td>
-    <td><img src="docs/assets/widgets.jpg" alt="Glass widgets in the Neon theme: a month calendar, a stacked clock, CPU, RAM and GPU rings, a focus timer, notes and a dot-matrix clock"></td>
+    <td><img src="docs/assets/widgets.jpg" alt="Glass widgets in the Neon theme over a neon night city: a month calendar, a stacked clock, CPU, RAM and GPU rings, a focus timer, notes and a dot-matrix clock"></td>
   </tr>
   <tr>
     <td><b>Coding agents</b> <sub>(opt-in)</sub><br><sub>See what Claude Code and Codex are doing. The island glows orange while one waits for you.</sub></td>
@@ -116,7 +124,7 @@
   <br><sub>13 themes, 8 rim colours, 5 shapes, 5 surfaces and 3 sizes. Six of the themes, each with one of the island's live cards.</sub>
 </p>
 
-<sub>Screenshots: the island at 1.25× to 1.4× size, using WinOrbit's built-in previews. The songs are demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are frames of Wallpaper Engine wallpapers from the Steam Workshop (Spirit Blossom Kindred, Minimal Sukuna 4K, Pain Yahiko, Samurai vs ShadowDragon, Ichigo Bleach, Itadori Yuji, Goku Ultra Instinct); credit to their artists and creators.</sub>
+<sub>Screenshots: the island at 1.25× to 1.4× size, using WinOrbit's built-in previews. The songs are demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are Wallpaper Engine wallpapers from the Steam Workshop (black-liquid-metal, Minimal Sukuna 4K, Pain Yahiko, Samurai vs ShadowDragon, Ichigo Bleach, Itadori Yuji, Goku Ultra Instinct, Night City - Cyberpunk 2077, Above Los Angeles); credit to their artists and creators.</sub>
 
 ---
 
