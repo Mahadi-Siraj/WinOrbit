@@ -34,6 +34,30 @@
 
 <table>
   <tr>
+    <td colspan="2"><img src="docs/assets/shot-liquid.jpg" alt="The island opened in the Liquid Clear theme: on the left the now-playing panel over a black-hole wallpaper, on the right the Control Centre over a full moon, both bending the wallpaper at their thick, rounded rims"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>True liquid glass</b><br><sub>Liquid Clear and Liquid Frosted bend the wallpaper at a thick, rounded rim with a hint of prism, like a real lens. Runs on the graphics card.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/assets/shot-desktop.jpg" alt="A whole desktop in the Orbit set: WEDNESDAY in wide Orbit letters, a music line and what's playing under it, CPU, RAM and GPU as slashes in the corner, and the island showing a song, over a sunset drive wallpaper"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>Widgets that live on your wallpaper</b><br><sub>The Orbit set: clock, music line, now playing and system pieces drawn straight on the wallpaper, their ink following what's under them.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/assets/shot-sets.jpg" alt="Six desktops: the Orbit, Poster, Terminal, Heavy night and Hairline desktop sets and the Lo-fi profile, each over a different wallpaper"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>Desktop sets and profiles</b><br><sub>A whole look in one click: a clock skin with its matching pieces, a theme and the island's glance. Share yours as a <code>.winorbitset</code> file.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/assets/shot-clocks.jpg" alt="Sixteen clock styles over a wallpaper: Orbit, Poster, Hairline, Heavy, Week, Story, Label, Dot matrix, Mono, Stacked, Spaced, Big date, Outline, Script, Ambient date and Minimal"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>Seventeen clock styles</b><br><sub>Sixteen of them here, from Orbit letters to an LED dot matrix, picked from a live gallery.</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/assets/shot-media.png" alt="Now playing: album art, title, artist, a seek bar, ±10 s, playback and volume controls; the glass takes on the cover's colours"></td>
     <td width="50%"><img src="docs/assets/shot-controls.png" alt="Control Centre: volume and brightness sliders and twelve tiles for Wi-Fi, Bluetooth, airplane mode, Do not disturb, night light, dark mode, Energy saver, power mode, microphone, keep awake, focus and widgets"></td>
   </tr>
@@ -77,28 +101,22 @@
   </tr>
   <tr>
     <td><img src="docs/assets/shot-agents.png" alt="Coding agents: one session needs you (orange), one is working, one is done, from Claude Code and Codex"></td>
-    <td><img src="docs/assets/widgets.png" alt="Desktop widgets: an ambient greeting card, a date clock, a month calendar, a system monitor and a focus timer"></td>
+    <td><img src="docs/assets/widgets.jpg" alt="Glass widgets in the Neon theme: a month calendar, a stacked clock, CPU, RAM and GPU rings, a focus timer, notes and a dot-matrix clock"></td>
   </tr>
   <tr>
     <td><b>Coding agents</b> <sub>(opt-in)</sub><br><sub>See what Claude Code and Codex are doing. The island glows orange while one waits for you.</sub></td>
-    <td><b>Desktop widgets</b><br><sub>13 widgets that snap, resize and follow your theme.</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="docs/assets/shot-desktop.png" alt="A real desktop: the island at the top, with clock, weather, system rings, now playing and calendar widgets over a Cyberpunk city wallpaper"></td>
-  </tr>
-  <tr>
-    <td colspan="2"><b>On a real desktop</b><br><sub>The island with clock, weather, system, music and calendar widgets over a live wallpaper.</sub></td>
+    <td><b>Glass widgets</b><br><sub>13 widgets that snap, resize and follow your theme, on glass or bare on the wallpaper.</sub></td>
   </tr>
 </table>
 
 ### Make it yours
 
 <p align="center">
-  <img src="docs/assets/shot-vibes.png" alt="Six looks: Midnight (black island, ocean rim), Ink (square shape, mono rim), Neon rain (smoked glass, aurora rim), Synthwave (drop shape, sunset rim), Cosmic (notch shape, prism rim, themed widgets) and Golden hour (solid island, warm accent)" width="100%">
-  <br><sub>13 themes, 8 rim colours, 5 shapes, 5 surfaces and 3 sizes. Six of the combinations, over Wallpaper Engine wallpapers.</sub>
+  <img src="docs/assets/shot-vibes.jpg" alt="Six themes, each with the island showing a live card over glass widgets: Neon (a song), Sakura (headphones connected), Ember (charging), Liquid Clear (Wi-Fi connected), Midnight (a call) and Soft Light (a reminder)" width="100%">
+  <br><sub>13 themes, 8 rim colours, 5 shapes, 5 surfaces and 3 sizes. Six of the themes, each with one of the island's live cards.</sub>
 </p>
 
-<sub>Screenshots: the island at 1.4× size with the Black material and Midnight theme, using WinOrbit's built-in previews. The songs are silent demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are from Wallpaper Engine; credit to their creators.</sub>
+<sub>Screenshots: the island at 1.25× to 1.4× size, using WinOrbit's built-in previews. The songs are demo tracks with made-up names, the calendar events are made up and the weather shows Tokyo. Wallpapers are frames of Wallpaper Engine wallpapers (Sunset Drive by Visualdon, Eternal sunset, Ultrawide Singularity, Luxury Rain Apartment and others); credit to their creators.</sub>
 
 ---
 
@@ -143,7 +161,9 @@ Apps (desktop and Store, with icons), Windows and WinOrbit settings, actions (da
 * **Wallpaper-aware glass** that frosts your real wallpaper — including **Wallpaper Engine / Lively** live wallpapers. Optional **Live glass** (Windows 11) shows the windows behind it instead, and **curved edges** bend the light at the rim. Not a glass person? The island and widgets can be **Gradient**, Smoked, Solid or plain **Black** instead.
 * **13 widgets** with one design — four sizes that line up, the same margins and headers everywhere, big light numbers, monospaced data and segmented HUD meters, on a glass card or **bare** on the wallpaper (their text colour follows the wallpaper under them). **Seventeen clock styles**, among them desktop skins drawn in WinOrbit's own geometric **Orbit letters**, a poster numeral, a boxed label and an LED-style dot matrix, with a live gallery to pick from and text-only **matching pieces** (now playing, system, weather, recycle bin, launcher) that take the clock's lettering, plus calendar, world clock, system monitor, now playing, focus, notes, tasks, launcher, recycle bin, weather and more.
 * **13 themes** (Neon, Sakura and Ember among them), a live **Liquid Glass Editor**, dark / light / auto / scheduled modes, wallpaper-generated gradients.
-* **Profiles** (Study, Gaming, Productivity, Minimal, Night) with optional automation.
+* **Desktop sets** — Orbit, Poster, Terminal, Heavy night and Hairline: a clock skin, its matching pieces, a theme and the island's glance in one click. Save your own desktop as a set and share it as a small `.winorbitset` file.
+* **Profiles** (Study, Gaming, Productivity, Minimal, Night and **Lo-fi**) with optional automation, and `--profile <name>` for shortcuts and Stream Deck.
+* **Screenshot with WinOrbit** (tray menu) — a screenshot that includes the island and widgets, even with Live glass on.
 * **Windows tweaks** with full backup and one-click **Revert all**.
 * **Rainmeter manager** — appears only if you use Rainmeter.
 
