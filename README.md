@@ -26,8 +26,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Mahadi-Siraj/WinOrbit/releases/download/v1.3.2/WinOrbit-demo.mp4"><img src="docs/assets/demo-poster.png" alt="Play the 39-second demo video: the island on anime wallpapers, glowing with each song's colours, live cards, widgets and the WinOrbit logo" width="720"></a>
-  <br><sub>▶ <a href="https://github.com/Mahadi-Siraj/WinOrbit/releases/download/v1.3.2/WinOrbit-demo.mp4">Watch the 39-second demo</a> (vertical, with music)</sub>
+  <a href="https://youtube.com/shorts/xD07YjHHF3I"><img src="docs/assets/demo-poster.png" alt="Watch the demo on YouTube: the island on anime wallpapers, glowing with each song's colours, live cards, widgets and the WinOrbit logo" width="720"></a>
+  <br><sub>▶ <a href="https://youtube.com/shorts/xD07YjHHF3I">Watch the demo on YouTube</a> (a Short, with music; plays right in your browser)</sub>
 </p>
 
 ## Screenshots
