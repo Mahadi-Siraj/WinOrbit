@@ -11,7 +11,7 @@ Free, open source (GPL-3.0), about 45–80 MB of RAM and ~0.1 % CPU at idle, zer
 
 Windows 10 (2004+) and Windows 11, 64-bit. **Not code-signed** — if SmartScreen warns, choose *More info → Run anyway*. [Code signing policy](https://github.com/Mahadi-Siraj/WinOrbit/blob/main/CODE_SIGNING_POLICY.md)
 
-▶ **[Watch the demo on YouTube](https://youtube.com/shorts/xD07YjHHF3I)**: no download needed.
+▶ **[Watch the demo on YouTube](https://youtube.com/shorts/vw55eK8Is8I)**: no download needed.
 
 ### New in 2.0
 - 💧 **Liquid glass that moves.** Two new themes, **Liquid Clear** and **Liquid Frosted**, give the glass a thick, rounded rim that bends the wallpaper beyond its edge, with a hint of prism and a lit rim. The glass flexes when the island grows or shrinks and wobbles back, light sweeps round the rim when it opens or closes, and the panel comes into focus through it. Any theme can have it with the new **Liquid lens** slider in the Liquid Glass Editor. It runs on the graphics card (pixel shader 3.0); without one, or with Curved glass edges off, you get the classic curved edge. Reduce motion keeps the lens and drops the movement

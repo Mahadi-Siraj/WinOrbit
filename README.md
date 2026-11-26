@@ -26,8 +26,8 @@
 </p>
 
 <p align="center">
-  <a href="https://youtube.com/shorts/xD07YjHHF3I"><img src="docs/assets/demo-poster.png" alt="Watch the demo on YouTube: the island on anime wallpapers, glowing with each song's colours, live cards, widgets and the WinOrbit logo" width="720"></a>
-  <br><sub>▶ <a href="https://youtube.com/shorts/xD07YjHHF3I">Watch the demo on YouTube</a> (a Short, with music; plays right in your browser)</sub>
+  <a href="https://youtube.com/shorts/vw55eK8Is8I"><img src="docs/assets/demo-poster.png" alt="Watch the 2.0 demo on YouTube: Meet WinOrbit, real liquid glass bending an anime wallpaper, a desktop set over liquid metal, and the Stacked clock skin" width="760"></a>
+  <br><sub>▶ <a href="https://youtube.com/shorts/vw55eK8Is8I">Watch the 2.0 demo on YouTube</a> (a one-minute Short, with music; plays right in your browser)</sub>
 </p>
 
 ## Screenshots
@@ -38,6 +38,12 @@
   </tr>
   <tr>
     <td colspan="2"><b>True liquid glass</b><br><sub>Liquid Clear is nearly clear glass with a thick, rounded rim that bends the wallpaper like a real lens, with a hint of prism. Top left is the developer's own desktop. Bottom: the same corner with the lens off and on. Runs on the graphics card.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/assets/liquid-lens.gif" alt="Recorded live: the now-playing panel over an anime wallpaper with the liquid lens off (a flat pane), a wipe to the lens on (the rim bends the art behind it), then the panel live over the moving wallpaper" width="760"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>Off, on, live</b><br><sub>The same panel with the lens off and on, then live: the rim keeps bending the wallpaper as it moves.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/assets/island-live.gif" alt="Recorded live: the pointer clicks the island over a moving liquid-metal wallpaper; it opens rose-tinted for the song, turns night blue on the weather tab, then dark for the calendar and system tabs"></td>
@@ -60,10 +66,12 @@
     <td colspan="2"><b>Desktop sets and profiles</b><br><sub>A whole look in one click: a clock skin with its matching pieces, a theme and the island's glance. Share yours as a <code>.winorbitset</code> file.</sub></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/assets/shot-clocks.jpg" alt="Sixteen clock styles over anime wallpapers: Orbit, Poster, Hairline, Heavy, Week, Story, Label, Dot matrix, Mono, Stacked, Spaced, Big date, Outline, Script, Ambient date and Minimal"></td>
+    <td width="50%" align="center"><img src="docs/assets/clock-skins.gif" alt="All seventeen clock skins one after another, recorded live over three wallpapers: Minimal, Orbit, Hairline, Poster, Label, Week, Heavy, Story, Stacked, Ambient date, Greeting, Spaced, Outline, Big date, Script, Mono and Dot matrix"></td>
+    <td width="50%" align="center"><img src="docs/assets/widget-themes.gif" alt="A column of glass widgets (two clocks, a calendar, a focus timer, system rings, now playing, notes and a world clock) flowing through the Neon, Sakura, Midnight, Liquid Clear and Ember themes"></td>
   </tr>
   <tr>
-    <td colspan="2"><b>Seventeen clock styles</b><br><sub>Sixteen of them here, from Orbit letters to an LED dot matrix, picked from a live gallery.</sub></td>
+    <td><b>Seventeen clock skins</b><br><sub>All of them, from Orbit letters to an LED dot matrix, picked from a live gallery.</sub></td>
+    <td><b>Glass widgets follow your theme</b><br><sub>Neon, Sakura, Midnight, Liquid Clear and Ember, recorded live.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/assets/shot-media.png" alt="Now playing: album art, title, artist, a seek bar, ±10 s, playback and volume controls; the glass takes on the cover's colours"></td>
@@ -84,12 +92,6 @@
   </tr>
   <tr>
     <td colspan="2"><b>In motion</b><br><sub>Wi-Fi, headphones, a USB drive, Caps Lock and charging, recorded live at real speed.</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="docs/assets/shot-colours.png" alt="The now-playing panel four times, each tinted by its album cover: violet and pink, deep red, teal and blue, and sunset rose"></td>
-  </tr>
-  <tr>
-    <td colspan="2"><b>It glows with your music</b><br><sub>The glass and rim pick up each cover's colours and change with every song.</sub></td>
   </tr>
   <tr>
     <td><img src="docs/assets/shot-weather.png" alt="Weather tab: current conditions, today's high and low, and the next hours and days"></td>
